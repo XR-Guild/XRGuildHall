@@ -23,6 +23,9 @@ Shared production tracker for the **XR Guild Hall** immersive build. This is the
 - [ ] Floors — `@open`
 - [ ] Ceilings — `@open`
 - [ ] Stained glass features — `@open`
+- [ ] Site map - `@yvonneliao`
+- [ ] Floor plan - `@yvonneliao`
+- [ ] Structure skeleton - `@yvonneliao`
 
 ## 🛠️ Production Spaces
 > Where members create, research, and gather.
