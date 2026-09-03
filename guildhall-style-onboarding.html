@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XR Guild Hall — Style Onboarding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus+SC&family=Oswald:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* --- Fallback token layer ---------------------------------------------
+     Mirrors tokens.css so this deck renders on-brand even when opened on its
+     own. The linked tokens.css (below, after this block) is the live source
+     of truth and OVERRIDES these when the two files ship together. Edit
+     tokens.css, not these values. ---------------------------------------- */
+  :root{
+    --gh-ground:#0A0818; --gh-ground-2:#05070F;
+    --gh-purple:#6F4BD8; --gh-purple-deep:#2A1C4A; --gh-purple-pale:#B98CE0;
+    --gh-gold:#C9A227; --gh-gold-emissive:#EEC96B; --gh-gold-pale:#F6E0A6; --gh-gold-deep:#8A6A16;
+    --gh-emerald:#0B6B3A; --gh-emerald-flash:#12A6A0; --gh-sapphire:#1226C8; --gh-sapphire-flash:#0E86D4;
+    --gh-ivory:#DCD6E8; --gh-ivory-dim:#B8B0C8;
+    --gh-oak:#6B4A2E; --gh-oak-deep:#3E2817; --gh-marble:#E9E1CE; --gh-marble-shadow:#C6BAA0;
+    --gh-bronze:#6E5A3A; --gh-bronze-verdigris:#4A6B5A; --gh-water:#0B3B4A; --gh-foliage:#1F5136;
+    --gh-edge:rgba(201,162,39,.30);
+    --gh-font-display:"Marcellus SC",serif;
+    --gh-font-title:"Oswald",system-ui,sans-serif;
+    --gh-font-body:"Poppins",system-ui,sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(120% 90% at 50% -12%, #17123A 0%, var(--gh-ground) 58%) fixed, var(--gh-ground);
+    color:var(--gh-ivory); font-family:var(--gh-font-body); overflow:hidden;
+  }
+  .deck{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+    padding:clamp(2rem,5.5vw,5.5rem);max-width:1180px;margin:0 auto;
+    opacity:0;visibility:hidden;transform:translateY(14px);pointer-events:none;
+  }
+  .slide.active{opacity:1;visibility:visible;transform:none;pointer-events:auto}
+  @media (prefers-reduced-motion: no-preference){.slide{transition:opacity .5s ease,transform .5s ease}}
+
+  .eyebrow{font-family:var(--gh-font-title);font-weight:500;color:var(--gh-gold);letter-spacing:.22em;
+    text-transform:uppercase;font-size:clamp(.66rem,1vw,.84rem);margin-bottom:1.1rem}
+  h2{font-family:var(--gh-font-display);font-weight:400;line-height:1.05;letter-spacing:.04em;
+    font-size:clamp(1.85rem,4.5vw,3.4rem);margin-bottom:1rem}
+  .lede{font-family:var(--gh-font-body);font-size:clamp(1rem,1.7vw,1.36rem);line-height:1.6;max-width:46ch;color:var(--gh-ivory)}
+  .dim{color:var(--gh-ivory-dim)}
+  b.g{color:var(--gh-gold-pale);font-weight:500}
+
+  /* two-style split (slide 1) */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:.4rem}
+  .path{border:1px solid var(--gh-edge);border-radius:3px;padding:1.3rem 1.4rem;
+    background:linear-gradient(180deg,rgba(111,75,216,.10),transparent)}
+  .path .tag{font-family:var(--gh-font-title);font-weight:600;letter-spacing:.18em;text-transform:uppercase;font-size:.72rem;color:var(--gh-gold)}
+  .path h3{font-family:var(--gh-font-display);font-weight:400;letter-spacing:.03em;font-size:clamp(1.2rem,2.2vw,1.7rem);margin:.4rem 0 .6rem;color:var(--gh-gold-pale)}
+  .path p{font-family:var(--gh-font-body);font-size:clamp(.9rem,1.45vw,1.12rem);line-height:1.5;color:var(--gh-ivory)}
+  .path.bones{background:linear-gradient(180deg,rgba(220,214,232,.07),transparent);border-color:rgba(220,214,232,.28)}
+  .path.bones .tag{color:var(--gh-ivory-dim)}
+  .rule{margin-top:1.3rem;font-family:var(--gh-font-body);color:var(--gh-gold-pale);font-size:clamp(1rem,1.7vw,1.3rem);line-height:1.5}
+  .rule b{font-family:var(--gh-font-display);font-weight:400;letter-spacing:.03em;color:var(--gh-gold-pale)}
+
+  /* quad grid (slide 2) */
+  .quad{display:grid;grid-template-columns:1fr 1fr;gap:1rem 2rem;margin-top:.2rem}
+  .quad .cell .k{font-family:var(--gh-font-title);font-weight:600;letter-spacing:.16em;text-transform:uppercase;font-size:.7rem;color:var(--gh-gold);margin-bottom:.4rem}
+  .quad .cell p{font-family:var(--gh-font-body);font-size:clamp(.84rem,1.38vw,1.06rem);line-height:1.5;color:var(--gh-ivory)}
+  .quad .cell p code{font-family:ui-monospace,Menlo,monospace;color:var(--gh-gold-emissive);font-size:.92em}
+  .swatches{display:flex;gap:.4rem;margin-top:.55rem;flex-wrap:wrap;align-items:center}
+  .swatches i{width:1.5rem;height:1.5rem;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.10)}
+  .swatches .labra{width:4.6rem;background:linear-gradient(105deg,var(--gh-ground-2) 0%,var(--gh-emerald) 32%,var(--gh-sapphire) 55%,var(--gh-purple) 74%,var(--gh-gold-emissive) 100%)}
+
+  /* word bank (slide 3) */
+  .band{margin-top:.1rem}
+  .band .k{font-family:var(--gh-font-title);font-weight:600;letter-spacing:.16em;text-transform:uppercase;font-size:.7rem;color:var(--gh-gold);margin:.75rem 0 .45rem}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem}
+  .chips span{border:1px solid var(--gh-edge);border-radius:3px;padding:.24rem .68rem;
+    font-family:var(--gh-font-title);font-weight:400;letter-spacing:.03em;font-size:clamp(.76rem,1.24vw,.98rem);color:var(--gh-ivory);white-space:nowrap}
+  ul.points{list-style:none;margin-top:.85rem;max-width:66ch}
+  ul.points li{position:relative;padding-left:1.5rem;font-family:var(--gh-font-body);font-size:clamp(.88rem,1.4vw,1.12rem);
+    line-height:1.42;margin:.48rem 0}
+  ul.points li::before{content:"";position:absolute;left:0;top:.5em;width:.5rem;height:.5rem;
+    transform:rotate(45deg);background:var(--gh-gold)}
+  ul.points li b{color:var(--gh-gold-pale);font-weight:600}
+  ul.points li code{font-family:ui-monospace,Menlo,monospace;color:var(--gh-gold-emissive);font-size:.92em}
+  .biglink{display:inline-block;margin-top:1rem;font-family:var(--gh-font-title);font-weight:500;letter-spacing:.08em;text-transform:uppercase;
+    font-size:clamp(.84rem,1.6vw,1.06rem);color:var(--gh-gold-pale);border-bottom:1px solid var(--gh-edge);
+    padding-bottom:.25rem;text-decoration:none}
+
+  /* material & colour board (slide 4) */
+  .board-eyebrow{margin-bottom:.7rem}
+  .board h2{margin-bottom:.7rem}
+  .board .k{font-family:var(--gh-font-title);font-weight:600;letter-spacing:.16em;text-transform:uppercase;font-size:.68rem;color:var(--gh-gold);margin:.2rem 0 .5rem}
+  .tokens-row{display:grid;grid-template-columns:repeat(7,1fr);gap:.55rem;margin-bottom:1rem}
+  .tok{display:flex;flex-direction:column;gap:.3rem}
+  .tok .sw{height:2.6rem;border-radius:3px;border:1px solid rgba(255,255,255,.10)}
+  .tok .nm{font-family:var(--gh-font-title);font-weight:500;text-transform:uppercase;letter-spacing:.06em;font-size:.6rem;color:var(--gh-ivory);line-height:1.2}
+  .tok .hx{font-family:ui-monospace,Menlo,monospace;font-size:.58rem;color:var(--gh-ivory-dim)}
+
+  .mats{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem}
+  .mat{border:1px solid var(--gh-edge);border-radius:4px;overflow:hidden;background:rgba(255,255,255,.02)}
+  .mat .tile{height:3.4rem}
+  .mat .body{padding:.5rem .6rem .6rem}
+  .mat .nm{font-family:var(--gh-font-display);font-weight:400;letter-spacing:.02em;font-size:.98rem;color:var(--gh-gold-pale);line-height:1.1}
+  .mat .role{font-family:var(--gh-font-body);font-size:.72rem;line-height:1.35;color:var(--gh-ivory-dim);margin-top:.2rem}
+  /* material fills */
+  .m-oak{background:linear-gradient(115deg,#7A5432,#5A3B22 42%,var(--gh-oak-deep))}
+  .m-marble{background:linear-gradient(115deg,#F2EBD9,var(--gh-marble) 48%,var(--gh-marble-shadow))}
+  .m-labra{background:linear-gradient(105deg,var(--gh-ground-2) 0%,var(--gh-emerald) 30%,var(--gh-sapphire) 52%,var(--gh-purple) 72%,var(--gh-gold-emissive) 100%)}
+  .m-gold{background:linear-gradient(115deg,#FFF3D0,var(--gh-gold-emissive) 34%,var(--gh-gold) 68%,var(--gh-gold-deep))}
+  .m-bronze{background:linear-gradient(115deg,#8A7A54,var(--gh-bronze) 40%,var(--gh-bronze-verdigris) 72%,#2A2A1E)}
+  .m-glass{background:linear-gradient(115deg,var(--gh-sapphire),#8A3B54 32%,var(--gh-emerald) 60%,var(--gh-gold) 88%)}
+  .m-water{background:linear-gradient(160deg,#0E3A4A,var(--gh-water) 42%,var(--gh-foliage) 100%)}
+  .m-sandstone{background:linear-gradient(115deg,#E7D6B4,#D8C199 50%,#B99B6A)}
+
+  .logo-mark{position:fixed;top:1.4rem;left:1.6rem;width:26px;height:26px;opacity:.85;z-index:5}
+  .logo-mark polygon{fill:none;stroke:var(--gh-gold);stroke-width:2}
+  .footer-brand{position:fixed;bottom:1.55rem;left:1.7rem;font-family:var(--gh-font-title);font-weight:400;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--gh-ivory-dim);font-size:.6rem;z-index:6;opacity:.75}
+  .progress{position:fixed;top:0;left:0;height:2px;background:var(--gh-gold);width:0;z-index:6;transition:width .4s ease}
+  .counter{position:fixed;bottom:1.5rem;right:1.7rem;font-family:var(--gh-font-title);font-weight:500;letter-spacing:.14em;color:var(--gh-gold);font-size:.8rem;z-index:6}
+  .nav{position:fixed;bottom:3rem;left:1.6rem;display:flex;gap:.5rem;z-index:6}
+  .nav button{background:transparent;border:1px solid var(--gh-edge);color:var(--gh-gold);width:2.4rem;height:2.4rem;
+    border-radius:3px;cursor:pointer;font-size:1.1rem;line-height:1;font-family:serif;transition:background .2s,border-color .2s}
+  .nav button:hover{background:rgba(201,162,39,.14);border-color:var(--gh-gold)}
+  .nav button:focus-visible{outline:2px solid var(--gh-gold-emissive);outline-offset:2px}
+
+  @media (max-width:820px){
+    .two-col,.quad{grid-template-columns:1fr}
+    .tokens-row{grid-template-columns:repeat(4,1fr)}
+    .mats{grid-template-columns:repeat(2,1fr)}
+  }
+  @media print{
+    body{overflow:visible;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .progress,.counter,.nav,.logo-mark,.footer-brand{display:none}
+    .deck{position:static}
+    .slide{position:relative;opacity:1!important;visibility:visible!important;transform:none!important;
+      page-break-after:always;height:100vh;max-width:100%}
+  }
+</style>
+<!-- Live token source of truth. Ships alongside this file; overrides the
+     fallback layer above. Edit tokens here and every surface updates. -->
+<link rel="stylesheet" href="tokens.css">
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<svg class="logo-mark" viewBox="0 0 240 240" aria-hidden="true">
+  <polygon points="120,20 170,33.4 206.6,70 220,120 206.6,170 170,206.6 120,220 70,206.6 33.4,170 20,120 33.4,70 70,33.4"/>
+</svg>
+
+<main class="deck" id="deck">
+
+  <!-- SLIDE 1 · the core rule -->
+  <section class="slide" id="s1">
+    <div class="eyebrow">XR Guild Hall · Style Onboarding · 01</div>
+    <h2>Two styles, one Hall</h2>
+    <p class="lede">The Hall's art direction — a subset of the XR Guild Design System. Two early-1900s movements, each with a job.</p>
+    <div class="two-col">
+      <div class="path bones">
+        <div class="tag">The bones</div>
+        <h3>Beaux-Arts</h3>
+        <p>The grand envelope — domes, colonnades, Corinthian columns, coffered ceilings, carved friezes, symmetrical formal gardens. Governs <span class="dim">scale, symmetry, procession, proportion.</span></p>
+      </div>
+      <div class="path">
+        <div class="tag">The skin &amp; soul</div>
+        <h3>Art Nouveau</h3>
+        <p>The ornament and interiors — stained-glass oculus, sinuous gilt tracery, botanical line, handcrafted glass &amp; metal. Governs <span class="dim">decoration, curve, craft, warmth.</span></p>
+      </div>
+    </div>
+    <p class="rule"><b>Beaux-Arts sets the room; Art Nouveau dresses it.</b> Art nouveau, labradorite and gilt — structure straight &amp; symmetrical, detail flowing &amp; organic.</p>
+  </section>
+
+  <!-- SLIDE 2 · look & feel -->
+  <section class="slide" id="s2">
+    <div class="eyebrow">XR Guild Hall · Style Onboarding · 02</div>
+    <h2>Look &amp; feel</h2>
+    <div class="quad">
+      <div class="cell">
+        <div class="k">Palette · black · purple · gold</div>
+        <p>Black ground, Guild-purple identity, gold accent. Cast-gold tracery is the only glowing material (<code>#EEC96B</code>). Labradorite adds its emerald &amp; sapphire flash. The full iridescent spectrum is <b class="g">posters &amp; print only</b> — never an in-world fill.</p>
+        <div class="swatches" aria-hidden="true">
+          <i style="background:var(--gh-ground)"></i>
+          <i style="background:var(--gh-purple)"></i>
+          <i style="background:var(--gh-gold)"></i>
+          <i style="background:var(--gh-gold-emissive)"></i>
+          <i style="background:var(--gh-emerald)"></i>
+          <i style="background:var(--gh-sapphire)"></i>
+          <i style="background:var(--gh-ivory)"></i>
+          <i class="labra" title="labradorite flash"></i>
+        </div>
+      </div>
+      <div class="cell">
+        <div class="k">Sky &amp; light</div>
+        <p>Golden-hour sunset meets aurora night sky — the same emerald-blue-purple-gold as the labradorite, thrown across the sky. A <b class="g">sky shifter</b> may offer more than one day/night mood. Serene and alive — never gloomy or neon.</p>
+      </div>
+      <div class="cell">
+        <div class="k">Materials</div>
+        <p>Wood carries, gold marks, stone holds the light. Quartersawn oak, cast-gold tracery, cream marble, patinated bronze, leaded jewel glass, labradorite — near-black until the light moves.</p>
+      </div>
+      <div class="cell">
+        <div class="k">Type · three faces</div>
+        <p><b class="g">Marcellus SC</b> — headings, plaques, hero lines (never a paragraph). <b class="g">Oswald</b> — eyebrows, badges, button labels (caps). <b class="g">Poppins</b> — everything read as a sentence.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3 · building on-style -->
+  <section class="slide" id="s3">
+    <div class="eyebrow">XR Guild Hall · Style Onboarding · 03</div>
+    <h2>Building on-style</h2>
+    <div class="band">
+      <div class="k">Form &amp; ornament</div>
+      <div class="chips">
+        <span>monumental</span><span>domed</span><span>colonnade</span><span>fluted</span><span>coffered</span><span>axial</span><span>dodecagonal</span><span>ogee</span><span>sinuous</span><span>botanical</span><span>tracery</span><span>gilt</span><span>filigree</span>
+      </div>
+      <div class="k">Material, light &amp; feel</div>
+      <div class="chips">
+        <span>labradorite</span><span>emissive gold</span><span>emerald</span><span>sapphire</span><span>jewel glass</span><span>quartersawn oak</span><span>golden hour</span><span>aurora</span><span>luminous</span><span>reverent</span><span>timeless</span>
+      </div>
+    </div>
+    <ul class="points">
+      <li><b>Bake it in, keep it light</b> — bake textures and lighting into assets and keep file sizes small. Small files load for everyone: an accessibility choice, not just performance.</li>
+      <li><b>Gold is the only glow</b> — cast-gold tracery, emissive <code>#EEC96B</code>, is the sole glowing material. Keep it selective: precious, not gaudy.</li>
+      <li><b>Silhouette carries the style</b> — nail the shape first; add Art Nouveau detail as texture and light second.</li>
+      <li><b>Structure square, ornament curved</b> — and mind the asset contract (dmm, degrees, comfort) in the immersive spec.</li>
+    </ul>
+    <a class="biglink" href="https://github.com/XR-Guild/XRGuildHall">Full guide → repo docs</a>
+  </section>
+
+  <!-- SLIDE 4 · materials & colour board -->
+  <section class="slide board" id="s4">
+    <div class="eyebrow board-eyebrow">XR Guild Hall · Style Onboarding · 04</div>
+    <h2>Materials &amp; colour board</h2>
+
+    <div class="k">Colour tokens</div>
+    <div class="tokens-row">
+      <div class="tok"><div class="sw" style="background:var(--gh-ground)"></div><div class="nm">Ground</div><div class="hx">#0A0818</div></div>
+      <div class="tok"><div class="sw" style="background:var(--gh-purple)"></div><div class="nm">Guild purple</div><div class="hx">#6F4BD8</div></div>
+      <div class="tok"><div class="sw" style="background:var(--gh-gold)"></div><div class="nm">Gold</div><div class="hx">#C9A227</div></div>
+      <div class="tok"><div class="sw" style="background:var(--gh-gold-emissive)"></div><div class="nm">Emissive gold</div><div class="hx">#EEC96B</div></div>
+      <div class="tok"><div class="sw" style="background:var(--gh-emerald)"></div><div class="nm">Labra&nbsp;emerald</div><div class="hx">#0B6B3A</div></div>
+      <div class="tok"><div class="sw" style="background:var(--gh-sapphire)"></div><div class="nm">Labra&nbsp;blue</div><div class="hx">#1226C8</div></div>
+      <div class="tok"><div class="sw" style="background:var(--gh-ivory)"></div><div class="nm">Ivory&nbsp;text</div><div class="hx">#DCD6E8</div></div>
+    </div>
+
+    <div class="k">Materials &amp; naturals</div>
+    <div class="mats">
+      <div class="mat"><div class="tile m-oak"></div><div class="body"><div class="nm">Quartersawn oak</div><div class="role">Floors, benches, shelving. Straight grain, no gloss.</div></div></div>
+      <div class="mat"><div class="tile m-marble"></div><div class="body"><div class="nm">Cream marble</div><div class="role">Floors, walls, column shafts. Travertine &amp; sandstone kin.</div></div></div>
+      <div class="mat"><div class="tile m-labra"></div><div class="body"><div class="nm">Labradorite</div><div class="role">Columns, panels, pool rim. Near-black until the light moves.</div></div></div>
+      <div class="mat"><div class="tile m-gold"></div><div class="body"><div class="nm">Cast-gold tracery</div><div class="role">Came, capitals, plaques. Emissive — the only glow.</div></div></div>
+      <div class="mat"><div class="tile m-bronze"></div><div class="body"><div class="nm">Patinated bronze</div><div class="role">Sconces, railings, door furniture. Aged, matte.</div></div></div>
+      <div class="mat"><div class="tile m-glass"></div><div class="body"><div class="nm">Leaded jewel glass</div><div class="role">Oculus &amp; windows. Emerald, sapphire, garnet in came.</div></div></div>
+      <div class="mat"><div class="tile m-water"></div><div class="body"><div class="nm">Water &amp; gardens</div><div class="role">Reflecting pool, lily pads, planting. Living, mirror-still.</div></div></div>
+      <div class="mat"><div class="tile m-sandstone"></div><div class="body"><div class="nm">Warm sandstone</div><div class="role">Exterior rotunda &amp; colonnade. Golden-hour warmth.</div></div></div>
+    </div>
+  </section>
+
+</main>
+
+<div class="nav">
+  <button id="prev" aria-label="Previous slide">&#8249;</button>
+  <button id="next" aria-label="Next slide">&#8250;</button>
+</div>
+<div class="footer-brand">Consistent with the XR Guild Design System · tokens.css</div>
+<div class="counter" id="counter">01 / 04</div>
+
+<script>
+  const slides=Array.from(document.querySelectorAll('.slide'));
+  const total=slides.length, progress=document.getElementById('progress'), counter=document.getElementById('counter');
+  let i=0;
+  const pad=n=>String(n).padStart(2,'0');
+  function show(n){
+    i=Math.max(0,Math.min(total-1,n));
+    slides.forEach((s,idx)=>s.classList.toggle('active',idx===i));
+    progress.style.width=((i+1)/total*100)+'%';
+    counter.textContent=pad(i+1)+' / '+pad(total);
+  }
+  document.getElementById('next').addEventListener('click',()=>show(i+1));
+  document.getElementById('prev').addEventListener('click',()=>show(i-1));
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();show(i+1);}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(i-1);}
+  });
+  show(0);
+</script>
+</body>
+</html>
