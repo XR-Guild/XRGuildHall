@@ -17,6 +17,19 @@ Built with Meta's open-source **Immersive Web SDK** (`@iwsdk/core`, MIT) on thre
 
 The 2D guide (desktop and phone) mirrors all of it: **Connect news**, **Library** search with filters, **Timeline** with a decade spine, **Ask** (library-grounded answers), and **Reading list**.
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Main hall](docs/images/03-main-hall.jpg) | ![Rotunda from the reflecting pool](docs/images/09-rotunda-from-pool.jpg) |
+| Main hall: labradorite columns, painted dome, the Connect table | The rotunda seen across the reflecting pool under the aurora |
+| ![Connect table](docs/images/04-connect-table-glasses.jpg) | ![News easel](docs/images/05-news-easel.jpg) |
+| Connect table: device lineage and the illustrative VR Glasses hologram | News easel: sourced Meta VR Glasses specs, with conflicting figures flagged |
+| ![Timeline easel](docs/images/06-timeline-easel.jpg) | ![Library apse](docs/images/07-library-apse.jpg) |
+| Timeline easel: 209 XR Guild timeline entries by decade | Library apse: search 225 works from library.xrguild.org |
+| ![Timeline tab](docs/images/01-hall-timeline-tab.jpg) | ![Garden colonnade](docs/images/08-reflecting-pool.jpg) |
+| 2D guide, Timeline tab with the decade spine | Reflecting pool and colonnade |
+
 ## Run it
 
 ```bash
