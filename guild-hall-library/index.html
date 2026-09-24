@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>XR Guild Hall</title>
+<meta name="description" content="An immersive WebXR guild hall and library for the XR Guild: search the XR ethics library and preview the Meta VR Glasses announced at Connect 2026." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus+SC&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap" />
+<link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+<div id="scene" aria-hidden="true"></div>
+
+<div id="loading" role="status" aria-live="polite">
+  <div class="load-inner">
+    <p class="kicker">XR Guild</p>
+    <h1 class="display">The Guild Hall</h1>
+    <p class="load-sub">Main hall · Library apse · Garden and reflecting pool</p>
+    <div class="bar" aria-hidden="true"><span id="loadBar"></span></div>
+    <p id="loadMsg" class="fine">Laying the labradorite…</p>
+    <ul class="load-notes">
+      <li><strong>Comfort:</strong> Comfortable. Teleport and snap turn by default, no forced camera motion.</li>
+      <li><strong>Privacy:</strong> No accounts, analytics, or tracking. Your position and input stay on this device.</li>
+    </ul>
+  </div>
+</div>
+
+<div id="ui">
+  <header class="brand">
+    <div class="mark" aria-hidden="true"></div>
+    <div>
+      <div class="brand-name">XR Guild Hall</div>
+      <div class="brand-sub">Library · Connect 2026 table</div>
+    </div>
+  </header>
+
+  <nav id="tours" aria-label="Walk to"></nav>
+
+  <aside id="drawer" data-open="true" aria-label="Guild guide">
+    <button id="drawerToggle" class="drawer-toggle" aria-expanded="true" aria-controls="drawerBody"><span class="open-l">Guide</span><span class="close-l">Hide guide</span></button>
+    <div id="drawerBody">
+      <div id="tabs" role="tablist">
+        <button role="tab" data-tab="news" aria-selected="true">Connect news</button>
+        <button role="tab" data-tab="library" aria-selected="false">Library</button>
+        <button role="tab" data-tab="timeline" aria-selected="false">Timeline</button>
+        <button role="tab" data-tab="ask" aria-selected="false">Ask</button>
+        <button role="tab" data-tab="reading" aria-selected="false">Reading list <span id="readingCount" class="badge"></span></button>
+      </div>
+
+      <section id="tab-news" class="tabpanel" role="tabpanel"></section>
+
+      <section id="tab-library" class="tabpanel" role="tabpanel" hidden>
+        <label class="sr" for="q">Search the library</label>
+        <input id="q" type="search" placeholder="Search titles, authors, keywords…" autocomplete="off" />
+        <div id="chips" class="chips"></div>
+        <div class="filters">
+          <label><span class="sr">Category</span><select id="cat"></select></label>
+          <label><span class="sr">Format</span><select id="type"></select></label>
+          <label><span class="sr">Sort</span><select id="sort"><option value="relevance">Most relevant</option><option value="newest">Newest</option><option value="title">A to Z</option></select></label>
+        </div>
+        <p class="count"><span id="count"></span></p>
+        <div id="results"></div>
+        <button id="more" class="ghost">Show more</button>
+        <p id="snapshot" class="fine"></p>
+      </section>
+
+      <section id="tab-timeline" class="tabpanel" role="tabpanel" hidden>
+        <h2 class="display sm">Timeline of XR</h2>
+        <p class="fine" id="tlCredit"></p>
+        <label class="sr" for="tlq">Search the timeline</label>
+        <input id="tlq" type="search" placeholder="Search people, devices, films, papers, years…" autocomplete="off" />
+        <div id="tlCats" class="chips" role="group" aria-label="Filter by kind"></div>
+        <div id="spine" class="spine" role="group" aria-label="Jump to an era"></div>
+        <p class="count"><span id="tlCount"></span> <button id="tlClear" class="linkbtn" hidden>Show every era</button></p>
+        <div id="tlList" class="tl"></div>
+      </section>
+
+      <section id="tab-ask" class="tabpanel" role="tabpanel" hidden>
+        <h2 class="display sm">Ask the Library</h2>
+        <form id="askForm">
+          <label class="sr" for="askQ">Your question</label>
+          <textarea id="askQ" rows="3" placeholder="What does the library say about eye tracking and consent?"></textarea>
+          <div id="askClaude" hidden>
+            <div class="row">
+              <button id="askGo" type="submit" class="primary">Ask</button>
+              <button id="askStop" type="button" class="ghost" hidden>Stop</button>
+            </div>
+            <p class="fine">Claude writes the answer from the library entries and cites them. It uses your Claude account and runs only when you press Ask.</p>
+          </div>
+        </form>
+        <div id="answer" class="answer" aria-live="polite"></div>
+        <p id="askNote" class="note"></p>
+        <div id="askFallback">
+          <p class="fine">Get an answer from the library's own GitBook assistant. It opens in a new tab with sources.</p>
+        </div>
+        <a id="gitbookAsk" class="ghost btnlink" href="https://library.xrguild.org" target="_blank" rel="noopener">Ask GitBook's library assistant ↗</a>
+      </section>
+
+      <section id="tab-reading" class="tabpanel" role="tabpanel" hidden>
+        <h2 class="display sm">Reading list</h2>
+        <p class="fine">Saved on this device only. Copy the list to share it at Connect.</p>
+        <button id="copyReading" class="ghost" hidden>Copy titles and links</button>
+        <div id="readingBody"></div>
+      </section>
+    </div>
+  </aside>
+
+  <div id="card" class="card" hidden role="dialog" aria-live="polite"></div>
+  <div id="tooltip" class="tooltip" hidden></div>
+
+  <footer class="bottom">
+    <p class="hint"><span class="desk">Drag to look · WASD to walk · double-click the floor to move · click objects</span><span class="touch">Drag to look · double-tap the floor to move · tap objects</span></p>
+    <div class="actions">
+      <button id="settingsBtn" class="ghost" aria-expanded="false" aria-controls="settings">Comfort</button>
+      <button id="enterVR" class="primary" hidden>Enter VR</button>
+    </div>
+    <div id="settings" class="settings" hidden>
+      <label><input type="checkbox" id="setReduce" /> Reduce motion</label>
+      <label><input type="checkbox" id="setAurora" checked /> Animate the aurora</label>
+      <label><input type="checkbox" id="setRefl" checked /> Mirror reflections (desktop)</label>
+      <p class="fine">In VR: teleport with the thumbstick, snap turn 45°. Squeeze or pinch to pick up devices on the table.</p>
+    </div>
+  </footer>
+  <div id="fade" aria-hidden="true"></div>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+node_modules/
+dist-single/
+artifact/
+scratch/
+*.log
+.DS_Store
