@@ -1,0 +1,30 @@
+{
+  "name": "xrguild-hall",
+  "version": "0.1.0",
+  "description": "XR Guild Hall: an immersive WebXR guild hall and library built with the Immersive Web SDK.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:single": "vite build --mode single && node scripts/make-artifact.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc -p ."
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@iwsdk/core": "^0.5.3",
+    "@pixiv/three-vrm": "^3.5.5",
+    "livekit-client": "^2.22.3",
+    "qrcode": "^1.5.4",
+    "three": "^0.181.0"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "@types/three": "^0.181.0",
+    "@types/webxr": "^0.5.24",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-singlefile": "^2.3.3"
+  },
+  "private": true,
+  "type": "module"
+}
