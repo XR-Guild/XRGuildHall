@@ -1,0 +1,13 @@
+import {chromium} from 'playwright';
+import fs from 'node:fs'; import path from 'node:path';
+const OUT = process.env.OUT || 'arrival-export';
+fs.rmSync(OUT,{recursive:true,force:true}); fs.mkdirSync(OUT+'/assets',{recursive:true});
+const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const pg=await b.newPage();
+pg.on('pageerror',e=>console.log('PAGEERR '+e.message));
+pg.on('console',m=>console.log(m.text().slice(0,300)));
+await pg.exposeFunction('saveFile',(n,b64)=>{ const f=path.join(OUT,n); fs.mkdirSync(path.dirname(f),{recursive:true}); fs.writeFileSync(f,Buffer.from(b64,'base64')); });
+await pg.goto(process.env.URL||'http://localhost:5173/export.html');
+await pg.waitForFunction(()=>window.__startExport,null,{timeout:120000});
+await pg.evaluate(()=>window.__startExport());
+await b.close();

@@ -22,9 +22,9 @@ export interface Seat { pos: THREE.Vector3; rotY: number; }
 export interface Bench { r: number; a0: number; a1: number; seats: number; }
 interface Layout { seats: Seat[]; tables: THREE.Vector3[]; benches: Bench[]; }
 
-const face = (p: THREE.Vector3, t: THREE.Vector3) => Math.atan2(t.x - p.x, t.z - p.z);
+export const face = (p: THREE.Vector3, t: THREE.Vector3) => Math.atan2(t.x - p.x, t.z - p.z);
 const d2 = (a: THREE.Vector3, x: number, z: number) => Math.hypot(a.x - x, a.z - z);
-const onArc = (r: number, th: number) => V(STAGE.center.x + Math.sin(th) * r, 0, STAGE.center.z + Math.cos(th) * r);
+export const onArc = (r: number, th: number) => V(STAGE.center.x + Math.sin(th) * r, 0, STAGE.center.z + Math.cos(th) * r);
 
 function hallOk(p: THREE.Vector3, stageClear: number, wall = 1.3) {
   if (Math.hypot(p.x - HALL.center.x, p.z - HALL.center.z) > HALL.apothem - wall) return false;
@@ -101,7 +101,7 @@ export function libLayout(id: LibPreset): Layout {
 }
 
 /** Nouveau side chair (cabaret and Library). */
-function chairGeometries() {
+export function chairGeometries() {
   const wood: THREE.BufferGeometry[] = [], vel: THREE.BufferGeometry[] = [], gold: THREE.BufferGeometry[] = [];
   const bx = (arr: THREE.BufferGeometry[], w: number, h: number, d: number, x: number, y: number, z: number, rx = 0) => { const g = new THREE.BoxGeometry(w, h, d); if (rx) g.rotateX(rx); g.translate(x, y, z); arr.push(g); };
   for (const sx of [-0.2, 0.2]) for (const sz of [-0.18, 0.18]) { const g = new THREE.CylinderGeometry(0.018, 0.024, 0.44, 8); g.translate(sx, 0.22, sz); wood.push(g); }
@@ -126,7 +126,7 @@ function sector(r0: number, r1: number, a0: number, a1: number, top: number, dep
 }
 
 /** Curved green-velvet benches whose arcs follow the stage curve: walnut base and back, gilt rail. Merged per material. */
-function benchMeshes(m: Mats, benches: Bench[]) {
+export function benchMeshes(m: Mats, benches: Bench[]) {
   const vel: THREE.BufferGeometry[] = [], wood: THREE.BufferGeometry[] = [], gold: THREE.BufferGeometry[] = [];
   for (const b of benches) {
     const { r, a0, a1 } = b;
