@@ -189,3 +189,48 @@ select option { background: var(--panel-solid); }
   .brand-sub { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- welcome tab, seating, social ---------- */
+.btnlink { display: inline-block; text-decoration: none; }
+a.primary { color: #1a1206; }
+.links { list-style: none; padding: 0 !important; }
+.links a { text-decoration: none; }
+.links a:hover { text-decoration: underline; }
+.ev { border-top: 1px solid var(--line-soft); padding: 10px 0; }
+.ev .when { font: 11px/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+.ev .t { font: 18px/1.25 var(--display); color: var(--text); margin: 3px 0; }
+.ev .where { font-size: 13px; color: var(--teal); }
+.ev p { font-size: 14px; color: #cfd3c7; margin: 4px 0 0; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; align-items: center; }
+.seg .lbl { font: 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); width: 100%; }
+.seg button { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; }
+.seg button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold-hi); background: rgba(216,174,90,.14); }
+.seg button:disabled { opacity: .45; cursor: not-allowed; }
+.ghost.sm, .primary.sm { padding: 4px 12px; font-size: 13px; }
+#social { position: absolute; left: var(--gutter); bottom: 72px; max-width: min(380px, calc(100vw - 32px)); display: flex; flex-direction: column-reverse; gap: 8px; }
+.soc-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 5px 6px 5px 14px; backdrop-filter: blur(10px); }
+.soc-status { font: 12px var(--mono); color: var(--dim); margin-right: 4px; }
+#socMic[aria-pressed="true"] { border-color: #ff6b6b; color: #ffd4d4; background: rgba(255,80,80,.14); }
+.soc-pop { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; backdrop-filter: blur(12px); max-height: 42vh; overflow-y: auto; }
+.chat-log { display: grid; gap: 6px; max-height: 30vh; overflow-y: auto; font-size: 14px; margin-bottom: 8px; }
+.chat-log .me b { color: var(--gold-hi); }
+.chat-log b { color: var(--teal); font-weight: 600; }
+.chat-log .sys { color: var(--dim); font-style: italic; }
+.chat-form { display: flex; gap: 6px; }
+.chat-form input { flex: 1; background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; }
+.person { display: flex; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line-soft); font-size: 14px; }
+.person .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person .z { font: 11px var(--mono); color: var(--dim); }
+.person button { background: none; border: 1px solid var(--line-soft); border-radius: 999px; padding: 1px 9px; font-size: 12px; cursor: pointer; }
+#hostBox h4 { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); margin: 10px 0 6px; }
+.modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(3,8,7,.7); padding: var(--gutter); }
+.modal-inner { max-width: 520px; width: 100%; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 16px; padding: 22px; box-shadow: 0 30px 80px rgba(0,0,0,.5); max-height: 90vh; overflow-y: auto; }
+.modal-inner h2 { font-size: 30px; margin: 0 0 10px; color: var(--gold-hi); }
+.modal-inner ul { padding-left: 18px; display: grid; gap: 6px; font-size: 15px; margin: 0 0 14px; }
+.modal-inner input#cocName { width: 100%; background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; margin: 4px 0 10px; }
+.chk { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+@media (max-width: 720px) {
+  #social { bottom: calc(env(safe-area-inset-bottom, 0px) + 108px); }
+  #drawer { bottom: calc(env(safe-area-inset-bottom, 0px) + 152px); max-height: 56vh; }
+  .soc-pop { max-height: 34vh; }
+}

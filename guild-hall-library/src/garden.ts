@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Mats } from './mats';
 import * as T from './tex';
-
-export const POOL = { x0: -2.5, x1: 2.5, z0: 14, z1: 42 };
-export const COLONNADE_Z = 49;
+import { HALL, LIB, POOL, BIG_TREE, BENCHES, V } from './site';
 
 export interface GardenBuilt {
   group: THREE.Group;
@@ -13,90 +12,58 @@ export interface GardenBuilt {
   waterReflector: Reflector | null;
   glows: THREE.Sprite[];
   lights: THREE.Light[];
+  benches: { pos: THREE.Vector3; rotY: number }[];
   placeColonnade: (scene: THREE.Object3D) => void;
   update: (t: number, reduced: boolean) => void;
 }
+
+const mtx = new THREE.Matrix4();
+const Q = new THREE.Quaternion();
+const E = new THREE.Euler();
 
 export function buildGarden(m: Mats, skyCube: THREE.Texture, desktopReflections: boolean): GardenBuilt {
   const group = new THREE.Group(); group.name = 'Garden';
   const colliders = new THREE.Group();
   const glows: THREE.Sprite[] = [];
   const lights: THREE.Light[] = [];
-  const box = (w: number, h: number, d: number, x: number, y: number, z: number) => { const c = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial()); c.position.set(x, y, z); colliders.add(c); };
+  const box = (w: number, h: number, d: number, x: number, y: number, z: number, ry = 0) => { const c = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial()); c.position.set(x, y, z); c.rotation.y = ry; colliders.add(c); return c; };
 
   // ground
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), m.grass); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; group.add(ground);
-  box(160, 0.2, 160, 0, -0.12, 10);
-  // gravel ring terrace + paths
-  const ring = new THREE.Mesh(new THREE.RingGeometry(9.3, 12.6, 96), m.gravel); ring.rotation.x = -Math.PI / 2; ring.position.y = -0.005; group.add(ring);
-  const path = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 3), m.gravel); path.rotation.x = -Math.PI / 2; path.position.set(0, -0.004, 13.2); group.add(path);
-  for (const s of [-1, 1]) {
-    const walk = new THREE.Mesh(new THREE.PlaneGeometry(2.2, POOL.z1 - POOL.z0 + 4), m.gravel); walk.rotation.x = -Math.PI / 2; walk.position.set(s * 4.0, -0.004, (POOL.z0 + POOL.z1) / 2); group.add(walk);
+  box(150, 0.2, 150, 11, -0.12, 2);
+  // gravel aprons around both chambers
+  for (const [c, a] of [[HALL.center, HALL.apothem], [LIB.center, LIB.apothem]] as const) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(a + 0.3, a + 2.6, 96), m.gravel); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, -0.006, c.z); group.add(ring);
   }
 
-  // reflecting pool: marble coping + dark water with sky reflections
-  const pw = POOL.x1 - POOL.x0, pl = POOL.z1 - POOL.z0, pcz = (POOL.z0 + POOL.z1) / 2;
-  const cop = 0.4;
-  const coping = [
-    [pw + cop * 2, cop, 0, POOL.z0 - cop / 2], [pw + cop * 2, cop, 0, POOL.z1 + cop / 2],
-    [cop, pl, POOL.x0 - cop / 2, pcz], [cop, pl, POOL.x1 + cop / 2, pcz],
-  ];
-  for (const [w, d, x, z] of coping) { const c = new THREE.Mesh(new THREE.BoxGeometry(w, 0.16, d), m.marble); c.position.set(x, 0.08, z); group.add(c); }
-  const basin = new THREE.Mesh(new THREE.BoxGeometry(pw, 0.4, pl), new THREE.MeshStandardMaterial({ color: 0x050a0c, roughness: 1 })); basin.position.set(0, -0.2, pcz); group.add(basin);
-  box(pw + 1, 2.2, pl + 1, 0, 1.0, pcz);
+  // ---------- diagonal reflecting pool ----------
+  const pool = new THREE.Group(); pool.position.copy(POOL.center); pool.rotation.y = POOL.rotY; group.add(pool);
+  const pw = POOL.width, pl = POOL.length, cop = 0.4;
+  for (const [w, d, x, z] of [[pw + cop * 2, cop, 0, -pl / 2 - cop / 2], [pw + cop * 2, cop, 0, pl / 2 + cop / 2], [cop, pl, -pw / 2 - cop / 2, 0], [cop, pl, pw / 2 + cop / 2, 0]]) {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(w, 0.16, d), m.marble); c.position.set(x, 0.08, z); pool.add(c);
+  }
+  const apron = new THREE.Mesh(new THREE.PlaneGeometry(pw + 5, pl + 5), m.gravel); apron.rotation.x = -Math.PI / 2; apron.position.y = -0.004; pool.add(apron);
+  const basin = new THREE.Mesh(new THREE.BoxGeometry(pw, 0.4, pl), new THREE.MeshStandardMaterial({ color: 0x050a0c, roughness: 1 })); basin.position.y = -0.2; pool.add(basin);
+  box(pw + 1, 2.2, pl + 1, POOL.center.x, 1.0, POOL.center.z, POOL.rotY);
   const wn = T.waterNormal(256); wn.repeat.set(3, 12);
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(pw, pl, 1, 1), new THREE.MeshPhysicalMaterial({
-    color: 0x02080a, roughness: 0.03, metalness: 0.0, envMap: skyCube, envMapIntensity: 1.6, normalMap: wn, normalScale: new THREE.Vector2(0.12, 0.12), clearcoat: 1.0, clearcoatRoughness: 0.02,
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(pw, pl), new THREE.MeshPhysicalMaterial({
+    color: 0x02080a, roughness: 0.03, metalness: 0, envMap: skyCube, envMapIntensity: 1.6, normalMap: wn, normalScale: new THREE.Vector2(0.12, 0.12), clearcoat: 1, clearcoatRoughness: 0.02,
   }));
-  water.rotation.x = -Math.PI / 2; water.position.set(0, 0.06, pcz); water.userData.keep = true; group.add(water);
+  water.rotation.x = -Math.PI / 2; water.position.y = 0.06; water.userData.keep = true; pool.add(water);
   let waterReflector: Reflector | null = null;
   if (desktopReflections) {
     waterReflector = new Reflector(new THREE.PlaneGeometry(pw, pl), { textureWidth: 1024, textureHeight: 1024, color: 0x8a9aa0, clipBias: 0.003 });
-    waterReflector.userData.keep = true; waterReflector.rotation.x = -Math.PI / 2; waterReflector.position.set(0, 0.055, pcz);
-    group.add(waterReflector);
-    // water sits on top as a thin tinted, rippled film
-    const wm = water.material as THREE.MeshPhysicalMaterial; wm.transparent = true; wm.opacity = 0.45; wm.depthWrite = false;
-    water.renderOrder = 3;
+    waterReflector.userData.keep = true; waterReflector.rotation.x = -Math.PI / 2; waterReflector.position.y = 0.055; pool.add(waterReflector);
+    const wm = water.material as THREE.MeshPhysicalMaterial; wm.transparent = true; wm.opacity = 0.45; wm.depthWrite = false; water.renderOrder = 3;
   }
+  const poolWorld = (x: number, z: number) => new THREE.Vector3(x, 0, z).applyAxisAngle(new THREE.Vector3(0, 1, 0), POOL.rotY).add(POOL.center);
+  const pxz = (x: number, z: number): [number, number] => { const p = poolWorld(x, z); return [p.x, p.z]; };
 
-  // hedges (instanced boxes) along both walks
-  const hedgeGeo = new THREE.BoxGeometry(1, 1, 1);
-  const hedgeCount = 2 * 7;
-  const hedges = new THREE.InstancedMesh(hedgeGeo, m.hedge, hedgeCount);
-  const mtx = new THREE.Matrix4(); let hi = 0;
-  for (const s of [-1, 1]) for (let i = 0; i < 7; i++) {
-    const z = POOL.z0 + 1 + i * 4.1;
-    mtx.compose(new THREE.Vector3(s * 5.6, 0.55, z + 1.6), new THREE.Quaternion(), new THREE.Vector3(1.0, 1.1, 3.4));
-    hedges.setMatrixAt(hi++, mtx); box(1.1, 2, 3.5, s * 5.6, 1, z + 1.6);
-  }
-  group.add(hedges);
-
-  // cypress trees
-  const cyGeo = new THREE.LatheGeometry([[0, 0], [0.45, 0.4], [0.7, 1.6], [0.65, 3.2], [0.4, 4.6], [0.08, 5.6], [0, 5.7]].map(([r, y]) => new THREE.Vector2(r, y)), 14);
-  const cyMat = new THREE.MeshStandardMaterial({ map: T.grass(256), color: 0x4f7552, roughness: 0.95 });
-  const cy = new THREE.InstancedMesh(cyGeo, cyMat, 40); let ci = 0;
-  const addTree = (x: number, z: number, s = 1) => { mtx.compose(new THREE.Vector3(x, 0, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, T.rand() * 6, 0)), new THREE.Vector3(s, s * (0.9 + T.rand() * 0.3), s)); cy.setMatrixAt(ci++, mtx); };
-  for (const s of [-1, 1]) for (let i = 0; i < 8; i++) addTree(s * 7.6, POOL.z0 + i * 4.1, 1);
-  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + 0.26; if (Math.abs(Math.sin(a)) < 0.3 && Math.cos(a) < 0) continue; addTree(Math.sin(a) * 15, -Math.cos(a) * 15, 1.25); }
-  cy.count = ci; group.add(cy);
-
-  // flower beds: small instanced blossoms between coping and walks
-  const blossomGeo = new THREE.IcosahedronGeometry(0.04, 1);
-  const bl = new THREE.InstancedMesh(blossomGeo, new THREE.MeshStandardMaterial({ roughness: 0.8, emissive: 0x221a2a, emissiveIntensity: 0.4 }), 900);
-  const flowerCols = ['#b7a4e6', '#efe8f4', '#d98fb0', '#8f79c9', '#f2d7a8'].map(c => new THREE.Color(c));
-  for (let i = 0; i < 900; i++) {
-    const s = i % 2 ? 1 : -1;
-    const x = s * (2.95 + T.rand() * 0.9), z = POOL.z0 + T.rand() * pl;
-    mtx.compose(new THREE.Vector3(x, 0.1 + T.rand() * 0.25, z), new THREE.Quaternion(), new THREE.Vector3(1, 1, 1).multiplyScalar(0.6 + T.rand() * 0.8));
-    bl.setMatrixAt(i, mtx); bl.setColorAt(i, flowerCols[Math.floor(T.rand() * flowerCols.length)]);
-  }
-  group.add(bl);
-
-  // lanterns
+  // lanterns along the pool
   const glowTex = T.glow('255,210,150');
-  for (const s of [-1, 1]) for (let i = 0; i < 6; i++) {
-    const z = POOL.z0 + 1.5 + i * 5.2;
-    const l = new THREE.Group(); l.position.set(s * 3.0, 0, z);
+  for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {
+    const p = poolWorld(s * (pw / 2 + 1.1), -pl / 2 + 2 + i * ((pl - 4) / 3));
+    const l = new THREE.Group(); l.position.copy(p);
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 1.3, 10), m.blackMetal); post.position.y = 0.65; l.add(post);
     const cap = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.12, 12), m.giltSatin); cap.position.y = 1.62; l.add(cap);
     const globe = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), m.emissiveWarm); globe.position.y = 1.45; l.add(globe);
@@ -105,50 +72,203 @@ export function buildGarden(m: Mats, skyCube: THREE.Texture, desktopReflections:
     group.add(l);
   }
 
-  // marble benches by the pool (Gardens punch-list item)
-  for (const sx of [-1, 1]) for (const bz of [POOL.z0 + 8.2, POOL.z0 + 18.6]) {
-    const b = new THREE.Group(); b.position.set(sx * 4.55, 0, bz); b.rotation.y = sx * Math.PI / 2;
+  // marble benches: one off each end of the pool (as sketched) and two along the long sides
+  const benches: { pos: THREE.Vector3; rotY: number }[] = [];
+  const bench = (p: THREE.Vector3, ry: number) => {
+    const b = new THREE.Group(); b.position.copy(p); b.rotation.y = ry;
     const seat = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.09, 0.5), m.marble); seat.position.y = 0.46; b.add(seat);
     for (const lx of [-0.72, 0.72]) { const leg = new THREE.Mesh(new THREE.LatheGeometry([[0.14, 0], [0.16, 0.04], [0.09, 0.14], [0.08, 0.32], [0.15, 0.42], [0, 0.42]].map(([r, y]) => new THREE.Vector2(r, y)), 16), m.marble); leg.position.set(lx, 0, 0); leg.scale.z = 1.4; b.add(leg); }
     const inlay = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.012, 0.04), m.gilt); inlay.position.set(0, 0.51, 0.2); b.add(inlay);
-    group.add(b);
-    box(0.6, 1, 2.0, sx * 4.55, 0.5, bz);
-  }
+    group.add(b); box(1.9, 1, 0.6, p.x, 0.5, p.z, ry);
+    benches.push({ pos: p.clone(), rotY: ry });
+  };
+  for (const p of BENCHES) bench(p, Math.atan2(POOL.center.x - p.x, POOL.center.z - p.z)); // both face the pool
 
-  // distant hills silhouette
-  const hills = new THREE.Mesh(hillRing(), new THREE.MeshStandardMaterial({ color: 0x0a1411, roughness: 1, side: THREE.DoubleSide }));
-  group.add(hills);
+  // ---------- cypress accents on the outer edges ----------
+  const cyGeo = new THREE.LatheGeometry([[0, 0], [0.45, 0.4], [0.7, 1.6], [0.65, 3.2], [0.4, 4.6], [0.08, 5.6], [0, 5.7]].map(([r, y]) => new THREE.Vector2(r, y)), 14);
+  const cyMat = new THREE.MeshStandardMaterial({ map: T.grass(256), color: 0x4f7552, roughness: 0.95 });
+  const cyPts: [number, number, number][] = [];
+  for (let i = 0; i < 9; i++) { const a = Math.PI * (0.95 + i * 0.13); cyPts.push([Math.sin(a) * 14.5, -Math.cos(a) * 14.5, 1.2]); } // west arc behind the hall
+  for (let i = 0; i < 7; i++) { const a = Math.PI * (-0.2 + i * 0.12); cyPts.push([LIB.center.x + Math.sin(a) * 12, LIB.center.z - Math.cos(a) * 12, 1.1]); } // north/east of the library
+  const cy = new THREE.InstancedMesh(cyGeo, cyMat, cyPts.length);
+  cyPts.forEach(([x, z, s], i) => { mtx.compose(V(x, 0, z), Q.setFromEuler(E.set(0, T.rand() * 6, 0)), V(s, s * (0.9 + T.rand() * 0.3), s)); cy.setMatrixAt(i, mtx); box(1.2, 3, 1.2, x, 1.5, z); });
+  group.add(cy);
+
+  // ---------- branched maples ----------
+  const maples = buildMaples(m, [
+    [BIG_TREE.x, BIG_TREE.z, 1.4], [-13, 11, 1.0], [11, -13, 0.95], [37, -19, 1.05], [-5, -16, 0.9], [26, 20, 1.0], [-7, 20, 0.85],
+  ]);
+  group.add(maples.group); maples.trunks.forEach(([x, z]) => box(0.7, 3, 0.7, x, 1.5, z));
+
+  // ---------- flower beds in many colours ----------
+  const beds: [number, number, number, number, string[]][] = [
+    // x, z, radiusX, radiusZ, palette
+    [...pxz(pw / 2 + 2.4, -6), 1.6, 1.0, ['#d7263d', '#f46036', '#ffd23f']],
+    [...pxz(-pw / 2 - 2.4, 5), 1.6, 1.0, ['#7b2cbf', '#c77dff', '#f1e9ff']],
+    [...pxz(0, -pl / 2 - 4.4), 2.4, 1.1, ['#ff5d8f', '#ffd6e0', '#ffffff', '#ff97b7']],
+    [...pxz(0, pl / 2 + 4.4), 2.4, 1.1, ['#3a86ff', '#8ecae6', '#ffffff']],
+    [12.2, -8.6, 2.0, 0.9, ['#ffbe0b', '#fb5607', '#ff006e']],
+    [12.5, 4.0, 2.0, 0.9, ['#8338ec', '#3a86ff', '#e0aaff']],
+    [LIB.center.x + 3.5, LIB.center.z + 9.4, 2.4, 1.0, ['#e63946', '#f4a261', '#ffe8a3']],
+    [LIB.center.x + 9.6, LIB.center.z + 1.5, 1.2, 2.2, ['#ff70a6', '#ff9770', '#ffd670']],
+    [-3.5, 11.9, 2.6, 1.0, ['#b5179e', '#f72585', '#ffffff']],
+    [-10.8, 4.2, 1.1, 2.4, ['#4361ee', '#4cc9f0', '#f8f9fa']],
+    [-8.5, -8.6, 1.4, 2.2, ['#ffb703', '#fb8500', '#ffffff']],
+  ];
+  group.add(buildFlowers(beds));
+
+  // ---------- distant hills + far forest ----------
+  group.add(new THREE.Mesh(hillRing(), new THREE.MeshStandardMaterial({ color: 0x0a1411, roughness: 1, side: THREE.DoubleSide })));
   const far = new THREE.InstancedMesh(new THREE.ConeGeometry(2.2, 9, 7), new THREE.MeshStandardMaterial({ color: 0x0c1a14, roughness: 1 }), 220);
   for (let i = 0; i < 220; i++) {
-    const a = T.rand() * Math.PI * 2, r = 60 + T.rand() * 55;
-    const s = 0.7 + T.rand() * 1.1;
-    mtx.compose(new THREE.Vector3(Math.cos(a) * r, 4 * s, Math.sin(a) * r), new THREE.Quaternion(), new THREE.Vector3(s, s, s));
-    far.setMatrixAt(i, mtx);
+    const a = T.rand() * Math.PI * 2, r = 62 + T.rand() * 55, s = 0.7 + T.rand() * 1.1;
+    mtx.compose(V(11 + Math.cos(a) * r, 4 * s, Math.sin(a) * r), Q.identity(), V(s, s, s)); far.setMatrixAt(i, mtx);
   }
   group.add(far);
 
   // boundary (invisible)
-  box(1, 3, 110, -32, 1.5, 10); box(1, 3, 110, 32, 1.5, 10); box(64, 3, 1, 0, 1.5, -40); box(64, 3, 1, 0, 1.5, 60);
+  box(1, 3, 90, -30, 1.5, 3); box(1, 3, 90, 52, 1.5, 3); box(84, 3, 1, 11, 1.5, -40); box(84, 3, 1, 11, 1.5, 46);
 
   // moon + ambient
   const moon = new THREE.DirectionalLight(0xa9c2ff, 0.55); moon.position.set(-30, 40, -20); group.add(moon); lights.push(moon);
   const hemi = new THREE.HemisphereLight(0x3b7f78, 0x0a120e, 0.35); group.add(hemi); lights.push(hemi);
-  const colLight = new THREE.PointLight(0xffc58a, 40, 22, 2); colLight.position.set(0, 2.2, COLONNADE_Z - 1); group.add(colLight); lights.push(colLight);
+  const poolLight = new THREE.PointLight(0xffc58a, 26, 16, 2); poolLight.position.copy(POOL.center).setY(2.6); group.add(poolLight); lights.push(poolLight);
 
+  /** Evo's white colonnade design, kept as a garden folly south of the Hall. */
   const placeColonnade = (scene: THREE.Object3D) => {
     const mat = new THREE.MeshPhysicalMaterial({ color: 0xece5d6, roughness: 0.32, clearcoat: 0.3, envMapIntensity: 0.9 });
-    scene.traverse(o => { const mesh = o as THREE.Mesh; if (mesh.isMesh) { mesh.material = mat; } });
-    scene.scale.setScalar(12);
+    scene.traverse(o => { const mesh = o as THREE.Mesh; if (mesh.isMesh) mesh.material = mat; });
+    scene.scale.setScalar(9);
+    // kept off the drawn plan: south of the Hall, facing north across the lawn
     scene.rotation.y = Math.PI;
-    scene.position.set(0, 0, COLONNADE_Z);
+    scene.position.set(0, 0, 24);
     group.add(scene);
-    box(12, 3, 1, 0, 1.5, COLONNADE_Z + 5.6);
+    box(9.5, 3, 1, 0, 1.5, 28.3);
   };
 
   const update = (t: number, reduced: boolean) => {
-    if (!reduced) { wn.offset.set(t * 0.004, t * 0.01); }
+    if (!reduced) { wn.offset.set(t * 0.004, t * 0.01); maples.sway(t); }
   };
-  return { group, colliders, water, waterReflector, glows, lights, placeColonnade, update };
+  return { group, colliders, water, waterReflector, glows, lights, benches, placeColonnade, update };
+}
+
+/** Procedural branched maples: merged bark geometry + instanced leaf clusters in autumn and summer tones. */
+function buildMaples(m: Mats, spots: [number, number, number][]) {
+  const group = new THREE.Group(); group.name = 'Maples';
+  const bark = new THREE.MeshStandardMaterial({ color: 0x4a3a30, roughness: 0.92, map: m.walnut.map ?? null });
+  const barkGeos: THREE.BufferGeometry[] = [];
+  const leafSpots: { p: THREE.Vector3; s: number; tree: number }[] = [];
+  const up = new THREE.Vector3(0, 1, 0);
+  const seg = (a: THREE.Vector3, b: THREE.Vector3, r0: number, r1: number) => {
+    const len = a.distanceTo(b); const g = new THREE.CylinderGeometry(r1, r0, len, 7, 1, true);
+    g.translate(0, len / 2, 0);
+    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, b.clone().sub(a).normalize()));
+    g.translate(a.x, a.y, a.z); barkGeos.push(g);
+  };
+  const grow = (tree: number, from: THREE.Vector3, d: THREE.Vector3, len: number, r: number, depth: number) => {
+    const mid = from.clone().addScaledVector(d, len * 0.5).add(V((T.rand() - 0.5) * 0.25 * len, 0, (T.rand() - 0.5) * 0.25 * len));
+    const end = mid.clone().addScaledVector(d, len * 0.5);
+    seg(from, mid, r, r * 0.85); seg(mid, end, r * 0.85, r * 0.7);
+    if (depth === 0 || r < 0.03) { leafSpots.push({ p: end, s: 0.9 + T.rand() * 0.5, tree }); return; }
+    const kids = depth > 2 ? 2 : 3;
+    for (let k = 0; k < kids; k++) {
+      const yaw = T.rand() * Math.PI * 2, tilt = 0.45 + T.rand() * 0.45;
+      const nd = d.clone().applyAxisAngle(new THREE.Vector3(Math.cos(yaw), 0, Math.sin(yaw)), tilt).normalize();
+      nd.y = Math.max(nd.y, 0.18); nd.normalize();
+      grow(tree, end, nd, len * (0.66 + T.rand() * 0.12), r * 0.62, depth - 1);
+    }
+    if (depth <= 2) leafSpots.push({ p: end, s: 0.7 + T.rand() * 0.4, tree });
+  };
+  const trunks: [number, number][] = [];
+  spots.forEach(([x, z, s], i) => {
+    trunks.push([x, z]);
+    const base = V(x, 0, z);
+    const top = base.clone().add(V(0, 1.8 * s, 0)); // trunk splits low, like a field maple
+    seg(base, top, 0.26 * s, 0.2 * s);
+    for (let k = 0; k < 3; k++) {
+      const yaw = (k / 3) * Math.PI * 2 + T.rand();
+      const d = V(Math.cos(yaw) * 0.55, 1, Math.sin(yaw) * 0.55).normalize();
+      grow(i, top, d, 1.9 * s, 0.15 * s, 3);
+    }
+  });
+  group.add(new THREE.Mesh(mergeGeometries(barkGeos), bark));
+  barkGeos.forEach(g => g.dispose());
+
+  const palettes = [
+    ['#b3261e', '#d7442a', '#8e1b16', '#e0622f'], // crimson maple
+    ['#e0782c', '#f2a03d', '#c95a1c', '#f7c04a'], // orange / amber
+    ['#3f6b35', '#58843f', '#2f5229', '#7a9a45'], // summer green
+  ];
+  // leaf clusters: crossed cards carrying a painted spray of maple leaves (alpha-tested), tinted per instance
+  const per = 4;
+  const card = mergeGeometries([0, 1, 2].map(i => { const g = new THREE.PlaneGeometry(1.25, 1.25); g.rotateY((i / 3) * Math.PI); if (i === 2) g.rotateX(Math.PI / 2); return g; }));
+  const leafMat = new THREE.MeshStandardMaterial({ map: mapleLeafTexture(), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.8, emissive: 0x1a0a06, emissiveIntensity: 0.5 });
+  const leaves = new THREE.InstancedMesh(card, leafMat, leafSpots.length * per);
+  const base: THREE.Matrix4[] = [];
+  let n = 0;
+  for (const L of leafSpots) {
+    const pal = palettes[L.tree % palettes.length];
+    for (let k = 0; k < per; k++) {
+      const off = V((T.rand() - 0.5) * 1.2, (T.rand() - 0.2) * 0.8, (T.rand() - 0.5) * 1.2).multiplyScalar(L.s);
+      const sc = (0.75 + T.rand() * 0.6) * L.s;
+      mtx.compose(L.p.clone().add(off), Q.setFromEuler(E.set((T.rand() - 0.5) * 0.6, T.rand() * 6.3, (T.rand() - 0.5) * 0.6)), V(sc, sc, sc));
+      leaves.setMatrixAt(n, mtx); base.push(mtx.clone());
+      leaves.setColorAt(n, new THREE.Color(pal[Math.floor(T.rand() * pal.length)]).multiplyScalar(0.85 + T.rand() * 0.3)); n++;
+    }
+  }
+  leaves.count = n; leaves.userData.keep = true; group.add(leaves);
+  // fallen leaves under the autumn trees
+  const fall = new THREE.InstancedMesh(new THREE.CircleGeometry(0.06, 5).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide }), spots.length * 70);
+  let f = 0;
+  spots.forEach(([x, z, s], i) => {
+    if (i % 3 === 2) return;
+    const pal = palettes[i % 3];
+    for (let k = 0; k < 70; k++) {
+      const a = T.rand() * Math.PI * 2, r = Math.sqrt(T.rand()) * 3.2 * s;
+      mtx.compose(V(x + Math.cos(a) * r, 0.01 + T.rand() * 0.01, z + Math.sin(a) * r), Q.setFromEuler(E.set(0, T.rand() * 6, 0)), V(1, 1, 1.6));
+      fall.setMatrixAt(f, mtx); fall.setColorAt(f, new THREE.Color(pal[k % pal.length]).multiplyScalar(0.6)); f++;
+    }
+  });
+  fall.count = f; group.add(fall);
+
+  const tmp = new THREE.Matrix4(), rot = new THREE.Matrix4();
+  let last = -1;
+  const sway = (t: number) => {
+    if (t - last < 1 / 20) return; last = t; // 20 Hz is plenty for a breeze
+    for (let i = 0; i < n; i++) { rot.makeRotationZ(Math.sin(t * 0.9 + i * 0.37) * 0.035); tmp.copy(base[i]).multiply(rot); leaves.setMatrixAt(i, tmp); }
+    leaves.instanceMatrix.needsUpdate = true;
+  };
+  return { group, trunks, sway };
+}
+
+/** Elliptical beds: a dark leafy mound with stems and many small blossoms. */
+function buildFlowers(beds: [number, number, number, number, string[]][]) {
+  const group = new THREE.Group(); group.name = 'Flowers';
+  const total = beds.reduce((s, b) => s + Math.round(b[2] * b[3] * 90), 0);
+  const blossomGeo = new THREE.IcosahedronGeometry(0.05, 0); blossomGeo.scale(1, 0.55, 1);
+  const bl = new THREE.InstancedMesh(blossomGeo, new THREE.MeshStandardMaterial({ roughness: 0.7, emissive: 0x1a1016, emissiveIntensity: 0.5 }), total);
+  const stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.006, 0.008, 1, 3, 1, true).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0x2f5a2a, roughness: 0.9 }), total);
+  const mound = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ map: T.grass(256), color: 0x4c7a45, roughness: 0.95 }), beds.length);
+  const soil = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2a1d14, roughness: 1 }), beds.length);
+  let n = 0;
+  beds.forEach(([x, z, rx, rz, pal], bi) => {
+    mtx.compose(V(x, -0.03, z), Q.identity(), V(rx * 0.95, 0.22, rz * 0.95)); mound.setMatrixAt(bi, mtx);
+    mtx.compose(V(x, 0.003, z), Q.identity(), V(rx + 0.15, 1, rz + 0.15)); soil.setMatrixAt(bi, mtx);
+    const cols = pal.map(c => new THREE.Color(c));
+    const cnt = Math.round(rx * rz * 90);
+    for (let i = 0; i < cnt; i++) {
+      const a = T.rand() * Math.PI * 2, r = Math.sqrt(T.rand());
+      const px = x + Math.cos(a) * r * rx, pz = z + Math.sin(a) * r * rz;
+      const h = 0.18 + (1 - r) * 0.22 + T.rand() * 0.15;
+      mtx.compose(V(px, 0, pz), Q.identity(), V(1, h, 1)); stems.setMatrixAt(n, mtx);
+      const s = 0.7 + T.rand() * 0.8;
+      mtx.compose(V(px, h, pz), Q.setFromEuler(E.set(0, T.rand() * 6, 0)), V(s, s, s)); bl.setMatrixAt(n, mtx);
+      bl.setColorAt(n, cols[Math.floor(T.rand() * cols.length)]); n++;
+    }
+  });
+  bl.count = stems.count = n;
+  group.add(soil, mound, stems, bl);
+  return group;
 }
 
 function hillRing() {
@@ -158,7 +278,7 @@ function hillRing() {
     const a = (i / segs) * Math.PI * 2;
     const r = 140 + j * 50;
     const h = j === 0 ? -2 : (T.fbm(i / segs * 12, j * 0.7, 4, 12) * 38 - 6) * (j / rings) + j * 4;
-    pos.push(Math.cos(a) * r, h, Math.sin(a) * r);
+    pos.push(11 + Math.cos(a) * r, h, Math.sin(a) * r);
   }
   for (let j = 0; j < rings; j++) for (let i = 0; i < segs; i++) {
     const a = j * (segs + 1) + i, b = a + segs + 1;
@@ -167,4 +287,17 @@ function hillRing() {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
   return g;
+}
+
+/** A transparent spray of small five-lobed leaves in light tones, so instance colours tint it (crimson, amber, green). */
+function mapleLeafTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d')!;
+  const leaf = (x: number, y: number, r: number, a: number, shade: number) => {
+    g.save(); g.translate(x, y); g.rotate(a); g.beginPath();
+    for (let i = 0; i <= 10; i++) { const ang = -Math.PI / 2 + (i / 10) * Math.PI * 2; const rr = i % 2 ? r * 0.42 : r * (i === 0 || i === 10 ? 1 : i === 4 || i === 6 ? 0.7 : 0.9); g.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr); }
+    g.closePath(); const v = Math.round(200 + shade * 55); g.fillStyle = `rgb(${v},${v},${v})`; g.fill();
+    g.strokeStyle = 'rgba(90,70,60,0.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, r * 0.9); g.lineTo(0, -r * 0.6); g.stroke(); g.restore();
+  };
+  for (let i = 0; i < 70; i++) { const a = T.rand() * Math.PI * 2, d = Math.sqrt(T.rand()) * 104; leaf(128 + Math.cos(a) * d, 128 + Math.sin(a) * d, 13 + T.rand() * 9, T.rand() * 6.3, T.rand()); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }

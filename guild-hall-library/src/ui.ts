@@ -6,7 +6,9 @@ import { ENTRIES, TIMELINE, TL_CATS, ERAS, BY_ID, eraOf, eraLabel, eraCount, cat
 const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector(sel) as T;
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
-type Tab = 'library' | 'timeline' | 'ask' | 'news' | 'reading';
+type Tab = 'welcome' | 'library' | 'timeline' | 'ask' | 'news' | 'reading';
+export type UIZone = 'hall' | 'library' | 'colonnade' | 'garden';
+const LIB_TABS: Tab[] = ['news', 'library', 'timeline', 'ask', 'reading'];
 
 export interface UIHooks {
   tours: { id: string; name: string; hint: string }[];
@@ -226,6 +228,7 @@ ${tlCtx || '(none matched)'}`;
 
   // ---------- world → UI bridges ----------
   store.openTab = (t, o) => {
+    if (drawer.dataset.open !== 'true') { drawer.dataset.open = 'true'; $('#drawerToggle').setAttribute('aria-expanded', 'true'); }
     if (t === 'timeline') { openTimeline(o as any); return; }
     setTab(t);
     if (t === 'library' && o) { if (o.cat !== undefined) cat.value = o.cat; if (o.query !== undefined) q.value = o.query; shown = PAGE; run(); }
@@ -253,10 +256,26 @@ ${tlCtx || '(none matched)'}`;
   const vr = $<HTMLButtonElement>('#enterVR');
   if (h.enterVR) { vr.hidden = false; vr.addEventListener('click', h.enterVR); }
 
-  let start: Tab = 'news';
-  try { const s = localStorage.getItem('xrgh-tab') as Tab | null; if (s) start = s; } catch { /* ignore */ }
-  setTab(start);
+  // ---------- zones: the Library guide lives only in the Library ----------
+  let zone: UIZone = 'hall';
+  let lastLibTab: Tab = 'library';
+  try { const s = localStorage.getItem('xrgh-tab') as Tab | null; if (s && LIB_TABS.includes(s)) lastLibTab = s; } catch { /* ignore */ }
+  const labels: Record<UIZone, string> = { hall: 'Guild Hall', library: 'The Library', colonnade: 'Labradorite colonnade', garden: 'The garden' };
+  const setZone = (z: UIZone) => {
+    if (z === zone && document.querySelector('#tabs [aria-selected="true"]:not([hidden])')) return;
+    const cur = (document.querySelector('#tabs [aria-selected="true"]') as HTMLElement | null)?.dataset.tab as Tab | undefined;
+    if (zone === 'library' && cur && LIB_TABS.includes(cur)) lastLibTab = cur;
+    zone = z;
+    document.querySelectorAll<HTMLButtonElement>('#tabs button').forEach(b => { b.hidden = !(b.dataset.zones ?? '').split(' ').includes(z); });
+    $('#zoneLabel').textContent = labels[z];
+    const wasOpen = drawer.dataset.open === 'true';
+    setTab(z === 'library' ? lastLibTab : 'welcome');
+    if (!wasOpen) { drawer.dataset.open = 'false'; $('#drawerToggle').setAttribute('aria-expanded', 'false'); }
+  };
+  document.addEventListener('click', e => { const b = (e.target as HTMLElement).closest('[data-go]') as HTMLElement | null; if (b) h.goTo(b.dataset.go!); });
+  zone = 'garden'; setZone('hall');
   if (matchMedia('(max-width: 720px)').matches) { drawer.dataset.open = 'false'; $('#drawerToggle').setAttribute('aria-expanded', 'false'); }
+  return { setZone, setTab };
 }
 
 export function lineageCard(i: number) {

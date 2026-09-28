@@ -17,12 +17,12 @@
   <div class="load-inner">
     <p class="kicker">XR Guild</p>
     <h1 class="display">The Guild Hall</h1>
-    <p class="load-sub">Main hall · Library apse · Garden and reflecting pool</p>
+    <p class="load-sub">Guild Hall · Library · Colonnade and garden</p>
     <div class="bar" aria-hidden="true"><span id="loadBar"></span></div>
     <p id="loadMsg" class="fine">Laying the labradorite…</p>
     <ul class="load-notes">
       <li><strong>Comfort:</strong> Comfortable. Teleport and snap turn by default, no forced camera motion.</li>
-      <li><strong>Privacy:</strong> No accounts, analytics, or tracking. Your position and input stay on this device.</li>
+      <li><strong>Privacy:</strong> Solo by default, with no accounts, analytics, or tracking. Your name, avatar, and position are shared only if you choose to join others, and your mic stays off until you turn it on.</li>
     </ul>
   </div>
 </div>
@@ -32,7 +32,7 @@
     <div class="mark" aria-hidden="true"></div>
     <div>
       <div class="brand-name">XR Guild Hall</div>
-      <div class="brand-sub">Library · Connect 2026 table</div>
+      <div class="brand-sub" id="zoneLabel">Guild Hall</div>
     </div>
   </header>
 
@@ -42,14 +42,42 @@
     <button id="drawerToggle" class="drawer-toggle" aria-expanded="true" aria-controls="drawerBody"><span class="open-l">Guide</span><span class="close-l">Hide guide</span></button>
     <div id="drawerBody">
       <div id="tabs" role="tablist">
-        <button role="tab" data-tab="news" aria-selected="true">Connect news</button>
-        <button role="tab" data-tab="library" aria-selected="false">Library</button>
-        <button role="tab" data-tab="timeline" aria-selected="false">Timeline</button>
-        <button role="tab" data-tab="ask" aria-selected="false">Ask</button>
-        <button role="tab" data-tab="reading" aria-selected="false">Reading list <span id="readingCount" class="badge"></span></button>
+        <button role="tab" data-tab="welcome" data-zones="hall colonnade garden" aria-selected="true">Welcome</button>
+        <button role="tab" data-tab="news" data-zones="library" aria-selected="false">Connect news</button>
+        <button role="tab" data-tab="library" data-zones="library" aria-selected="false">Library</button>
+        <button role="tab" data-tab="timeline" data-zones="library" aria-selected="false">Timeline</button>
+        <button role="tab" data-tab="ask" data-zones="library" aria-selected="false">Ask</button>
+        <button role="tab" data-tab="reading" data-zones="library" aria-selected="false">Reading list <span id="readingCount" class="badge"></span></button>
       </div>
 
-      <section id="tab-news" class="tabpanel" role="tabpanel"></section>
+      <section id="tab-welcome" class="tabpanel" role="tabpanel">
+        <p class="kicker">XR Guild</p>
+        <h2 class="display">Join the Guild</h2>
+        <p class="dek">Professionals working in Spatial Computing dedicated to ethical outcomes in XR, AI, and the Metaverse.</p>
+        <div class="row">
+          <a class="primary btnlink" href="https://www.xrguild.org/join" target="_blank" rel="noopener">Join the XR Guild ↗</a>
+          <a class="ghost btnlink" href="https://www.xrguild.org" target="_blank" rel="noopener">Visit xrguild.org ↗</a>
+        </div>
+        <p class="fine">Or scan the code on the welcome desk inside the east door.</p>
+        <h3>Upcoming</h3>
+        <div id="events"></div>
+        <h3>More at xrguild.org</h3>
+        <ul class="links">
+          <li><a href="https://www.xrguild.org/calendar" target="_blank" rel="noopener">Events calendar ↗</a></li>
+          <li><a href="https://www.xrguild.org/mentorship" target="_blank" rel="noopener">Mentorship ↗</a></li>
+          <li><a href="https://www.xrguild.org/principles" target="_blank" rel="noopener">Our principles ↗</a></li>
+          <li><a href="https://library.xrguild.org" target="_blank" rel="noopener">The Guild Library ↗</a></li>
+        </ul>
+        <h3>Seating</h3>
+        <div id="seatHall" class="seg" role="group" aria-label="Hall seating"></div>
+        <div id="seatLib" class="seg" role="group" aria-label="Library seating"></div>
+        <p class="fine" id="seatNote">Click or select any chair to sit. Walk away to stand.</p>
+        <h3>The Library</h3>
+        <p>Search the Guild library, walk the Timeline of XR, and read the Meta Connect 2026 briefing. Its guide opens when you step inside.</p>
+        <button class="ghost" data-go="library">Walk to the Library</button>
+      </section>
+
+      <section id="tab-news" class="tabpanel" role="tabpanel" hidden></section>
 
       <section id="tab-library" class="tabpanel" role="tabpanel" hidden>
         <label class="sr" for="q">Search the library</label>
@@ -108,6 +136,44 @@
   </aside>
 
   <div id="card" class="card" hidden role="dialog" aria-live="polite"></div>
+
+  <section id="social" aria-label="People and voice">
+    <div class="soc-bar">
+      <span id="socStatus" class="soc-status">Solo</span>
+      <button id="socJoin" class="ghost sm" hidden>Join others</button>
+      <button id="socMic" class="ghost sm" hidden aria-pressed="false">Mic off</button>
+      <button id="socChatBtn" class="ghost sm" hidden aria-expanded="false" aria-controls="socChat">Chat <span id="socUnread" class="badge"></span></button>
+      <button id="socPeopleBtn" class="ghost sm" hidden aria-expanded="false" aria-controls="socPeople">People <span id="socCount" class="badge"></span></button>
+    </div>
+    <div id="socChat" class="soc-pop" hidden>
+      <div id="chatLog" class="chat-log" aria-live="polite"></div>
+      <form id="chatForm" class="chat-form"><label class="sr" for="chatIn">Message</label><input id="chatIn" maxlength="280" autocomplete="off" placeholder="Say something kind…" /><button class="primary sm">Send</button></form>
+    </div>
+    <div id="socPeople" class="soc-pop" hidden>
+      <div id="peopleList"></div>
+      <div id="hostBox" hidden><h4>Host</h4><button id="muteHall" class="ghost sm">Ask the hall to mute</button></div>
+      <p class="fine">Mute and Block apply only on your device. Blocked people disappear for you, and you stop hearing and seeing their chat.</p>
+    </div>
+  </section>
+
+  <div id="coc" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="cocTitle">
+    <div class="modal-inner">
+      <p class="kicker">Before you join others</p>
+      <h2 id="cocTitle" class="display">Guild Hall code of conduct</h2>
+      <p id="cocSim" class="note" hidden>This preview has no server: it simulates a crowd of visitors inside your browser so you can see seating, chat and avatars at scale. Nothing is sent anywhere.</p>
+      <ul>
+        <li>Be kind and respectful. Harassment, hate, and unwanted contact are not welcome here.</li>
+        <li>Respect personal space. Anyone who walks into you fades out; you can mute or block anyone.</li>
+        <li>Your mic stays <strong>off</strong> until you press Mic. Voice is carried by LiveKit Cloud and is not recorded by this world.</li>
+        <li>Others will see your display name, avatar, position, and seat while you are connected. No gaze, hand, or device data is shared.</li>
+        <li>Read the XR Guild <a href="https://www.xrguild.org/principles" target="_blank" rel="noopener">principles ↗</a>.</li>
+      </ul>
+      <label class="fine" for="cocName">Display name</label>
+      <input id="cocName" maxlength="32" autocomplete="nickname" placeholder="Your name" />
+      <label class="chk"><input type="checkbox" id="cocOk" /> I agree to the code of conduct</label>
+      <div class="row"><button id="cocGo" class="primary" disabled>Join</button><button id="cocCancel" class="ghost">Stay solo</button></div>
+    </div>
+  </div>
   <div id="tooltip" class="tooltip" hidden></div>
 
   <footer class="bottom">

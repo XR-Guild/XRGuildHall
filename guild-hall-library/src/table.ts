@@ -68,24 +68,7 @@ export function buildTable(m: Mats, font: { display: string; body: string; mono:
   }
   const col = new THREE.Mesh(new THREE.CylinderGeometry(1.64, 1.64, 1.2, 24), new THREE.MeshBasicMaterial()); col.position.y = 0.6; colliders.add(col);
 
-  // ---------- guild benches ----------
-  for (let b = 0; b < 3; b++) {
-    const a0 = (b / 3) * Math.PI * 2 + Math.PI / 2 + 0.475, len = Math.PI * 2 / 3 - 0.95;
-    const sh = new THREE.Shape();
-    sh.absarc(0, 0, 3.4, a0, a0 + len, false); sh.absarc(0, 0, 2.95, a0 + len, a0, true);
-    const seat = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.36, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2, curveSegments: 48 }), m.walnut);
-    seat.rotation.x = -Math.PI / 2; seat.position.y = 0.06; group.add(seat);
-    const csh = new THREE.Shape(); csh.absarc(0, 0, 3.37, a0 + 0.03, a0 + len - 0.03, false); csh.absarc(0, 0, 2.98, a0 + len - 0.03, a0 + 0.03, true);
-    const cushion = new THREE.Mesh(new THREE.ExtrudeGeometry(csh, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3, curveSegments: 48 }), m.velvet);
-    cushion.rotation.x = -Math.PI / 2; cushion.position.y = 0.44; group.add(cushion);
-    const trim = new THREE.Mesh(new THREE.TorusGeometry(3.42, 0.015, 6, 64, len), m.gilt);
-    trim.rotation.set(-Math.PI / 2, 0, a0); trim.position.y = 0.3; group.add(trim);
-    for (let k = 0; k < 3; k++) {
-      const aa = a0 + len * (0.17 + k * 0.33);
-      const bc = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1, 1.1), new THREE.MeshBasicMaterial());
-      bc.position.set(Math.cos(aa) * 3.17, 0.5, -Math.sin(aa) * 3.17); bc.rotation.y = aa; colliders.add(bc);
-    }
-  }
+  // (the old curved benches are replaced by the seating presets in seating.ts)
 
   // ---------- devices on plinths ----------
   const devices: Device[] = [];

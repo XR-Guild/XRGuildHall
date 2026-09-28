@@ -14,7 +14,7 @@ export const store = {
     emit();
   },
   // requests from the world to the 2D UI
-  openTab: null as null | ((tab: 'library' | 'timeline' | 'ask' | 'news' | 'reading', opts?: { cat?: string; query?: string; era?: number | null; id?: string }) => void),
+  openTab: null as null | ((tab: 'welcome' | 'library' | 'timeline' | 'ask' | 'news' | 'reading', opts?: { cat?: string; query?: string; era?: number | null; id?: string }) => void),
   showCard: null as null | ((html: string) => void),
 };
 export function emit() { subs.forEach(f => f()); }

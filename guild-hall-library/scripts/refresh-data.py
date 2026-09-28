@@ -4,6 +4,7 @@
 
 - src/data/library.json   from https://library.xrguild.org (GitBook llms.txt + each item's .md page)
 - src/data/timeline.json  from https://www.xrguild.org/api/timeline (the public feed behind /timeline)
+- src/data/events.json    from https://www.xrguild.org/api/calendar/events (the public feed behind /calendar)
 
 Only public fields are kept. Contributor keys and feedback counts from the timeline are dropped.
 """
@@ -58,5 +59,12 @@ def timeline():
     json.dump(dict(fetched=TODAY, source='https://www.xrguild.org/timeline', entries=out), open('src/data/timeline.json', 'w'), ensure_ascii=False, separators=(',', ':'))
     print('timeline:', len(out), 'entries')
 
+def events():
+    d = json.loads(get('https://www.xrguild.org/api/calendar/events'))
+    keep = ('id', 'title', 'start', 'end', 'allDay', 'location', 'description', 'eventUrl')
+    out = [{k: e.get(k) for k in keep} for e in d.get('events', [])]
+    json.dump(dict(fetched=TODAY, source='https://www.xrguild.org/calendar', events=out), open('src/data/events.json', 'w'), ensure_ascii=False, separators=(',', ':'))
+    print('events:', len(out), 'upcoming')
+
 if __name__ == '__main__':
-    library(); timeline()
+    library(); timeline(); events()

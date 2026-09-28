@@ -1,130 +1,122 @@
-# Guild Hall Library · pilot build
+# XR Guild Hall · Guild Hall + Library (v2, multiplayer-ready)
 
-An immersive WebXR rotunda for the XR Guild: the main hall with the Connect table, the Library apse, and the garden with its reflecting pool under an aurora sky. It runs in any modern browser (desktop, phone, and Quest/Pico/other WebXR headsets) with no install.
+An immersive WebXR home for the XR Guild. It has two chambers joined by an open labradorite colonnade, set in a garden under an aurora sky. It runs in any modern browser (desktop, phone, Quest, Pico, and other WebXR headsets) with no install, and it is ready to publish to VIVERSE.
 
-Built with Meta's open-source **Immersive Web SDK** (`@iwsdk/core`, MIT) on three.js. Pilot build, September 2026.
+Built with Meta's open-source **Immersive Web SDK** (`@iwsdk/core`, MIT) on three.js. September 2026.
 
-## What's inside
+![The Guild Hall with the stage and theater seating](docs/images/v2-01-hall-stage.jpg)
+
+## The site
+
+Evo's sketch, as built:
+
+- **Guild Hall:** the west 12-gon.
+- **Library:** the north-east 12-gon.
+- **Colonnade:** an S-curved teal path lined with labradorite columns, open to the garden on both sides.
+- **Reflecting pool:** a diagonal pool in the garden to the south.
 
 | Space | What you can do |
 |---|---|
-| **Main hall** | 12-sided rotunda: labradorite columns with lily capitals, Nouveau tracery windows, walnut bookcases, a painted dome (Past · Present · Future) with a glass oculus, and the frieze *Past · More Human / Present · More Connected / Future · More Real*. |
-| **Connect table** | Labradorite, walnut and gilt table with a glowing era ring. Six period devices (1838 stereoscope to 2023 AI glasses) sit on plinths. In VR you can pick them up; they return to their plinth when you let go. An illustrative model of the **Meta VR Glasses** floats in the hologram with its spec callouts. |
-| **News easel** | Meta Connect 2026 briefing: sourced specs, discrepancies flagged, what Meta hasn't disclosed, and questions for builders, ethics, and business. |
-| **Timeline easel** | The XR Guild's community **Timeline of XR** (209 entries, 1800s–2026): browse by decade and category, open an entry, follow related entries. |
-| **Library apse** | Search the 225 works in [library.xrguild.org](https://library.xrguild.org) by category and topic, open an entry, and save it to a reading list. Nine crystal lanterns each open one library category. |
-| **Garden** | Reflecting pool, cypress rows, lanterns, flower beds, marble benches, and a white colonnade at the far end. |
-
-The 2D guide (desktop and phone) mirrors all of it: **Connect news**, **Library** search with filters, **Timeline** with a decade spine, **Ask** (library-grounded answers), and **Reading list**.
-
-## Screenshots
+| **Guild Hall** | Arrive by the **welcome desk** inside the east door. Its main action is **Join the Guild**: buttons for xrguild.org, Join, Events, Mentorship and Principles, plus a QR code for xrguild.org/join. Next to it, the **notice board** shows upcoming Guild events (a snapshot of xrguild.org/calendar) and a Meta Connect 2026 poster. To the north, a round **walnut stage with gilt detailing** holds up to 5 people, and it has gentle steps on every side. Behind it, a banner carries the Guild's mission line and **xrguild.org**. The walls are pointed Gothic arches with **clear glass and gilt Art Nouveau tree tracery**, set between labradorite columns. |
+| **Seating** | Choose **theater rows** or **in the round** (110 seats each), or **cabaret tables** (108 seats). Click or select a chair to sit, and walk away to stand. |
+| **Library** | The **Library guide lives here only.** Three bookcases hold the panels built into their shelves: **Connect news**, **Library search** (225 works from library.xrguild.org), and the **Timeline of XR** (209 entries). The shelves are only partly filled with books, which leaves room for real ones. At the centre is the **Connect table**: device lineage, pick-up period devices, and the illustrative Meta VR Glasses hologram. Nine category lanterns stand around it. Seating: **round table**, **reading circle**, or **seminar**, 15 seats each. |
+| **Colonnade and garden** | The walk between the chambers. The garden has branched **maples** in crimson, amber and green, beds of flowers in many colours, the reflecting pool with benches at each end, and Evo's white colonnade model as a garden folly. |
+| **People** | Presence, chat, VRM avatars, and spatial voice are built in. See [`MULTIPLAYER.md`](MULTIPLAYER.md). With no server configured, **Preview a crowd** simulates 60 visitors offline. |
 
 | | |
 |---|---|
-| ![Main hall](docs/images/03-main-hall.jpg) | ![Rotunda from the reflecting pool](docs/images/09-rotunda-from-pool.jpg) |
-| Main hall: labradorite columns, painted dome, the Connect table | The rotunda seen across the reflecting pool under the aurora |
-| ![Connect table](docs/images/04-connect-table-glasses.jpg) | ![News easel](docs/images/05-news-easel.jpg) |
-| Connect table: device lineage and the illustrative VR Glasses hologram | News easel: sourced Meta VR Glasses specs, with conflicting figures flagged |
-| ![Timeline easel](docs/images/06-timeline-easel.jpg) | ![Library apse](docs/images/07-library-apse.jpg) |
-| Timeline easel: 209 XR Guild timeline entries by decade | Library apse: search 225 works from library.xrguild.org |
-| ![Timeline tab](docs/images/01-hall-timeline-tab.jpg) | ![Garden colonnade](docs/images/08-reflecting-pool.jpg) |
-| 2D guide, Timeline tab with the decade spine | Reflecting pool and colonnade |
+| ![Welcome desk and notice board](docs/images/v2-02-welcome-desk.jpg) | ![Library](docs/images/v2-05-library.jpg) |
+| Welcome desk with the Join panel and QR code, and the notice board | Library: panels built into the bookcases, round-table seating around the Connect table |
+| ![Colonnade](docs/images/v2-04-colonnade.jpg) | ![Garden](docs/images/v2-07-garden-pool.jpg) |
+| The labradorite colonnade to the Library | Reflecting pool, maples, and flower beds |
+| ![Cabaret seating](docs/images/v2-03-cabaret.jpg) | ![Simulated crowd](docs/images/v2-10-crowd.jpg) |
+| Cabaret preset | 60 simulated visitors (mannequins stand in for people without a VRM) |
+| ![Library shelves](docs/images/v2-06-library-shelves.jpg) | ![Maple](docs/images/v2-08-maples.jpg) |
+| News, Library search and Timeline shelves | A branched maple outside the Library |
+
+The pilot (v1) screenshots are kept in `docs/images/pilot-v1/`.
 
 ## Run it
 
 ```bash
 cd guild-hall-library
 npm install
-npm run dev          # http://localhost:5173 , IWER emulates a headset in desktop Chrome
+npm run dev          # http://localhost:5173
 npm run build        # → dist/  (static site, relative paths)
 npm run preview      # serve dist/ locally
+# try the crowd: http://localhost:4173/?sim=100
 ```
 
-Needs Node 20.19+. `dist/` is committed prebuilt, so you can also host it without installing anything.
+Needs Node 20.19+.
 
-## Publish to a short URL
+### Configuration (all optional)
 
-`dist/` is a plain static site. WebXR needs **HTTPS**.
+| Variable | What it turns on |
+|---|---|
+| `VITE_VIVERSE_APP_ID` | VIVERSE login, the visitor's own VRM avatar, and shared rooms through the VIVERSE Play SDK |
+| `VITE_LIVEKIT_TOKEN_URL` | Spatial voice through LiveKit Cloud. Deploy [`proxy/livekit-token-worker.js`](proxy/livekit-token-worker.js) first. Off VIVERSE, this also carries presence and chat. |
+| `VITE_ASK_PROXY` | Inline answers from the library's GitBook assistant ([`proxy/ask-worker.js`](proxy/ask-worker.js)) |
 
-- **GitHub Pages** – Pages can only serve a repo root or `/docs` from a branch, so use the small Action in [`DEPLOY.md`](DEPLOY.md). Once a maintainer adds it, it publishes this folder's `dist/`.
-- **Custom short domain** (for example `hall.xrguild.org`): add a `CNAME` record pointing to the Pages or Netlify host, and put the domain in the host's settings.
-- **Netlify / Vercel / Cloudflare Pages** – drag and drop `dist/`, or connect the repo with build command `npm run build` and output `guild-hall-library/dist`.
-
-## Viverse and other platforms
-
-- **Viverse / RP1 (zip upload):** zip the *contents* of `dist/` (index.html at the zip root) and upload. The build uses relative paths, so it runs from any sub-path.
-- **Pico / Meta developer portals:** the same `dist/` zip.
-- The two uploaded designs are plain glTF (`public/models/*.glb`), so any engine can reuse them.
+URL flags: `?sim=N` runs a simulated crowd of N (up to 300) that never leaves the browser.
 
 ## Controls and comfort
 
-- **Desktop:** drag to look, WASD or arrows to walk, Q/E to turn, double-click the floor to move there, click objects and panels.
-- **Phone:** drag to look, double-tap the floor to move, tap objects. The **Walk to** buttons jump to each space.
-- **VR:** thumbstick teleport and **45° snap turn** by default. Point and trigger (or pinch) at panels. Squeeze or pinch to pick up devices.
-- **Comfort rating: Comfortable.** No forced camera motion. Walk-to jumps fade instead of gliding. The Comfort menu lets you reduce motion, stop the aurora, and turn off mirror reflections. `prefers-reduced-motion` is honored.
+- **Desktop:** drag to look, WASD or arrows to walk, Q/E to turn, double-click the floor to move there, click objects, panels, and chairs.
+- **Phone:** drag to look, double-tap the floor to move, tap objects. The **Walk to** buttons jump between places.
+- **VR:** thumbstick teleport and **45° snap turn** by default. Point and trigger (or pinch) at panels and chairs. Squeeze or pinch to pick up devices.
+- **Comfort rating: Comfortable.** No forced camera motion, and walk-to jumps fade instead of gliding. The Comfort menu can reduce motion, stop the aurora, and turn off mirror reflections.
 
 ## XR Guild principles checklist
 
-- [x] Teleport + snap turn default; smooth slide only on request
+- [x] Teleport and snap turn by default
 - [x] No strobing; ambient animation can be stopped
-- [x] Every interactive panel works with a single trigger, pinch, click, or tap. Text sized for 1 m+ reading.
-- [x] **Privacy:** no accounts, analytics, cookies, or tracking. Position, gaze, and hand data never leave the device. The reading list is stored only in the viewer's browser.
-- [x] **Ask** only runs when the visitor presses Ask, and says where the answer comes from
-- [x] Open formats (glTF, WebXR, plain JSON data), reachable by URL
-- [x] News is sourced line by line, with conflicting figures flagged. The glasses model is labeled *illustrative, not an official render*.
-- [ ] Seated-reach audit **in headset** by a second volunteer (definition of done)
-- [ ] Gaze-dwell selection for users without controllers or hand tracking (next task)
+- [x] Every panel and chair works with a single trigger, pinch, click, or tap
+- [x] **Consent before connecting:** a code of conduct, a chosen display name, and the **mic off by default**
+- [x] **Mute and Block** for every person, plus a personal-space bubble (0.6 m)
+- [x] Only name, avatar, position, zone, and seat are shared. **No gaze, hand, or device data.** Solo mode has no accounts, analytics, or tracking.
+- [x] Links from the world open only when you press them; in VR the panels show a QR code instead
+- [x] News is sourced line by line; the glasses model is labeled *illustrative*
+- [ ] Seated-reach audit **in headset** by a second volunteer
+- [ ] Moderator and reporting route for public events (see `MULTIPLAYER.md`)
 
 ## How it's built
 
 ```
 guild-hall-library/
-├── index.html            2D shell: loading screen, guide drawer, tours
+├── index.html              2D shell: loading, zone-aware guide, social dock, code of conduct
 ├── src/
-│   ├── main.ts           boots the IWSDK World, builds the scene, per-frame system
-│   ├── rotunda.ts        walls, windows, columns, bookcases, frieze, dome, chandelier
-│   ├── table.ts          the Connect table, device lineage, VR Glasses hologram
-│   ├── library3d.ts      Library apse (encloses the Tripo library model) + category lanterns
-│   ├── garden.ts         reflecting pool, trees, benches, lanterns, colonnade
-│   ├── sky.ts            aurora + stars, rendered to a cube one face per frame
-│   ├── tex.ts / mats.ts  procedural labradorite, walnut, mosaic, mural, frieze textures
-│   ├── panel.ts          clickable canvas panels (the same code serves mouse, touch, and XR rays)
-│   ├── xrpanels.ts       News, Library, and Timeline panels
-│   ├── interact.ts       one raycast path for mouse, touch, controllers, and hands
-│   ├── ui.ts / style.css the 2D guide
-│   ├── search.ts         library search index
-│   ├── timeline.ts       timeline search and eras
-│   ├── bake.ts           merges static meshes by material (keeps headset draw calls low)
-│   └── data/             library.json, timeline.json, news.ts
-├── public/models/        library.glb (Tripo fantasy library), hall.glb (ornate colonnade)
-├── scripts/refresh-data.py   re-pull library + timeline snapshots
-├── proxy/ask-worker.js   optional Cloudflare Worker for the library's GitBook "ask" endpoint
-└── dist/                 prebuilt static site
+│   ├── main.ts             boots IWSDK, builds the site, per-frame system, zones, sitting
+│   ├── site.ts             site plan: chamber centres, door, stage, desk, pool, colonnade path, zones
+│   ├── chamber.ts          12-sided chamber builder: pointed arches, Nouveau window tracery, labradorite columns,
+│   │                       bookcases with built-in panel openings and sparse books, dome, frieze, chandelier
+│   ├── walk.ts             the labradorite colonnade and teal path
+│   ├── hallfeatures.ts     stage, welcome desk + Join panel + QR, notice board, mission banner
+│   ├── seating.ts          instanced chairs and tables, six presets
+│   ├── table.ts            the Connect table, device lineage, VR Glasses hologram
+│   ├── library3d.ts        Library category lanterns
+│   ├── garden.ts           pool, maples (leaf cards), flower beds, benches, folly
+│   ├── avatars.ts          crowd renderer: instanced mannequins + nearest-N VRM (three-vrm), tags, bubbles
+│   ├── net/                presence core, VIVERSE Play SDK, LiveKit voice/data, simulated crowd
+│   ├── social.ts           social dock, chat, people list, seating toggles, events list
+│   ├── panel.ts / xrpanels.ts / interact.ts / ui.ts   panels and the 2D guide
+│   ├── sky.ts / tex.ts / mats.ts / bake.ts            aurora, procedural materials, static batching
+│   └── data/               library.json, timeline.json, events.json, news.ts
+├── public/models/hall.glb  Evo's white colonnade (garden folly)
+├── models-source/          Evo's fantasy-library GLB (kept, not shipped: see below)
+├── proxy/                  ask-worker.js, livekit-token-worker.js
+└── scripts/refresh-data.py re-pull the library, timeline and events snapshots
 ```
 
-**World as data:** library works, timeline entries, and the news briefing are JSON or TypeScript data files. Update them without touching rendering code. Run `python3 scripts/refresh-data.py` to re-pull the library and timeline.
+**Performance:**
+- With 100 simulated people in view in the hall, a frame measured about 140 draw calls and 0.5 M triangles.
+- The main code is about 1.7 MB (0.5 MB gzipped). Voice (0.55 MB) and VRM (0.14 MB) load only when someone connects.
+- **The fantasy-library GLB (8.4 MB) is no longer loaded.** The Library is now a real chamber, and dropping the model cut the download by about 80%, which matters for 100+ people arriving at once. The file is kept in `models-source/` if the team wants it back, for example as a separate reading-room scene.
 
-**Performance:** static meshes are merged per material, the aurora renders at most one cube face per frame (every other frame in VR), and mirror reflections switch off in VR and on phones. The heavy IWSDK spatial-UI fonts and the Havok physics runtime are stubbed out of the bundle (`src/stubs/`) because this world doesn't use them. JS is about 1.9 MB (520 KB gzipped); the models are about 8.7 MB.
-
-## Ask the Library
-
-- **Self-hosted:** Ask links out to the library's own GitBook assistant. To answer inline, deploy [`proxy/ask-worker.js`](proxy/ask-worker.js), because GitBook's endpoint does not send CORS headers. Then build with `VITE_ASK_PROXY=https://<your-worker>.workers.dev npm run build`, and set `ALLOWED_ORIGINS` in the worker to your domain.
-- **Claude artifact preview:** Ask uses the visitor's own Claude account to answer from the library and timeline snapshots, with citations.
-
-## Open decisions for the team
-
-- **Multiplayer:** this pilot is single-visitor. Presence and voice need a networking layer (see the repo's `needs-decision` issue). Add a code of conduct, mute/block, and moderation before shared voice.
-- **Engine:** this pilot votes for IWSDK/three.js with data-driven content. Port notes for Babylon.js are welcome.
-- **12 pillars as program doorways** (`PROGRAMS.md`): the 12 columns are ready to carry program plaques and portals.
-
-## Punch-list items this pilot covers
-
-Architectural: columns, archways, floors, ceilings (dome). Production spaces: library elements, immersive library research viewer, search → library, tables and benches. Interactive: search → XR releases (Connect news), principles checklist. Content: **XR Timeline**. Gardens: reflecting pool, trees, bench by pool, flowers.
+**Data:** run `python3 scripts/refresh-data.py` to refresh the library, timeline, and events snapshots, then rebuild.
 
 ## Credits
 
-- Design direction, concept art, and the Tripo 3D models: **Evo** (Realitycraft) for the XR Guild
+- Design direction, concept art, sketches, and 3D models: **Evo** (Realitycraft), artist and technologist, for the XR Guild
 - Library data: [XR Guild Library](https://library.xrguild.org) volunteers
-- Timeline data: the XR Guild community [Timeline of XR](https://www.xrguild.org/timeline), inspired by Avi Bar-Zeev's original XR terminology list
-- Connect 2026 news: UploadVR, Road to VR, Engadget, VR.org, Tom's Guide, Hypebeast, Meta (linked line by line in the app)
-- Built with the [Immersive Web SDK](https://github.com/facebook/immersive-web-sdk) (MIT) and [three.js](https://threejs.org) (MIT)
+- Timeline data: the XR Guild community [Timeline of XR](https://www.xrguild.org/timeline)
+- Built with the [Immersive Web SDK](https://github.com/facebook/immersive-web-sdk) (MIT), [three.js](https://threejs.org) (MIT), [three-vrm](https://github.com/pixiv/three-vrm) (MIT), [LiveKit client](https://github.com/livekit/client-sdk-js) (Apache-2.0), and the VIVERSE JS SDK

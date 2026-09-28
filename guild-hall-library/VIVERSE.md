@@ -8,29 +8,36 @@ Viverse Studio asks for a **Thumbnail**, an optional **Trailer**, and optional *
 
 **Title:** XR Guild Hall
 
-**Short description:** A volunteer-built guild hall for the XR community: walk a labradorite rotunda, search the XR Guild ethics library, browse the Timeline of XR, and gather around the Connect table.
+**Short description:** A volunteer-built guild hall for the XR community: meet on the stage, join the Guild at the welcome desk, and walk the labradorite colonnade to a library of XR ethics and history.
 
 **Description:**
-The XR Guild Hall is a browser-native home for the XR Guild, a volunteer-run nonprofit of spatial computing professionals who care about ethical outcomes. Step into a twelve-sided rotunda under a painted Past · Present · Future dome. At the Connect table, trace XR from the 1838 stereoscope to today, and preview the newly announced Meta VR Glasses with sourced specs. In the Library apse you can search 225 works on XR ethics, privacy, safety, and research. The Timeline easel walks 209 community-curated moments in XR history. Outside, a reflecting pool mirrors the aurora.
+The XR Guild Hall is a browser-native home for the XR Guild, a volunteer-run nonprofit of spatial computing professionals who care about ethical outcomes. Arrive in a twelve-sided hall with Gothic arches, gilt Art Nouveau windows, and labradorite columns. Join the Guild at the welcome desk, check upcoming events on the notice board, and gather around the walnut stage. An open labradorite colonnade leads through the garden to the Library. There you can search 225 works on XR ethics, privacy, safety, and research, walk 209 moments on the Timeline of XR, and read the Meta Connect 2026 briefing at the Connect table. Outside, maples and a reflecting pool sit under the aurora.
 
-No accounts, analytics, or tracking. Comfortable: teleport and snap turn by default, no forced camera motion.
+Comfortable: teleport and snap turn by default, no forced camera motion. When you join others, your mic stays off until you turn it on, and you can mute or block anyone.
 
 **Tags:** XR Guild, library, education, ethics, history of VR, timeline, WebXR, art nouveau, community
 
 **Comfort:** Comfortable
 
-**Controls:** Desktop: drag to look, WASD to walk, click objects. Mobile: drag to look, tap. VR: teleport, snap turn, point and trigger or pinch.
+**Controls:** Desktop: drag to look, WASD to walk, click objects and chairs. Mobile: drag to look, tap. VR: teleport, snap turn, point and trigger or pinch.
 
 **Credits:** Design direction and 3D models by Evo (Realitycraft) for the XR Guild. Library data from library.xrguild.org volunteers. Timeline from the XR Guild community Timeline of XR. Built with the Immersive Web SDK and three.js.
 
-## Gallery order
+## Before publishing the multiplayer version
 
-1. 09-rotunda-from-pool
-2. 03-main-hall
-3. 04-connect-table-glasses
-4. 07-library-apse
-5. 06-timeline-easel
-6. 05-news-easel
-7. 08-reflecting-pool
-8. 01-hall-timeline-tab
-9. 02-hall-connect-news
+- [ ] App ID from VIVERSE Studio, set as `VITE_VIVERSE_APP_ID` at build time
+- [ ] Microphone permission requested for the world in VIVERSE Studio (needed for voice)
+- [ ] LiveKit token worker deployed, with the VIVERSE world origin in `ALLOWED_ORIGINS`
+- [ ] New trailer and thumbnail: the current ones show the pilot layout
+
+## Gallery order (v2)
+
+1. v2-01-hall-stage
+2. v2-02-welcome-desk
+3. v2-05-library
+4. v2-04-colonnade
+5. v2-07-garden-pool
+6. v2-06-library-shelves
+7. v2-03-cabaret
+8. v2-08-maples
+9. v2-09-aerial
