@@ -1,10 +1,31 @@
-# XR Guild Hall · Guild Hall + Library (v2, multiplayer-ready)
+# XR Guild Hall · Guild Hall + Library (v3)
 
 An immersive WebXR home for the XR Guild. It has two chambers joined by an open labradorite colonnade, set in a garden under an aurora sky. It runs in any modern browser (desktop, phone, Quest, Pico, and other WebXR headsets) with no install, and it is ready to publish to VIVERSE.
 
 Built with Meta's open-source **Immersive Web SDK** (`@iwsdk/core`, MIT) on three.js. September 2026.
 
-![The Guild Hall with the stage and theater seating](docs/images/v2-01-hall-stage.jpg)
+![The v3 Guild Hall: proscenium benches, stained-glass dome, XR capitals](docs/images/v3-01-hall-benches.jpg)
+
+## What changed in v3 (Sept 28, 2026)
+
+- **Guild Hall at DeeDee Chainey Jones's scale** ("Guild Draft 3" on arrival.space), about 29 m across, built from her design elements:
+  - square dark-marble pillars, a marble wainscot, and dark cherry plank walls;
+  - tall gilt gothic windows with mullions and a four-foil oculus;
+  - a clerestory band of stained-glass roses (placeholder art, ready to swap for commissioned glass);
+  - a stained-glass dome with XR roundels and XR GUILD around the oculus;
+  - a grey-veined marble floor.
+- **XR monogram capitals:** every column (Hall, colonnade, Library) is topped with a shiny gilt monogram in which the X and the R share one stroke.
+- **Wood grain:** every wood surface now uses strong procedural grain with bump relief.
+- **Curved green-velvet benches** for 3 or 4 people, following the curve of the stage, laid out as a proscenium (the default, up to 200 seats). Cabaret tables and an open floor are the other options.
+- **Longer colonnade:** 17 m between the doors, with more columns, so the two rooms' voices stay apart.
+- **Bigger reflecting pool** (18 × 9 m) with Alhambra-style zellige: eight-point stars, with a tiny gold cube for XR at each centre.
+- **Portal sites reserved** behind the Hall, north of the colonnade, and behind the Library. Each has a gravel pad and a dormant labradorite ring.
+
+| | |
+|---|---|
+| ![Dome](docs/images/v3-02-dome.jpg) | ![XR capital](docs/images/v3-03-xr-capital.jpg) |
+| ![Stage and benches](docs/images/v3-04-stage.jpg) | ![Pool tile](docs/images/v3-08-tile.jpg) |
+| ![Colonnade](docs/images/v3-06-colonnade.jpg) | ![Site plan](docs/images/v3-09-plan.jpg) |
 
 ## The site
 

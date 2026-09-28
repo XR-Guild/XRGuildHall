@@ -41,7 +41,7 @@ Chairs are instanced and clickable: click or select a chair to sit, and walk awa
 
 | Room | Presets | Seats |
 |---|---|---|
-| Guild Hall | Theater rows facing the stage · In the round · Cabaret tables | 110 · 110 · 108 |
+| Guild Hall | Proscenium benches (curved, 3–4 per bench) · Cabaret tables · Open floor | 200 · 120 · 0 |
 | Library | Round table (around the Connect table) · Reading circle · Seminar (facing the search shelf) | 15 each |
 
 ## Safety and consent (XR Guild principles)

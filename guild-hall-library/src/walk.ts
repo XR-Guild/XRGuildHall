@@ -41,7 +41,7 @@ export function buildColonnade(m: Mats) {
   }
 
   // columns + lintels
-  const pairs = Math.max(4, Math.round(len / 2.8));
+  const pairs = Math.max(6, Math.round(len / 2.3));
   const capY = 3.3, colOff = W + 0.35;
   const lintel: THREE.Vector3[][] = [[], []];
   const glowTex = T.glow('255,214,150');
@@ -50,9 +50,9 @@ export function buildColonnade(m: Mats) {
     const { p, side, tan } = frame(t);
     [-1, 1].forEach((s, si) => {
       const c = p.clone().addScaledVector(side, s * colOff);
-      const col = labradoriteColumn(m, capY, 0.22); col.position.copy(c); group.add(col);
-      const ab = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.12, 0.85), m.giltSatin); ab.position.set(c.x, capY + 0.92, c.z); ab.rotation.y = Math.atan2(tan.x, tan.z); group.add(ab);
-      lintel[si].push(c.clone().setY(capY + 1.05));
+      const col = labradoriteColumn(m, capY, 0.22); col.position.copy(c); col.rotation.y = Math.atan2(-side.x * s, -side.z * s); group.add(col);
+      
+      lintel[si].push(c.clone().setY(capY + 0.8));
       const cc = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 3, 10), new THREE.MeshBasicMaterial()); cc.position.set(c.x, 1.5, c.z); colliders.add(cc);
     });
     // pointed gilt cross-rib over the path on every other pair
@@ -60,7 +60,7 @@ export function buildColonnade(m: Mats) {
       const rib: THREE.Vector3[] = [];
       for (let k = 0; k <= 20; k++) {
         const u = k / 20, x = (u * 2 - 1) * colOff;
-        const y = capY + 1.05 + (1 - Math.pow(Math.abs(u * 2 - 1), 1.35)) * 1.25; // gently pointed
+        const y = capY + 0.8 + (1 - Math.pow(Math.abs(u * 2 - 1), 1.35)) * 1.25; // gently pointed
         rib.push(p.clone().addScaledVector(side, x).setY(y));
       }
       group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rib), 40, 0.045, 8), m.gilt));
@@ -78,6 +78,6 @@ export function buildColonnade(m: Mats) {
   }
   // two warm lights along the walk (kept few for headset budgets)
   const lights: THREE.PointLight[] = [];
-  for (const t of [0.3, 0.72]) { const l = new THREE.PointLight(0xffc88a, 16, 9, 2); l.position.copy(PATH_CURVE.getPointAt(t)).setY(3.6); group.add(l); lights.push(l); }
+  for (const t of [0.2, 0.5, 0.8]) { const l = new THREE.PointLight(0xffc88a, 16, 9, 2); l.position.copy(PATH_CURVE.getPointAt(t)).setY(3.6); group.add(l); lights.push(l); }
   return { group, colliders, glows, lights };
 }

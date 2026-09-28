@@ -38,7 +38,7 @@ export function initSocial(h: SocialHooks) {
     el.addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (!b || b.disabled) return; h.seating.setPreset(zone, b.dataset.id!); });
     return draw;
   };
-  const drawHall = seg($('#seatHall'), 'hall', HALL_PRESETS, 'Guild Hall · up to 110 seats');
+  const drawHall = seg($('#seatHall'), 'hall', HALL_PRESETS, 'Guild Hall seating');
   const drawLib = seg($('#seatLib'), 'library', LIB_PRESETS, 'Library · 15 seats');
   const drawSeats = () => { drawHall(); drawLib(); $('#seatNote').textContent = P.connected && !P.isHost() ? 'The host sets the seating layout. Click or select any free chair to sit; walk away to stand.' : 'Click or select any chair to sit. Walk away to stand.'; };
   drawSeats();

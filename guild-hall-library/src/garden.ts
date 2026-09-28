@@ -3,7 +3,8 @@ import { Reflector } from 'three/addons/objects/Reflector.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Mats } from './mats';
 import * as T from './tex';
-import { HALL, LIB, POOL, BIG_TREE, BENCHES, V } from './site';
+import { HALL, LIB, POOL, BIG_TREE, BENCHES, PORTAL_SITES, poolWorld, V } from './site';
+import { zellige, zelligeBorder } from './tex2';
 
 export interface GardenBuilt {
   group: THREE.Group;
@@ -30,39 +31,51 @@ export function buildGarden(m: Mats, skyCube: THREE.Texture, desktopReflections:
 
   // ground
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), m.grass); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; group.add(ground);
-  box(150, 0.2, 150, 11, -0.12, 2);
+  box(220, 0.2, 220, 12, -0.12, 2);
   // gravel aprons around both chambers
   for (const [c, a] of [[HALL.center, HALL.apothem], [LIB.center, LIB.apothem]] as const) {
     const ring = new THREE.Mesh(new THREE.RingGeometry(a + 0.3, a + 2.6, 96), m.gravel); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, -0.006, c.z); group.add(ring);
   }
 
-  // ---------- diagonal reflecting pool ----------
+  // ---------- reflecting pool with Moorish zellige (Alhambra-style stars, tiny gold cubes for XR) ----------
   const pool = new THREE.Group(); pool.position.copy(POOL.center); pool.rotation.y = POOL.rotY; group.add(pool);
-  const pw = POOL.width, pl = POOL.length, cop = 0.4;
+  const pw = POOL.width, pl = POOL.length, cop = 1.4, TILE = 1.2, top = 0.22;
+  const zt = zellige(512, 4);
+  const tileMat = (w: number, d: number) => { const t = zt.clone(); t.repeat.set(w / TILE, d / TILE); t.needsUpdate = true; return new THREE.MeshPhysicalMaterial({ map: t, roughness: 0.18, clearcoat: 0.8, clearcoatRoughness: 0.1, envMapIntensity: 0.9 }); };
+  const zb = zelligeBorder(1024, 128);
   for (const [w, d, x, z] of [[pw + cop * 2, cop, 0, -pl / 2 - cop / 2], [pw + cop * 2, cop, 0, pl / 2 + cop / 2], [cop, pl, -pw / 2 - cop / 2, 0], [cop, pl, pw / 2 + cop / 2, 0]]) {
-    const c = new THREE.Mesh(new THREE.BoxGeometry(w, 0.16, d), m.marble); c.position.set(x, 0.08, z); pool.add(c);
+    const c = new THREE.Mesh(new THREE.BoxGeometry(w, top, d), tileMat(w, d)); c.position.set(x, top / 2, z); pool.add(c);
   }
-  const apron = new THREE.Mesh(new THREE.PlaneGeometry(pw + 5, pl + 5), m.gravel); apron.rotation.x = -Math.PI / 2; apron.position.y = -0.004; pool.add(apron);
-  const basin = new THREE.Mesh(new THREE.BoxGeometry(pw, 0.4, pl), new THREE.MeshStandardMaterial({ color: 0x050a0c, roughness: 1 })); basin.position.y = -0.2; pool.add(basin);
-  box(pw + 1, 2.2, pl + 1, POOL.center.x, 1.0, POOL.center.z, POOL.rotY);
-  const wn = T.waterNormal(256); wn.repeat.set(3, 12);
+  // marble curb outside the tile and gilt edge at the water
+  for (const [w, d, x, z] of [[pw + cop * 2 + 0.5, 0.25, 0, -pl / 2 - cop - 0.12], [pw + cop * 2 + 0.5, 0.25, 0, pl / 2 + cop + 0.12], [0.25, pl + cop * 2, -pw / 2 - cop - 0.12, 0], [0.25, pl + cop * 2, pw / 2 + cop + 0.12, 0]]) {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(w, top + 0.06, d), m.marble); c.position.set(x, (top + 0.06) / 2, z); pool.add(c);
+  }
+  for (const [len, x, z, ry] of [[pw, 0, -pl / 2, 0], [pw, 0, pl / 2, Math.PI], [pl, -pw / 2, 0, Math.PI / 2], [pl, pw / 2, 0, -Math.PI / 2]] as const) {
+    const t = zb.clone(); t.repeat.set(len / 1.0, 1); t.needsUpdate = true;
+    const strip = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.55), new THREE.MeshStandardMaterial({ map: t, roughness: 0.25 }));
+    strip.position.set(x, top - 0.275, z); strip.rotation.y = ry; pool.add(strip);
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(len + 0.04, 0.04, 0.06), m.gilt); edge.position.set(x, top + 0.005, z); edge.rotation.y = ry; pool.add(edge);
+  }
+  const apron = new THREE.Mesh(new THREE.PlaneGeometry(pw + cop * 2 + 4, pl + cop * 2 + 4), m.gravel); apron.rotation.x = -Math.PI / 2; apron.position.y = -0.004; pool.add(apron);
+  const bed = new THREE.Mesh(new THREE.PlaneGeometry(pw, pl), tileMat(pw, pl)); bed.rotation.x = -Math.PI / 2; bed.position.y = -0.33; pool.add(bed);
+  box(pw + cop * 2, 2.2, pl + cop * 2, POOL.center.x, 1.0, POOL.center.z, POOL.rotY);
+  const wn = T.waterNormal(256); wn.repeat.set(4, 8);
   const water = new THREE.Mesh(new THREE.PlaneGeometry(pw, pl), new THREE.MeshPhysicalMaterial({
-    color: 0x02080a, roughness: 0.03, metalness: 0, envMap: skyCube, envMapIntensity: 1.6, normalMap: wn, normalScale: new THREE.Vector2(0.12, 0.12), clearcoat: 1, clearcoatRoughness: 0.02,
+    color: 0x0a2a33, roughness: 0.03, metalness: 0, envMap: skyCube, envMapIntensity: 1.4, normalMap: wn, normalScale: new THREE.Vector2(0.12, 0.12), clearcoat: 1, clearcoatRoughness: 0.02, transparent: true, opacity: 0.72,
   }));
-  water.rotation.x = -Math.PI / 2; water.position.y = 0.06; water.userData.keep = true; pool.add(water);
+  water.rotation.x = -Math.PI / 2; water.position.y = 0.1; water.userData.keep = true; water.renderOrder = 3; pool.add(water);
   let waterReflector: Reflector | null = null;
   if (desktopReflections) {
     waterReflector = new Reflector(new THREE.PlaneGeometry(pw, pl), { textureWidth: 1024, textureHeight: 1024, color: 0x8a9aa0, clipBias: 0.003 });
-    waterReflector.userData.keep = true; waterReflector.rotation.x = -Math.PI / 2; waterReflector.position.y = 0.055; pool.add(waterReflector);
-    const wm = water.material as THREE.MeshPhysicalMaterial; wm.transparent = true; wm.opacity = 0.45; wm.depthWrite = false; water.renderOrder = 3;
+    waterReflector.userData.keep = true; waterReflector.rotation.x = -Math.PI / 2; waterReflector.position.y = 0.095; pool.add(waterReflector);
+    const wm = water.material as THREE.MeshPhysicalMaterial; wm.opacity = 0.45; wm.depthWrite = false;
   }
-  const poolWorld = (x: number, z: number) => new THREE.Vector3(x, 0, z).applyAxisAngle(new THREE.Vector3(0, 1, 0), POOL.rotY).add(POOL.center);
   const pxz = (x: number, z: number): [number, number] => { const p = poolWorld(x, z); return [p.x, p.z]; };
 
   // lanterns along the pool
   const glowTex = T.glow('255,210,150');
   for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {
-    const p = poolWorld(s * (pw / 2 + 1.1), -pl / 2 + 2 + i * ((pl - 4) / 3));
+    const p = poolWorld(s * (pw / 2 + cop + 0.9), -pl / 2 + 2 + i * ((pl - 4) / 3));
     const l = new THREE.Group(); l.position.copy(p);
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 1.3, 10), m.blackMetal); post.position.y = 0.65; l.add(post);
     const cap = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.12, 12), m.giltSatin); cap.position.y = 1.62; l.add(cap);
@@ -88,34 +101,41 @@ export function buildGarden(m: Mats, skyCube: THREE.Texture, desktopReflections:
   const cyGeo = new THREE.LatheGeometry([[0, 0], [0.45, 0.4], [0.7, 1.6], [0.65, 3.2], [0.4, 4.6], [0.08, 5.6], [0, 5.7]].map(([r, y]) => new THREE.Vector2(r, y)), 14);
   const cyMat = new THREE.MeshStandardMaterial({ map: T.grass(256), color: 0x4f7552, roughness: 0.95 });
   const cyPts: [number, number, number][] = [];
-  for (let i = 0; i < 9; i++) { const a = Math.PI * (0.95 + i * 0.13); cyPts.push([Math.sin(a) * 14.5, -Math.cos(a) * 14.5, 1.2]); } // west arc behind the hall
-  for (let i = 0; i < 7; i++) { const a = Math.PI * (-0.2 + i * 0.12); cyPts.push([LIB.center.x + Math.sin(a) * 12, LIB.center.z - Math.cos(a) * 12, 1.1]); } // north/east of the library
+  for (let i = 0; i < 9; i++) { const a = Math.PI * (0.95 + i * 0.13); cyPts.push([Math.sin(a) * (HALL.apothem + 8), -Math.cos(a) * (HALL.apothem + 8), 1.4]); } // west arc behind the hall
+  for (let i = 0; i < 7; i++) { const a = Math.PI * (-0.2 + i * 0.12); cyPts.push([LIB.center.x + Math.sin(a) * (LIB.apothem + 6), LIB.center.z - Math.cos(a) * (LIB.apothem + 6), 1.1]); } // north/east of the library
   const cy = new THREE.InstancedMesh(cyGeo, cyMat, cyPts.length);
   cyPts.forEach(([x, z, s], i) => { mtx.compose(V(x, 0, z), Q.setFromEuler(E.set(0, T.rand() * 6, 0)), V(s, s * (0.9 + T.rand() * 0.3), s)); cy.setMatrixAt(i, mtx); box(1.2, 3, 1.2, x, 1.5, z); });
   group.add(cy);
 
   // ---------- branched maples ----------
   const maples = buildMaples(m, [
-    [BIG_TREE.x, BIG_TREE.z, 1.4], [-13, 11, 1.0], [11, -13, 0.95], [37, -19, 1.05], [-5, -16, 0.9], [26, 20, 1.0], [-7, 20, 0.85],
+    [BIG_TREE.x, BIG_TREE.z, 1.5], [-20, 17, 1.1], [12, -20, 1.0], [47, -24, 1.1], [-9, -24, 1.0], [37, 30, 1.1], [-13, 26, 0.95], [6, 24, 1.0],
   ]);
   group.add(maples.group); maples.trunks.forEach(([x, z]) => box(0.7, 3, 0.7, x, 1.5, z));
 
   // ---------- flower beds in many colours ----------
   const beds: [number, number, number, number, string[]][] = [
     // x, z, radiusX, radiusZ, palette
-    [...pxz(pw / 2 + 2.4, -6), 1.6, 1.0, ['#d7263d', '#f46036', '#ffd23f']],
-    [...pxz(-pw / 2 - 2.4, 5), 1.6, 1.0, ['#7b2cbf', '#c77dff', '#f1e9ff']],
-    [...pxz(0, -pl / 2 - 4.4), 2.4, 1.1, ['#ff5d8f', '#ffd6e0', '#ffffff', '#ff97b7']],
-    [...pxz(0, pl / 2 + 4.4), 2.4, 1.1, ['#3a86ff', '#8ecae6', '#ffffff']],
-    [12.2, -8.6, 2.0, 0.9, ['#ffbe0b', '#fb5607', '#ff006e']],
-    [12.5, 4.0, 2.0, 0.9, ['#8338ec', '#3a86ff', '#e0aaff']],
+    [...pxz(pw / 2 + cop + 2.8, -6), 1.6, 1.0, ['#d7263d', '#f46036', '#ffd23f']],
+    [...pxz(-pw / 2 - cop - 2.8, 5), 1.6, 1.0, ['#7b2cbf', '#c77dff', '#f1e9ff']],
+    [...pxz(0, -pl / 2 - cop - 3.4), 2.4, 1.1, ['#ff5d8f', '#ffd6e0', '#ffffff', '#ff97b7']],
+    [...pxz(0, pl / 2 + cop + 3.4), 2.4, 1.1, ['#3a86ff', '#8ecae6', '#ffffff']],
+    [22, -10, 2.4, 1.0, ['#ffbe0b', '#fb5607', '#ff006e']],
+    [19, 4.5, 2.4, 1.0, ['#8338ec', '#3a86ff', '#e0aaff']],
     [LIB.center.x + 3.5, LIB.center.z + 9.4, 2.4, 1.0, ['#e63946', '#f4a261', '#ffe8a3']],
     [LIB.center.x + 9.6, LIB.center.z + 1.5, 1.2, 2.2, ['#ff70a6', '#ff9770', '#ffd670']],
-    [-3.5, 11.9, 2.6, 1.0, ['#b5179e', '#f72585', '#ffffff']],
-    [-10.8, 4.2, 1.1, 2.4, ['#4361ee', '#4cc9f0', '#f8f9fa']],
-    [-8.5, -8.6, 1.4, 2.2, ['#ffb703', '#fb8500', '#ffffff']],
+    [-5, 18.5, 2.8, 1.1, ['#b5179e', '#f72585', '#ffffff']],
+    [-18.5, 5, 1.2, 2.6, ['#4361ee', '#4cc9f0', '#f8f9fa']],
+    [-13, -13.5, 1.5, 2.4, ['#ffb703', '#fb8500', '#ffffff']],
   ];
   group.add(buildFlowers(beds));
+
+  // ---------- reserved portal sites (future links to other worlds): a gravel pad and a dormant labradorite ring ----------
+  for (const p of PORTAL_SITES) {
+    const pad = new THREE.Mesh(new THREE.CircleGeometry(3.4, 48), m.gravel); pad.rotation.x = -Math.PI / 2; pad.position.set(p.x, -0.003, p.z); group.add(pad);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.12, 10, 64), m.labradoriteDark); ring.rotation.x = Math.PI / 2; ring.position.set(p.x, 0.1, p.z); group.add(ring);
+    const inlay = new THREE.Mesh(new THREE.TorusGeometry(2.62, 0.03, 6, 64), m.gilt); inlay.rotation.x = Math.PI / 2; inlay.position.set(p.x, 0.02, p.z); group.add(inlay);
+  }
 
   // ---------- distant hills + far forest ----------
   group.add(new THREE.Mesh(hillRing(), new THREE.MeshStandardMaterial({ color: 0x0a1411, roughness: 1, side: THREE.DoubleSide })));
@@ -127,7 +147,7 @@ export function buildGarden(m: Mats, skyCube: THREE.Texture, desktopReflections:
   group.add(far);
 
   // boundary (invisible)
-  box(1, 3, 90, -30, 1.5, 3); box(1, 3, 90, 52, 1.5, 3); box(84, 3, 1, 11, 1.5, -40); box(84, 3, 1, 11, 1.5, 46);
+  box(1, 3, 110, -42, 1.5, 3); box(1, 3, 110, 68, 1.5, 3); box(112, 3, 1, 13, 1.5, -46); box(112, 3, 1, 13, 1.5, 52);
 
   // moon + ambient
   const moon = new THREE.DirectionalLight(0xa9c2ff, 0.55); moon.position.set(-30, 40, -20); group.add(moon); lights.push(moon);
@@ -141,9 +161,9 @@ export function buildGarden(m: Mats, skyCube: THREE.Texture, desktopReflections:
     scene.scale.setScalar(9);
     // kept off the drawn plan: south of the Hall, facing north across the lawn
     scene.rotation.y = Math.PI;
-    scene.position.set(0, 0, 24);
+    scene.position.set(0, 0, 33);
     group.add(scene);
-    box(9.5, 3, 1, 0, 1.5, 28.3);
+    box(9.5, 3, 1, 0, 1.5, 37.3);
   };
 
   const update = (t: number, reduced: boolean) => {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as T from './tex';
+import { woodGrain } from './tex2';
 
 export interface Mats {
   labradorite: THREE.MeshPhysicalMaterial;
@@ -25,6 +26,9 @@ export interface Mats {
   hedge: THREE.MeshStandardMaterial;
   leather: THREE.MeshStandardMaterial;
   floorDark: THREE.MeshPhysicalMaterial;
+  cherryWall: THREE.MeshPhysicalMaterial;
+  hallFloor: THREE.MeshPhysicalMaterial;
+  darkMarble: THREE.MeshPhysicalMaterial;
 }
 
 export function makeMats(): Mats {
@@ -42,9 +46,14 @@ export function makeMats(): Mats {
   const gilt = new THREE.MeshStandardMaterial({ color: 0xd4a44c, metalness: 1.0, roughness: 0.22, envMapIntensity: 1.3 });
   const giltSatin = new THREE.MeshStandardMaterial({ color: 0xb98d3e, metalness: 1.0, roughness: 0.38, envMapIntensity: 1.1 });
 
-  const wmap = T.walnut(1024);
-  const walnut = new THREE.MeshPhysicalMaterial({ map: wmap, roughness: 0.42, clearcoat: 0.7, clearcoatRoughness: 0.12, envMapIntensity: 0.9 });
-  const walnutDark = walnut.clone(); walnutDark.color.set(0x8a7a70);
+  // v3: strong, well-textured grain on every wood surface (colour + bump for relief under light)
+  const wg = woodGrain('walnut', 1024, 3);
+  const walnut = new THREE.MeshPhysicalMaterial({ map: wg.map, bumpMap: wg.bump, bumpScale: 1.2, roughness: 0.46, clearcoat: 0.6, clearcoatRoughness: 0.16, envMapIntensity: 0.9 });
+  const walnutDark = walnut.clone(); walnutDark.color.set(0x9a8a80);
+  const cg = woodGrain('cherry', 1024, 6); cg.map.repeat.set(1, 1); cg.bump.repeat.set(1, 1);
+  const cherryWall = new THREE.MeshPhysicalMaterial({ map: cg.map, bumpMap: cg.bump, bumpScale: 1.4, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
+  const hallFloor = new THREE.MeshPhysicalMaterial({ map: T.marble(1024, '#e6e8ec', '#6f7c8c', 3), roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1 });
+  const darkMarble = new THREE.MeshPhysicalMaterial({ map: T.marble(512, '#1f2a36', '#9fb0c2', 1), roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.1 });
 
   const floor = new THREE.MeshPhysicalMaterial({ map: T.mosaicFloor(2048), roughness: 0.2, clearcoat: 1.0, clearcoatRoughness: 0.06, envMapIntensity: 1.0 });
 
@@ -67,5 +76,5 @@ export function makeMats(): Mats {
   const hedge = new THREE.MeshStandardMaterial({ map: T.grass(256), color: 0x6f9a62, roughness: 0.9 });
   const leather = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, metalness: 0.0 });
   const floorDark = new THREE.MeshPhysicalMaterial({ map: T.marble(512, '#1a3a33', '#4f7d70', 6), roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08 });
-  return { floorDark, labradorite, labradoriteDark, gilt, giltSatin, walnut, walnutDark, floor, wall, reveal, stoneExt, marble: marbleMat, glass, velvet, blackMetal, holo, emissiveWarm, emissiveCyan, patina, grass, gravel, hedge, leather };
+  return { cherryWall, hallFloor, darkMarble, floorDark, labradorite, labradoriteDark, gilt, giltSatin, walnut, walnutDark, floor, wall, reveal, stoneExt, marble: marbleMat, glass, velvet, blackMetal, holo, emissiveWarm, emissiveCyan, patina, grass, gravel, hedge, leather };
 }

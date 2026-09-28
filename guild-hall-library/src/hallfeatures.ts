@@ -46,7 +46,7 @@ export function buildStage(m: Mats) {
   // walkable collider: a shallow cone frustum so feet glide up the steps
   const cone = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 0.75, H, 48), new THREE.MeshBasicMaterial()); cone.position.y = H / 2; colliders.add(cone);
   // stage lighting
-  const spot = new THREE.SpotLight(0xfff0d8, 90, 16, 0.52, 0.55, 1.6); spot.position.set(0, 7.2, 4.2); spot.target.position.set(0, 0.4, 0); group.add(spot, spot.target);
+  const spot = new THREE.SpotLight(0xfff0d8, 200, 26, 0.42, 0.55, 1.6); spot.position.set(0, 11.5, 7.5); spot.target.position.set(0, 0.4, 0); group.add(spot, spot.target);
   const glowTex = T.glow('255,236,200');
   const pool = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xfff2d6, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.12 }));
   pool.scale.set(R * 2.6, R * 2.6, 1); pool.position.y = H + 0.6; group.add(pool);

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Mats } from './mats';
 import * as T from './tex';
+import { xrMonogram } from './xrmark';
 
 /** Compass helper in a chamber's local frame: θ=0 north (-z), θ=π/2 east (+x). */
 export const dir = (th: number) => new THREE.Vector3(Math.sin(th), 0, -Math.cos(th));
@@ -142,9 +143,9 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
   const capY = H - 1.6;
   for (let k = 0; k < SIDES; k++) {
     const th = ((k + 0.5) / SIDES) * Math.PI * 2;
-    const col = new THREE.Group(); col.position.copy(dir(th).multiplyScalar(CR - 0.5)); group.add(col);
+    const col = new THREE.Group(); col.position.copy(dir(th).multiplyScalar(CR - 0.5)); col.rotation.y = -th; group.add(col);
     col.add(labradoriteColumn(m, capY, 0.3));
-    const ab = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.14, 1.15), m.giltSatin); ab.position.y = capY + 0.93; ab.rotation.y = -th; col.add(ab);
+    
     const cc = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3, 10), new THREE.MeshBasicMaterial()); cc.position.copy(col.position).setY(1.5); colliders.add(cc);
     if (k % 2 === 0) {
       const inward = dir(th).multiplyScalar(-1);
@@ -234,16 +235,31 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
   return { group, colliders, floor, lights, glows, panelMounts, bannerMounts, domeMat, bayWorld, toWorld, radius: A };
 }
 
+/**
+ * Round labradorite column with a gilt base and the v3 capital: a gilt neck ring, a square
+ * labradorite abacus edged in gilt, and a shiny XR monogram on its front and back faces (local +z / -z).
+ */
 export function labradoriteColumn(m: Mats, capY: number, r = 0.3) {
   const g = new THREE.Group();
   g.add(lathe([[0, 0], [r + 0.25, 0], [r + 0.25, 0.28], [r + 0.2, 0.3], [r + 0.2, 0.36], [r + 0.12, 0.42], [r + 0.16, 0.48], [r + 0.06, 0.56], [r + 0.03, 0.62], [0, 0.62]], m.gilt, 28));
   const shaftH = capY - 0.62;
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(r, r + 0.03, shaftH, 32, 1, true), m.labradoriteDark); shaft.position.y = 0.62 + shaftH / 2; g.add(shaft);
   for (const f of [0.2, 0.82]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(r + 0.015, 0.025, 6, 32), m.gilt); ring.rotation.x = Math.PI / 2; ring.position.y = 0.62 + shaftH * f; g.add(ring); }
-  const cap = lathe([[r, 0], [r + 0.06, 0.12], [r + 0.14, 0.35], [r + 0.26, 0.6], [r + 0.38, 0.78], [r + 0.42, 0.86], [0, 0.86]], m.gilt, 32); cap.position.y = capY; g.add(cap);
-  for (let p = 0; p < 6; p++) {
-    const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 6), m.gilt); leaf.scale.set(0.9, 3.2, 0.45);
-    const a = (p / 6) * Math.PI * 2; leaf.position.set(Math.cos(a) * (r + 0.13), capY + 0.28, Math.sin(a) * (r + 0.13)); leaf.rotation.set(0, -a, 0); leaf.rotateZ(0.5); g.add(leaf);
+  g.add(xrCapital(m, capY, r));
+  return g;
+}
+
+/** Square XR capital that sits on a column or pillar of radius / half-width `r` at height `y`. */
+export function xrCapital(m: Mats, y: number, r: number, faces: 2 | 4 = 2) {
+  const g = new THREE.Group();
+  const neck = lathe([[r, 0], [r + 0.05, 0.05], [r + 0.08, 0.12], [0, 0.12]], m.gilt, 28); neck.position.y = y; g.add(neck);
+  const W = 2 * r + 0.34, H = Math.max(0.62, W * 0.8);
+  const block = new THREE.Mesh(new THREE.BoxGeometry(W, H, W), m.labradoriteDark); block.position.y = y + 0.12 + H / 2; g.add(block);
+  for (const yy of [y + 0.12, y + 0.12 + H]) { const band = new THREE.Mesh(new THREE.BoxGeometry(W + 0.06, 0.05, W + 0.06), m.gilt); band.position.y = yy; g.add(band); }
+  const mh = H * 0.62;
+  for (let k = 0; k < faces; k++) {
+    const a = faces === 2 ? k * Math.PI : k * Math.PI / 2;
+    const mono = xrMonogram(m.gilt, mh); mono.position.set(Math.sin(a) * (W / 2 + 0.035), y + 0.12 + H / 2, Math.cos(a) * (W / 2 + 0.035)); mono.rotation.y = a; mono.scale.z = mh * 0.8; g.add(mono);
   }
   return g;
 }

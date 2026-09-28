@@ -9,6 +9,7 @@ import { makeMats } from './mats';
 import * as T from './tex';
 import { AuroraSky } from './sky';
 import { buildChamber, type BayKind } from './chamber';
+import { buildGrandHall } from './grandhall';
 import { buildColonnade } from './walk';
 import { buildTable, TABLE_TOP } from './table';
 import { buildGarden } from './garden';
@@ -75,8 +76,8 @@ async function main() {
   const { renderer, scene, camera } = world;
   // Register a floor immediately so the player never free-falls while the world loads.
   {
-    const early = new THREE.Mesh(new THREE.BoxGeometry(150, 0.2, 150), new THREE.MeshBasicMaterial());
-    early.position.set(11, -0.1, 2); early.visible = false;
+    const early = new THREE.Mesh(new THREE.BoxGeometry(220, 0.2, 220), new THREE.MeshBasicMaterial());
+    early.position.set(12, -0.1, 2); early.visible = false;
     world.createTransformEntity(early, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
   }
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -95,15 +96,14 @@ async function main() {
 
   await step(0.4, 'Raising the Guild Hall…');
   const mural = T.domeMural();
-  const hallBays: BayKind[] = ['banner', 'window', 'window', 'door', 'window', 'window', 'window', 'window', 'window', 'window', 'window', 'window'];
-  const hall = buildChamber(m, { name: 'GuildHall', center: HALL.center, apothem: HALL.apothem, wallH: HALL.wallH, bays: hallBays, frieze: true, friezeFont: FONTS.display, domeMural: mural, chandelier: 1, fillLights: 3, floorMat: m.floor });
+  const hall = buildGrandHall(m, HALL.center, ['banner', 'window', 'window', 'door', 'window', 'window', 'window', 'window', 'window', 'window', 'window', 'window'], FONTS.display);
   const libBays: BayKind[] = ['window', 'shelf', 'panelShelf', 'panelShelf', 'panelShelf', 'shelf', 'window', 'window', 'shelf', 'door', 'shelf', 'shelf'];
   const libFloor = m.floorDark.clone();
   const lib = buildChamber(m, { name: 'Library', center: LIB.center, apothem: LIB.apothem, wallH: LIB.wallH, bays: libBays, domeMural: mural, chandelier: 0.75, fillLights: 2, floorMat: libFloor, sparseBooks: 0.42 });
   // banner behind the stage
   {
     const mount = hall.bannerMounts.get(0)!;
-    const banner = new THREE.Mesh(new THREE.PlaneGeometry(2.78, 3.8), new THREE.MeshStandardMaterial({ map: bannerTexture(FONTS), emissiveMap: null, roughness: 0.8, emissive: 0x0, envMapIntensity: 0.4 }));
+    const banner = new THREE.Mesh(new THREE.PlaneGeometry(3.95, 5.4), new THREE.MeshStandardMaterial({ map: bannerTexture(FONTS), emissiveMap: null, roughness: 0.8, emissive: 0x0, envMapIntensity: 0.4 }));
     (banner.material as THREE.MeshStandardMaterial).emissiveMap = (banner.material as THREE.MeshStandardMaterial).map; (banner.material as THREE.MeshStandardMaterial).emissive.set(0xffffff); (banner.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.28;
     banner.position.z = 0.03; mount.add(banner);
   }
