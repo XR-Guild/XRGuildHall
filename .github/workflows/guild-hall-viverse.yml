@@ -1,0 +1,34 @@
+# Builds the Guild Hall V3 and attaches the VIVERSE upload zip to the run (Actions → this run → Artifacts).
+# Repo variables (Settings → Secrets and variables → Actions → Variables): VIVERSE_APP_ID, PHOTON_APP_ID,
+# PHOTON_MAX_PLAYERS, ADMIN_MODE, MEDIA_TOKEN_URL. None are secrets.
+# The Photon Voice SDK is not in git; store photon-voice.min.js and photon-voice.wasm base64-encoded in the
+# repo SECRETS PHOTON_SDK_JS_B64 and PHOTON_SDK_WASM_B64 if you want CI zips with voice.
+name: Guild Hall V3 → VIVERSE zip
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['guild-hall-library/**']
+permissions: { contents: read }
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: guild-hall-library } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: guild-hall-library/package-lock.json }
+      - run: npm ci
+      - name: Photon SDK (optional)
+        env: { JS: '${{ secrets.PHOTON_SDK_JS_B64 }}', WASM: '${{ secrets.PHOTON_SDK_WASM_B64 }}' }
+        run: |
+          if [ -n "$JS" ]; then mkdir -p public/photon; echo "$JS" | base64 -d > public/photon/photon-voice.min.js; echo "$WASM" | base64 -d > public/photon/photon-voice.wasm; fi
+      - run: npm run viverse-zip
+        env:
+          VITE_VIVERSE_APP_ID: ${{ vars.VIVERSE_APP_ID }}
+          VITE_PHOTON_APP_ID: ${{ vars.PHOTON_APP_ID }}
+          VITE_PHOTON_MAX_PLAYERS: ${{ vars.PHOTON_MAX_PLAYERS }}
+          VITE_ADMIN_MODE: ${{ vars.ADMIN_MODE }}
+          VITE_MEDIA_TOKEN_URL: ${{ vars.MEDIA_TOKEN_URL }}
+      - uses: actions/upload-artifact@v4
+        with: { name: guild-hall-v3-viverse, path: guild-hall-library/guild-hall-v3-viverse.zip }

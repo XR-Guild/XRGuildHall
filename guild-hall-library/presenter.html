@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Guild Hall presenter</title>
+<meta name="robots" content="noindex" />
+<style>
+  :root { color-scheme: dark; --bg: #07110f; --panel: #0f1f1c; --line: rgba(216,174,90,.35); --gold: #d8ae5a; --text: #e9efe9; --dim: #9fb3ad; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; padding: 16px; }
+  main { width: 100%; max-width: 640px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  h1 { font: 400 30px Georgia, serif; color: #f2d79a; margin: 0 0 6px; }
+  p { color: var(--dim); }
+  label { display: block; margin: 14px 0 4px; }
+  input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--text); font: inherit; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  button { font: inherit; padding: 9px 18px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--text); cursor: pointer; }
+  button.primary { background: var(--gold); color: #1b1407; border-color: var(--gold); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  video { width: 100%; margin-top: 16px; border-radius: 10px; border: 1px solid var(--line); background: #000; aspect-ratio: 16/9; }
+  #status { margin-top: 12px; color: #8fd3c4; min-height: 1.5em; }
+  .fine { font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Share slides to the Guild Hall</h1>
+  <p>Open this page on a laptop or desktop (Chrome, Edge or Firefox). Your shared window appears on the big screen above the stage once a Guild admin sets it to <b>Live: screenshare</b>. Only your screen is sent: no camera, and no microphone. Speak from inside the Hall.</p>
+  <form id="f">
+    <label for="name">Your name</label>
+    <input id="name" maxlength="32" autocomplete="name" placeholder="Shown to admins" />
+    <label for="key">Presenter passphrase</label>
+    <input id="key" type="password" autocomplete="off" maxlength="128" placeholder="From the event organiser" />
+    <div class="row">
+      <button id="go" class="primary">Share a window</button>
+      <button id="stop" type="button" disabled>Stop sharing</button>
+    </div>
+  </form>
+  <div id="status" role="status" aria-live="polite"></div>
+  <video id="preview" muted playsinline autoplay></video>
+  <p class="fine">Tip: share a single window (your slides app in presenter mode), not the whole screen, so notifications stay private. Tick "Share tab audio" to send a video's sound.</p>
+</main>
+<script type="module" src="/src/presenter.ts"></script>
+</body>
+</html>

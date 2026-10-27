@@ -1,0 +1,1 @@
+function e(e,t,n){return new Promise((r,i)=>{if(t())return r();let a=document.createElement(`script`);a.src=e,a.async=!0,a.onload=()=>r(),a.onerror=()=>i(Error(n)),document.head.appendChild(a)})}export{e as t};

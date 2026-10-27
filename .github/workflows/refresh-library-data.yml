@@ -1,0 +1,21 @@
+# Weekly: re-pull the Library (library.xrguild.org), Timeline of XR and events snapshots and open a pull request.
+name: Refresh Guild Library and Timeline data
+on:
+  schedule: [{ cron: '17 15 * * 1' }]
+  workflow_dispatch:
+permissions: { contents: write, pull-requests: write }
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 scripts/refresh-data.py
+        working-directory: guild-hall-library
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          branch: data/refresh
+          title: Refresh Library, Timeline and events snapshots
+          body: Automated weekly refresh from library.xrguild.org and xrguild.org. Review the diff, then merge.
+          commit-message: Refresh Library, Timeline and events snapshots

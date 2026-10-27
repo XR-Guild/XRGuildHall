@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as T from './tex';
+import * as T3 from './tex3';
 import { woodGrain } from './tex2';
 
 export interface Mats {
@@ -52,10 +53,13 @@ export function makeMats(): Mats {
   const walnutDark = walnut.clone(); walnutDark.color.set(0x9a8a80);
   const cg = woodGrain('cherry', 1024, 6); cg.map.repeat.set(1, 1); cg.bump.repeat.set(1, 1);
   const cherryWall = new THREE.MeshPhysicalMaterial({ map: cg.map, bumpMap: cg.bump, bumpScale: 1.4, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
-  const hallFloor = new THREE.MeshPhysicalMaterial({ map: T.marble(1024, '#e6e8ec', '#6f7c8c', 3), roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1 });
+  // V3 (from the Arrival build): a simpler, darker hall floor; the labradorite compass stays at the centre
+  const hallTex = T3.hallFloorV3(1024); hallTex.repeat.set(10, 10);
+  const hallFloor = new THREE.MeshPhysicalMaterial({ map: hallTex, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1 });
   const darkMarble = new THREE.MeshPhysicalMaterial({ map: T.marble(512, '#1f2a36', '#9fb0c2', 1), roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.1 });
 
-  const floor = new THREE.MeshPhysicalMaterial({ map: T.mosaicFloor(2048), roughness: 0.2, clearcoat: 1.0, clearcoatRoughness: 0.06, envMapIntensity: 1.0 });
+  // the hall's centre medallion: a labradorite-and-gold compass (was the v2 mosaic rosette, T.mosaicFloor)
+  const floor = new THREE.MeshPhysicalMaterial({ map: T3.compassDecal(2048), roughness: 0.15, clearcoat: 1.0, clearcoatRoughness: 0.05, envMapIntensity: 1.1 });
 
   const dm = T.wallDamask(512);
   const wall = new THREE.MeshStandardMaterial({ map: dm, roughness: 0.55, metalness: 0.05, envMapIntensity: 0.6 });

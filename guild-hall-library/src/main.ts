@@ -7,6 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { makeMats } from './mats';
 import * as T from './tex';
+import * as T3 from './tex3';
 import { AuroraSky } from './sky';
 import { buildChamber, type BayKind } from './chamber';
 import { buildGrandHall } from './grandhall';
@@ -26,7 +27,14 @@ import { HALL, LIB, STAGE, DESK, SPAWN, POOL, BENCHES, PATH_CURVE, V, zoneOf, ty
 import { Presence } from './net/presence';
 import { SimTransport } from './net/sim';
 import { Avatars } from './avatars';
-import type { LiveKitSession } from './net/livekit';
+import type { PhotonSession } from './net/photon';
+import { CONFIG, loadConfig } from './config';
+import { Room, defaultState } from './room';
+import { initAdmin } from './admin';
+import { MediaScreens } from './media';
+import { makeSkySwitcher, savedSky, type SkyId } from './skies';
+import { buildArrivalAdds } from './arrivaladds';
+import type { Control, RoomState } from './net/types';
 
 const FONTS = {
   display: "'Marcellus SC', Georgia, serif",
@@ -35,11 +43,10 @@ const FONTS = {
 };
 const MODEL_BASE = (window as any).__XRGH_MODELS__ ?? 'models/';
 const MODEL_EXT = (window as any).__XRGH_MODEL_EXT__ ?? '.glb';
-const ENV = (import.meta as any).env ?? {};
 const PARAMS = new URLSearchParams(location.search);
 const SIM = Math.min(300, Math.max(0, parseInt(PARAMS.get('sim') ?? '0', 10) || 0));
-const VIVERSE_APP_ID: string = PARAMS.get('viverseApp') || ENV.VITE_VIVERSE_APP_ID || '';
-const LIVEKIT_TOKEN_URL: string = ENV.VITE_LIVEKIT_TOKEN_URL || '';
+// App IDs and event settings come from src/config.ts (env at build time, guildhall.config.json at run time); see main()
+let VIVERSE_APP_ID = '', PHOTON_APP_ID = '', PHOTON_REGION = 'us';
 
 const loadBar = document.getElementById('loadBar')!;
 const loadMsg = document.getElementById('loadMsg')!;
@@ -59,6 +66,12 @@ async function fontsReady() {
 
 async function main() {
   await step(0.03, 'Opening the doors…');
+  await loadConfig();
+  // ?room= is a private Photon room (e.g. a voice load test): bots there send presence over Photon, which VIVERSE presence can't see
+  VIVERSE_APP_ID = PARAMS.has('room') ? '' : PARAMS.get('viverseApp') || CONFIG.viverseAppId;
+  // the single-file artifact ships without public/photon/, so it always previews with the simulated crowd
+  PHOTON_APP_ID = import.meta.env.MODE === 'single' ? '' : CONFIG.photonAppId;
+  PHOTON_REGION = PARAMS.get('region') || CONFIG.photonRegion;
   await fontsReady();
   const container = document.getElementById('scene')!;
   const xrSupported = !!navigator.xr && await navigator.xr.isSessionSupported('immersive-vr').catch(() => false);
@@ -96,16 +109,25 @@ async function main() {
 
   await step(0.4, 'Raising the Guild Hall…');
   const mural = T.domeMural();
-  const hall = buildGrandHall(m, HALL.center, ['banner', 'window', 'window', 'door', 'window', 'window', 'window', 'window', 'window', 'window', 'window', 'window'], FONTS.display);
+  // V3: bay 0 (behind the stage) and the two bays either side of it are media walls (src/media.ts)
+  const hall = buildGrandHall(m, HALL.center, ['screen', 'screen', 'window', 'door', 'window', 'window', 'window', 'window', 'window', 'window', 'window', 'screen'], FONTS.display);
   const libBays: BayKind[] = ['window', 'shelf', 'panelShelf', 'panelShelf', 'panelShelf', 'shelf', 'window', 'window', 'shelf', 'door', 'shelf', 'shelf'];
-  const libFloor = m.floorDark.clone();
+  // V3 Library floor (from the Arrival build): red marble with flashes of labradorite
+  const libTex = T3.libraryFloorV3(1024); libTex.repeat.set(3, 3);
+  const libFloor = new THREE.MeshPhysicalMaterial({ map: libTex, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.07, envMapIntensity: 1 });
   const lib = buildChamber(m, { name: 'Library', center: LIB.center, apothem: LIB.apothem, wallH: LIB.wallH, bays: libBays, domeMural: mural, chandelier: 0.75, fillLights: 2, floorMat: libFloor, sparseBooks: 0.42 });
-  // banner behind the stage
+  // media screens on the hall's media walls (the stage screen's idle slide carries the mission line that the v3 banner held)
+  let presenceRef: Presence | null = null;
+  const media = new MediaScreens(m, {
+    tokenUrl: CONFIG.media.tokenUrl, room: CONFIG.media.room, logoUrl: 'xrguild-logo.png', fonts: FONTS,
+    identity: () => presenceRef?.self.id ?? Math.random().toString(36).slice(2, 10), name: () => presenceRef?.self.name ?? 'Guest',
+  });
+  media.build(hall.bannerMounts);
+  void bannerTexture;
+  // labradorite-and-gold compass around the Connect table
   {
-    const mount = hall.bannerMounts.get(0)!;
-    const banner = new THREE.Mesh(new THREE.PlaneGeometry(3.95, 5.4), new THREE.MeshStandardMaterial({ map: bannerTexture(FONTS), emissiveMap: null, roughness: 0.8, emissive: 0x0, envMapIntensity: 0.4 }));
-    (banner.material as THREE.MeshStandardMaterial).emissiveMap = (banner.material as THREE.MeshStandardMaterial).map; (banner.material as THREE.MeshStandardMaterial).emissive.set(0xffffff); (banner.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.28;
-    banner.position.z = 0.03; mount.add(banner);
+    const dm = new THREE.MeshPhysicalMaterial({ map: T3.compassDecal(1024, 0.36), alphaTest: 0.5, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05 });
+    const decal = new THREE.Mesh(new THREE.CircleGeometry(3.9, 72).rotateX(-Math.PI / 2), dm); decal.position.copy(LIB.center).setY(0.007); decal.renderOrder = 2; lib.group.attach(decal);
   }
   const colonnade = buildColonnade(m);
   const stage = buildStage(m);
@@ -113,6 +135,7 @@ async function main() {
   table.group.position.copy(LIB.center); table.colliders.position.copy(LIB.center);
   const garden = buildGarden(m, sky.rt.texture, !isMobile);
   const libIn = buildLibraryInterior(m, FONTS);
+  const adds = buildArrivalAdds(m, sky.rt.texture, FONTS, (url: string) => window.open(url, '_blank', 'noopener'), () => !!world.session);
   const seating = buildSeating(m);
 
   const inXR = () => !!world.session;
@@ -140,11 +163,11 @@ async function main() {
   const board = buildEventsBoard(m, FONTS, openLink, () => goTo('library'), inXR);
 
   await step(0.55, 'Gilding the details…');
-  for (const g of [hall.group, lib.group, colonnade.group, stage.group, table.group, garden.group, libIn.group]) bakeStatic(g);
+  for (const g of [hall.group, lib.group, colonnade.group, stage.group, table.group, garden.group, libIn.group, adds.group]) bakeStatic(g);
 
   // ---- IWSDK entities ----
   const addEntity = (o: THREE.Object3D) => world.createTransformEntity(o, { persistent: true });
-  for (const g of [hall.group, lib.group, colonnade.group, stage.group, garden.group, libIn.group, desk.group, board.group, seating.group]) addEntity(g);
+  for (const g of [hall.group, lib.group, colonnade.group, stage.group, garden.group, libIn.group, desk.group, board.group, seating.group, adds.group]) addEntity(g);
   const tableEnt = addEntity(table.group);
   for (const d of table.devices) {
     const e = world.createTransformEntity(d.object, { parent: tableEnt, persistent: true });
@@ -152,7 +175,7 @@ async function main() {
     e.addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveTowardsTarget, returnToOrigin: true, scale: false } as any);
   }
   const colliders = new THREE.Group(); colliders.name = 'Walkable';
-  colliders.add(hall.colliders, lib.colliders, colonnade.colliders, stage.colliders, desk.colliders, table.colliders, garden.colliders);
+  colliders.add(hall.colliders, lib.colliders, colonnade.colliders, stage.colliders, desk.colliders, table.colliders, garden.colliders, adds.colliders);
   colliders.visible = false;
   world.createTransformEntity(colliders, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
 
@@ -178,6 +201,17 @@ async function main() {
   };
   capture(); capture();
   scene.environmentIntensity = 0.9;
+
+  // ---- skies: each visitor picks their own (Comfort menu) ----
+  const skies = makeSkySwitcher({
+    sky, renderer, scene, base: '', recapture: () => { capture(); capture(); },
+    sun: garden.lights[0] as THREE.DirectionalLight, hemi: garden.lights[1] as THREE.HemisphereLight,
+    hallDaylight: hall.lights.find(l => (l as THREE.HemisphereLight).isHemisphereLight) as THREE.HemisphereLight | undefined,
+  });
+  const drawSkySeg = () => document.querySelectorAll<HTMLButtonElement>('#skySeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sky === skies.current)));
+  document.getElementById('skySeg')!.addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b?.dataset.sky) skies.set(b.dataset.sky as SkyId).then(() => { drawSkySeg(); adds.sound.night = skies.isNight(); }); });
+  if (savedSky() !== 'aurora') await skies.set(savedSky());
+  drawSkySeg();
 
   // desktop mirror floors: only the one in your zone renders
   const floorRefls: { zone: Zone; refl: Reflector; mat: THREE.MeshPhysicalMaterial }[] = [];
@@ -206,9 +240,9 @@ async function main() {
   setReflections(true);
 
   // ---- people ----
-  const presence = new Presence('Guest');
+  const presence = new Presence('Guest'); presenceRef = presence;
   const avatars = new Avatars(FONTS); scene.add(avatars.group);
-  let voice: LiveKitSession | null = null;
+  let voice: PhotonSession | null = null;
   let sim: SimTransport | null = null;
 
   // ---- interaction ----
@@ -221,6 +255,7 @@ async function main() {
   inter.addPanel(tlp.panel, 'Timeline of XR');
   inter.addPanel(desk.panel, 'Join the XR Guild');
   inter.addPanel(board.panel, 'Guild notice board');
+  for (const p of adds.panels) inter.addPanel(p.panel, p.label);
   inter.add(desk.plaque, { label: 'Visit xrguild.org', onClick: () => { if (!inXR()) openLink(LINKS.home); } });
   table.devices.forEach(d => inter.add(d.object, { label: 'Lineage · click for details', onClick: () => store.showCard?.(lineageCard(d.index)) }));
   inter.add(table.featured, { label: 'Meta VR Glasses · open the news', onClick: () => store.openTab?.('news') });
@@ -305,47 +340,117 @@ async function main() {
     setReduceMotion: v => { reduced = v; },
     setAurora: v => { sky.animate = v; },
     setReflections: v => { reflectionsWanted = v; setReflections(v); },
-    askProxy: ENV.VITE_ASK_PROXY || undefined,
+    askProxy: import.meta.env.VITE_ASK_PROXY || undefined,
   });
 
-  const social = initSocial({
-    presence, seating,
+  // ---- room settings shared by everyone (seating, audio mode, spotlight, screens): src/room.ts ----
+  let adminKey = '';
+  /** On VIVERSE, room controls ride on Photon events when voice is up: Photon stamps the sender, VIVERSE messages don't. */
+  const canAdmin = () => !presence.connected || (voice ? voice.isHost() : presence.isHost());
+  const sendControl = (c: Control) => { if (voice) voice.sendControl(c); else presence.sendControl(c); };
+  const applyRoom = (st: RoomState, prev: RoomState, by: 'me' | 'remote') => {
+    for (const z of ['hall', 'library'] as const) {
+      if (st.seating[z] === prev.seating[z] && st.v) continue;
+      seating.setPreset(z, st.seating[z]);
+      if (seat && seat.key.startsWith(z + ':') && !seat.key.startsWith(`${z}:${seating.preset[z]}:`)) stand();
+      if (by === 'remote' && st.seating[z] !== prev.seating[z]) social?.sys(`A Guild admin changed the ${z === 'hall' ? 'hall' : 'library'} seating.`);
+    }
+    if (voice) { voice.setAudioMode(st.audio); voice.spotlight = new Set(st.spotlight); }
+    if (by === 'remote' && st.audio !== prev.audio) social?.sys(st.audio === 'spotlight' ? 'Stage spotlight is on: the stage is heard by everyone, and guests can whisper to their neighbours.' : st.audio === 'event' ? 'Large group audio is on: you hear the people nearest you, softer.' : 'Conversation audio is back on.');
+    if (by === 'remote' && st.spotlight.includes(presence.self.id) && !prev.spotlight.includes(presence.self.id)) social?.sys('A Guild admin put you in the spotlight: everyone can hear you. Press Mic to talk.');
+    media.apply(st);
+  };
+  const room = new Room(defaultState(CONFIG.defaults), {
+    canAdmin, connected: () => presence.connected, send: sendControl, apply: applyRoom,
+    onMuteHall: () => { if (voice?.micOn && presence.self.zone === 'hall' && !presence.self.onStage && !room.state.spotlight.includes(presence.self.id)) { voice.setMic(false).then(() => social.drawDock()); social.sys('A Guild admin asked the hall to mute. Your mic is off.'); } },
+  });
+  applyRoom(room.state, defaultState(CONFIG.defaults), 'me');
+
+  const social: ReturnType<typeof initSocial> = initSocial({
+    presence, seating, room, canAdmin,
     canConnect: true,
-    joinLabel: SIM > 0 || VIVERSE_APP_ID || LIVEKIT_TOKEN_URL ? 'Join others' : 'Preview a crowd',
+    joinLabel: SIM > 0 || VIVERSE_APP_ID || PHOTON_APP_ID ? 'Join others' : 'Preview a crowd',
     defaultName: () => presence.self.name !== 'Guest' ? presence.self.name : '',
     voice: () => voice,
     connect: async (name: string) => {
       presence.self.name = name.slice(0, 32) || 'Guest';
-      if (SIM > 0 || !(VIVERSE_APP_ID || LIVEKIT_TOKEN_URL)) {
+      if (SIM > 0 || !(VIVERSE_APP_ID || PHOTON_APP_ID)) {
         // no server configured (e.g. the artifact preview): an offline simulated crowd shows how the room behaves
         sim = new SimTransport(SIM || 60);
         sim.seatProvider = () => (['hall', 'library'] as const).flatMap(z => seating.seats(z).map((s, i) => ({ key: `${z}:${seating.preset[z]}:${i}`, pos: s.pos, rotY: s.rotY })));
         await presence.connect(sim);
         return;
       }
-      const { LiveKitSession, LiveKitTransport } = LIVEKIT_TOKEN_URL ? await import('./net/livekit') : ({} as any);
+      const { PhotonSession, PhotonTransport } = PHOTON_APP_ID ? await import('./net/photon') : ({} as any);
       if (VIVERSE_APP_ID) {
         const { viverseIdentity, ViverseTransport } = await import('./net/viverse');
+        const PEV = (await import('./net/photon')).EV;
         const id = await viverseIdentity(VIVERSE_APP_ID, true);
         if (!id) throw new Error('Taking you to the VIVERSE login…');
         if (!name) presence.self.name = id.name;
         presence.self.avatar = id.vrmUrl;
         avatars.fetchAvatar = url => id.avatarClient.getAvatarFileWithSDK(url);
-        await presence.connect(new ViverseTransport(VIVERSE_APP_ID, id));
-        if (LiveKitSession) { voice = new LiveKitSession(LIVEKIT_TOKEN_URL, 'guild-hall'); voice!.onStatus = () => social.drawDock(); await voice!.connect(presence.self.id, presence.self.name); }
+        await presence.connect(new ViverseTransport(VIVERSE_APP_ID, id, CONFIG.viverseRoomCap));
+        if (PhotonSession) {
+          // presence stays on VIVERSE; a voice problem (e.g. the CCU cap) must not drop people from the room.
+          // Voice joins the Photon room for this world's VIVERSE room (overflow rooms get their own voice room).
+          const vt = presence.transport as InstanceType<typeof ViverseTransport>;
+          const v: PhotonSession = voice = new PhotonSession(PHOTON_APP_ID, vt.voiceRoom, PHOTON_REGION, photonOpts());
+          v.setAudioMode(room.state.audio); v.spotlight = new Set(room.state.spotlight);
+          // room controls over Photon (verified sender); VIVERSE `general` controls are ignored while voice is up
+          v.onEvent = (code, payload, from, fromHost) => { if (code === PEV.ctl && (fromHost || payload?.type === 'hello')) room.receive(payload as Control); void from; };
+          // presence owns the dock status on VIVERSE, so voice drops and recoveries are reported in chat
+          v.onStatus = () => social.drawDock();
+          v.onLink = up => social.sys(up ? 'Voice is back.' : 'Voice dropped. Reconnecting…');
+          try { await v.connect(presence.self.id, presence.self.name); } catch (e: any) { v.disconnect(); if (voice === v) { voice = null; social.sys('Voice is unavailable right now. ' + (e?.message ?? '')); } }
+          // Leave pressed while voice was still joining: the listener below already dropped it, so close this one too
+          if (voice !== v) v.disconnect();
+        }
         return;
       }
-      if (LiveKitSession) {
-        voice = new LiveKitSession(LIVEKIT_TOKEN_URL, PARAMS.get('room') ?? 'guild-hall');
-        voice!.hostKey = PARAMS.get('hostKey') ?? '';
-        await presence.connect(new LiveKitTransport(voice));
+      if (PhotonSession) {
+        voice?.disconnect();
+        voice = new PhotonSession(PHOTON_APP_ID, PARAMS.get('room') ?? 'guild-hall', PHOTON_REGION, photonOpts());
+        voice!.setAudioMode(room.state.audio); voice!.spotlight = new Set(room.state.spotlight);
+        await presence.connect(new PhotonTransport(voice));
       }
     },
   });
-  presence.onControl = c => {
-    if (c.type === 'seating') { seating.setPreset(c.zone, c.preset); if (seat && seat.key.startsWith(c.zone + ':')) stand(); social.sys(`The host changed the ${c.zone === 'hall' ? 'hall' : 'library'} seating.`); }
-    if (c.type === 'muteHall' && voice?.micOn && presence.self.zone === 'hall' && !presence.self.onStage) { voice.setMic(false).then(() => social.drawDock()); social.sys('The host asked the hall to mute. Your mic is off.'); }
+  // Leave only disconnects the presence transport; on VIVERSE the voice session is separate and must not keep the mic live
+  presence.listeners.add(() => { if (!presence.connected && voice) { voice.disconnect(); voice = null; } });
+  // controls from the presence transport: Photon (verified) off VIVERSE, VIVERSE `general` otherwise.
+  // On VIVERSE with voice up, only `hello` is taken from VIVERSE; admin controls come through Photon (see above).
+  presence.onControl = c => { if (presence.transport?.kind === 'viverse' && voice && c.type !== 'hello') return; room.receive(c); };
+  // ask whoever administers the room for the current settings once we're in
+  let wasConnected = false;
+  presence.listeners.add(() => {
+    if (presence.connected && !wasConnected) { wasConnected = true; setTimeout(() => room.hello(), 1500); }
+    if (!presence.connected && wasConnected) { wasConnected = false; }
+  });
+  function photonOpts() { return { maxPlayers: CONFIG.photonMaxPlayers, verified: CONFIG.adminMode === 'verified', adminKey }; }
+  const roleText = () => {
+    if (!presence.connected) return 'You are on your own, so you can try every setting here. Changes are just for you until you join others.';
+    const who = voice?.isHost() ?? presence.isHost();
+    if (CONFIG.adminMode === 'verified') return who ? 'You are signed in as a Guild admin. Changes apply to everyone in this room.' : 'Only Guild admins can change room settings. Sign in with your admin passphrase.';
+    return who ? 'You are the host of this room (the first person in). Changes apply to everyone. Turn on verified admins for public events: docs/ADMIN.md.' : 'The host of this room (the first person in) sets these. You can see the current settings below.';
   };
+  initAdmin({
+    room, presence, canAdmin, role: roleText, liveAvailable: media.liveAvailable,
+    signIn: CONFIG.adminMode === 'verified' && PHOTON_APP_ID ? async (key: string) => {
+      adminKey = key;
+      if (!presence.connected) return 'Passphrase kept for this visit. Press Join others: you will join as an admin if it is right.';
+      // reconnect so Photon re-authenticates with the passphrase (voice drops for a moment)
+      presence.disconnect(); social.drawDock();
+      await social.rejoin();
+      return voice?.isHost() ? 'Signed in as a Guild admin.' : 'That passphrase was not accepted. You are connected as a guest.';
+    } : null,
+  });
+  // stream and garden sound need one user gesture
+  const firstGesture = () => { media.unlockAudio(); adds.sound.night = skies.isNight(); if ((document.getElementById('setAmbient') as HTMLInputElement).checked) adds.sound.start(); };
+  window.addEventListener('pointerdown', firstGesture, { once: true });
+  window.addEventListener('keydown', firstGesture, { once: true });
+  (document.getElementById('setAmbient') as HTMLInputElement).addEventListener('change', e => adds.sound.setEnabled((e.target as HTMLInputElement).checked));
+  (document.getElementById('setStream') as HTMLInputElement).addEventListener('change', e => media.setSound((e.target as HTMLInputElement).checked));
   if (VIVERSE_APP_ID && /viverse/i.test(location.hostname) && !SIM) setTimeout(() => document.getElementById('socJoin')?.click(), 1200);
   if (SIM > 0) setTimeout(() => { social.drawDock(); document.getElementById('socJoin')?.click(); (document.getElementById('cocName') as HTMLInputElement).value = 'You'; }, 800);
 
@@ -384,16 +489,19 @@ async function main() {
           if (time - lastSubs > 0.5) { lastSubs = time; voice.updateSubscriptions({ x: pp.x, z: pp.z, zone: presence.self.zone }, presence.peers, presence.blocked); }
         }
       } else if (avatars.group.children.length) avatars.update(new Map(), pp, camera, delta, time, speaking);
+      media.update(camera, zone === 'hall');
+      adds.update(time, delta, reduced, camera);
       inter.update();
     }
   }
   world.registerSystem(HallSystem);
+  if (PARAMS.get('debug') === 'voice') import('./net/voiceDebug').then(m => m.voiceDebugOverlay(() => voice));
 
   world.setAuthoredPlayerPosition(SPAWN.pos);
   setTimeout(() => world.setAuthoredPlayerPosition(SPAWN.pos), 600);
   await step(1, 'Welcome to the Guild Hall');
   document.getElementById('loading')!.classList.add('done');
-  (window as any).__xrgh = { THREE, world, goTo, setView: (y: number, p: number) => { yaw = y; pitch = p; }, TABLE_TOP, presence, seating, sitAt, zone: () => zone };
+  (window as any).__xrgh = { THREE, world, voice: () => voice, goTo, room, media, skies, adds, setView: (y: number, p: number) => { yaw = y; pitch = p; }, TABLE_TOP, presence, seating, sitAt, zone: () => zone };
 }
 
 main().catch(err => {

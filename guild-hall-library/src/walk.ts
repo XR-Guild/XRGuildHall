@@ -45,14 +45,20 @@ export function buildColonnade(m: Mats) {
   const capY = 3.3, colOff = W + 0.35;
   const lintel: THREE.Vector3[][] = [[], []];
   const glowTex = T.glow('255,214,150');
+  const columns: THREE.Vector3[] = [];
   for (let i = 0; i <= pairs; i++) {
     const t = 0.04 + (i / pairs) * 0.92;
     const { p, side, tan } = frame(t);
+    void tan;
+    // V3 (from the Arrival build): only the arch-bearing pairs (every other one) keep their columns, for a more open
+    // walk; the lintels still run the full length. Bases sit fully into the ground; the XR mark is embossed in the stone.
+    const bearing = i % 2 === 0;
     [-1, 1].forEach((s, si) => {
       const c = p.clone().addScaledVector(side, s * colOff);
-      const col = labradoriteColumn(m, capY, 0.22); col.position.copy(c); col.rotation.y = Math.atan2(-side.x * s, -side.z * s); group.add(col);
-      
       lintel[si].push(c.clone().setY(capY + 0.8));
+      if (!bearing) return;
+      const col = labradoriteColumn(m, capY, 0.22, true); col.position.copy(c).setY(-0.06); col.rotation.y = Math.atan2(-side.x * s, -side.z * s); group.add(col);
+      columns.push(c.clone());
       const cc = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 3, 10), new THREE.MeshBasicMaterial()); cc.position.set(c.x, 1.5, c.z); colliders.add(cc);
     });
     // pointed gilt cross-rib over the path on every other pair
@@ -79,5 +85,5 @@ export function buildColonnade(m: Mats) {
   // two warm lights along the walk (kept few for headset budgets)
   const lights: THREE.PointLight[] = [];
   for (const t of [0.2, 0.5, 0.8]) { const l = new THREE.PointLight(0xffc88a, 16, 9, 2); l.position.copy(PATH_CURVE.getPointAt(t)).setY(3.6); group.add(l); lights.push(l); }
-  return { group, colliders, glows, lights };
+  return { group, colliders, glows, lights, columns, lintels: lintel, capY };
 }

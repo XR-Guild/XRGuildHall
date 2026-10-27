@@ -34,7 +34,7 @@ function lathe(profile: [number, number][], mat: THREE.Material, seg = 32) {
 }
 const tube = (pts: THREE.Vector3[], r: number, mat: THREE.Material, closed = false) => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, closed, 'centripetal'), Math.max(16, pts.length * 2), r, 6, closed), mat);
 
-export function buildGrandHall(m: Mats, center: THREE.Vector3, bays: ('window' | 'door' | 'banner')[], friezeFont: string): GrandHall {
+export function buildGrandHall(m: Mats, center: THREE.Vector3, bays: ('window' | 'door' | 'banner' | 'screen')[], friezeFont: string): GrandHall {
   const group = new THREE.Group(); group.name = 'GuildHall'; group.position.copy(center);
   const colliders = new THREE.Group(); colliders.position.copy(center);
   const lights: THREE.Light[] = []; const glows: THREE.Sprite[] = [];
@@ -104,6 +104,10 @@ export function buildGrandHall(m: Mats, center: THREE.Vector3, bays: ('window' |
       bay.add(tube(inner.map(p => new THREE.Vector3(p.x * 1.07, p.y > b0 + 0.05 ? b0 + (p.y - b0) * 1.03 : p.y, 0.06)), 0.04, m.giltSatin));
     }
     if (kind === 'window') { windowTracery(bay, m, glass); }
+    // V3 media wall: solid bay with a mount for a media screen (src/media.ts adds the screen and its frame)
+    if (kind === 'screen') { const mount = new THREE.Group(); mount.position.set(0, k === 0 ? 5.0 : 4.4, 0.12); bay.add(mount); bannerMounts.set(k, mount);
+      const arc: THREE.Vector3[] = []; for (let i = 0; i <= 24; i++) { const a = Math.PI - (i / 24) * Math.PI; arc.push(new THREE.Vector3(Math.cos(a) * 3.0, (k === 0 ? 7.45 : 6.4) + Math.sin(a) * 0.7, 0.1)); }
+      bay.add(tube(arc, 0.05, m.gilt)); }
     if (kind === 'banner') { const mount = new THREE.Group(); mount.position.set(0, 5.4, 0.08); bay.add(mount); bannerMounts.set(k, mount);
       const fr = new THREE.Mesh(new THREE.BoxGeometry(4.3, 5.9, 0.06), m.walnutDark); fr.position.set(0, 5.4, 0.04); bay.add(fr);
       const arc: THREE.Vector3[] = []; for (let i = 0; i <= 24; i++) { const a = Math.PI - (i / 24) * Math.PI; arc.push(new THREE.Vector3(Math.cos(a) * 2.2, 8.4 + Math.sin(a) * 0.8, 0.1)); }

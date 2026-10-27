@@ -20,6 +20,9 @@ import { buildStage, buildWelcomeDesk, buildEventsBoard, bannerTexture } from '.
 import { hallLayout, libLayout, benchMeshes, chairGeometries, onArc, face } from './seating';
 import { newsPanel, libraryPanel, timelinePanel } from './xrpanels';
 import { HALL, LIB, STAGE, POOL, BENCHES, PORTAL_SITES, PATH_CURVE, SPAWN, V } from './site';
+import * as T3 from './tex3';
+import { MediaScreens } from './media';
+import { buildArrivalAdds, FOUNTAIN, POND, BOARD_SPOTS } from './arrivaladds';
 
 const FONTS = {
   display: "'Marcellus SC', Georgia, serif",
@@ -27,7 +30,7 @@ const FONTS = {
   mono: "'IBM Plex Mono', ui-monospace, monospace",
 };
 
-export interface Placement { label: string; asset: string; position: [number, number, number]; rotationY: number; scale: [number, number, number]; group: string; }
+export interface Placement { label: string; asset: string; position: [number, number, number]; rotationY: number; scale: [number, number, number]; group: string; hidden?: boolean; }
 export interface AssetOut { file: string; bytes: number; triangles: number; collision?: string; }
 
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -107,7 +110,9 @@ function flatten(root: THREE.Object3D, pivot: THREE.Vector3, rotY: number, name:
   root.traverse(o => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh || (o as any).isReflector || !visible(o)) return;
-    const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+    const mat0 = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+    // shader materials (water) have a plain stand-in for export; other shader materials (spray, sky) are skipped
+    const mat: THREE.Material = (mat0 as any)?.isShaderMaterial && mesh.userData.exportMat ? mesh.userData.exportMat : mat0;
     if (!mat || !mat.visible || (mat as any).isShaderMaterial || (mat as any).colorWrite === false || ((mat as any).opacity === 0 && mat.transparent)) return;
     const base = new THREE.Matrix4().multiplyMatrices(inv, mesh.matrixWorld);
     const inst = o as THREE.InstancedMesh;
@@ -169,16 +174,18 @@ export async function runExport(save: (name: string, base64: string) => Promise<
     if (colliders) { const cb = await glb(flattenCollision(colliders, pivot, rotY, `${key}-collision`)); await save(`assets/${key}-collision.glb`, b64(cb)); a.collision = `assets/${key}-collision.glb`; }
     assets[key] = a; log(`${key}: ${(buf.byteLength / 1048576).toFixed(2)} MB, ${tris} tris`);
   };
-  const place = (label: string, asset: string, group: string, p: THREE.Vector3, rotY = 0, scale: [number, number, number] = [1, 1, 1]) =>
-    placements.push({ label, asset, group, position: [r3(p.x), r3(p.y), r3(p.z)], rotationY: deg(rotY), scale });
+  const place = (label: string, asset: string, group: string, p: THREE.Vector3, rotY = 0, scale: [number, number, number] = [1, 1, 1], hidden = false) =>
+    placements.push({ label, asset, group, position: [r3(p.x), r3(p.y), r3(p.z)], rotationY: deg(rotY), scale, ...(hidden ? { hidden } : {}) });
   const apron = (c: THREE.Vector3, a: number) => { const ring = new THREE.Mesh(new THREE.RingGeometry(a + 0.3, a + 2.6, 96), m.gravel); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, -0.006, c.z); return ring; };
 
-  // --- Guild Hall shell (with the mission banner) ---
-  const hall = buildGrandHall(m, HALL.center, ['banner', 'window', 'window', 'door', 'window', 'window', 'window', 'window', 'window', 'window', 'window', 'window'], FONTS.display);
+  // --- Guild Hall shell (V3: media walls behind and beside the stage, screens showing the idle XR Guild slide) ---
+  const hall = buildGrandHall(m, HALL.center, ['screen', 'screen', 'window', 'door', 'window', 'window', 'window', 'window', 'window', 'window', 'window', 'screen'], FONTS.display);
   {
-    const mount = hall.bannerMounts.get(0)!;
-    const bm = new THREE.MeshStandardMaterial({ map: bannerTexture(FONTS), roughness: 0.8 }); bm.emissiveMap = bm.map; bm.emissive.set(0xffffff); bm.emissiveIntensity = 0.28; bm.name = 'MissionBanner';
-    const banner = new THREE.Mesh(new THREE.PlaneGeometry(3.95, 5.4), bm); banner.position.z = 0.03; mount.add(banner);
+    const screens = new MediaScreens(m, { tokenUrl: '', room: '', logoUrl: 'xrguild-logo.png', fonts: FONTS, identity: () => 'export', name: () => 'export' });
+    screens.build(hall.bannerMounts); await screens.ready;
+    // the screen surfaces are unlit in the world; give them an emissive standard material for GLB viewers
+    for (const sc of screens.screens.values()) { const sm = new THREE.MeshStandardMaterial({ map: sc.mat.map, emissiveMap: sc.mat.map, emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.6 }); sm.name = `Screen_${sc.id}`; sc.mesh.material = sm; }
+    void bannerTexture;
   }
   const hallRoot = new THREE.Group(); hallRoot.add(hall.group, apron(HALL.center, HALL.apothem));
   await writeAsset('guild-hall', hallRoot, HALL.center, 0, hall.colliders);
@@ -199,8 +206,8 @@ export async function runExport(save: (name: string, base64: string) => Promise<
   await writeAsset('events-board', board.group, board.group.position.clone(), boardRot);
   place('Events board', 'events-board', 'Guild Hall', board.group.position, boardRot);
 
-  // --- proscenium benches: one asset per (row radius, seat count), reused around the arc ---
-  const L = hallLayout('proscenium');
+  // --- backless benches: one asset per (row radius, seat count), reused around the arc ---
+  const L = hallLayout('benches');
   let bi = 0;
   for (const b of L.benches) {
     const mid = (b.a0 + b.a1) / 2, da = b.a1 - b.a0;
@@ -212,7 +219,13 @@ export async function runExport(save: (name: string, base64: string) => Promise<
 
   // --- Library shell, bookcase panels, lanterns ---
   const libBays: BayKind[] = ['window', 'shelf', 'panelShelf', 'panelShelf', 'panelShelf', 'shelf', 'window', 'window', 'shelf', 'door', 'shelf', 'shelf'];
-  const lib = buildChamber(m, { name: 'Library', center: LIB.center, apothem: LIB.apothem, wallH: LIB.wallH, bays: libBays, domeMural: T.domeMural(), chandelier: 0.75, fillLights: 2, floorMat: m.floorDark.clone(), sparseBooks: 0.42 });
+  const libTex = T3.libraryFloorV3(1024); libTex.repeat.set(3, 3);
+  const libFloor = new THREE.MeshPhysicalMaterial({ map: libTex, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.07 }); libFloor.name = 'LibraryRedMarble';
+  const lib = buildChamber(m, { name: 'Library', center: LIB.center, apothem: LIB.apothem, wallH: LIB.wallH, bays: libBays, domeMural: T.domeMural(), chandelier: 0.75, fillLights: 2, floorMat: libFloor, sparseBooks: 0.42 });
+  {
+    const dm = new THREE.MeshPhysicalMaterial({ map: T3.compassDecal(1024, 0.36), alphaTest: 0.5, roughness: 0.15, clearcoat: 1 }); dm.name = 'LibraryCompass';
+    const decal = new THREE.Mesh(new THREE.CircleGeometry(3.9, 72).rotateX(-Math.PI / 2), dm); decal.position.copy(LIB.center).setY(0.007); lib.group.attach(decal);
+  }
   const news = newsPanel(FONTS); news.mesh.position.set(0, 0, 0.01); lib.panelMounts.get(2)!.add(news.mesh); news.draw();
   const libp = libraryPanel(FONTS); libp.panel.mesh.position.set(0, 0, 0.01); lib.panelMounts.get(3)!.add(libp.panel.mesh); libp.panel.draw();
   const tlp = timelinePanel(FONTS); tlp.panel.mesh.position.set(0, 0, 0.01); lib.panelMounts.get(4)!.add(tlp.panel.mesh); tlp.panel.draw();
@@ -304,8 +317,35 @@ export async function runExport(save: (name: string, base64: string) => Promise<
     } else log('folly model missing, skipped');
   }
 
+  // --- V3 garden additions (from the Arrival build): fountain, pond and stream, vines, principles boards ---
+  {
+    const env = new THREE.CubeTexture();
+    const adds = buildArrivalAdds(m, env, FONTS, noop, notXR);
+    const P = adds.parts;
+    const fountain = new THREE.Group(); fountain.add(P.fountain, P.fountainRing.clone());
+    const fc = new THREE.Group(); { const c = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 3, 24)); c.position.set(FOUNTAIN.x, 1.5, FOUNTAIN.z); fc.add(c); }
+    await writeAsset('fountain', fountain, FOUNTAIN, 0, fc);
+    place('Labradorite fountain', 'fountain', 'Garden', FOUNTAIN);
+    await writeAsset('pond-and-stream', P.pond, POND.center, 0);
+    place('Pond and spring stream', 'pond-and-stream', 'Garden', POND.center);
+    await writeAsset('colonnade-grapevine', P.grapevine, colPivot, 0);
+    place('Colonnade grapevine', 'colonnade-grapevine', 'Colonnade vines', colPivot);
+    P.ivy.visible = true;
+    await writeAsset('colonnade-ivy-jasmine', P.ivy, colPivot, 0);
+    place('Colonnade ivy with jasmine', 'colonnade-ivy-jasmine', 'Colonnade vines', colPivot, 0, [1, 1, 1], true);
+    for (const [k, label, i] of [['principlesBoard', 'XR Guild Principles board', 0], ['conductBoard', 'Code of conduct board (I’m in)', 1]] as const) {
+      const g = P[k]; const spot = BOARD_SPOTS[i];
+      for (const pn of adds.panels) pn.panel.draw();
+      // canvas panels render as unlit planes in the world; give them an emissive material in the GLB
+      g.traverse(o => { const mm = (o as THREE.Mesh).material as THREE.MeshBasicMaterial; if ((o as THREE.Mesh).isMesh && mm?.isMeshBasicMaterial && mm.map) { const sm = new THREE.MeshStandardMaterial({ map: mm.map, emissiveMap: mm.map, emissive: 0xffffff, emissiveIntensity: 0.85 }); sm.name = 'BoardPanel'; (o as THREE.Mesh).material = sm; } });
+      const key = k === 'principlesBoard' ? 'board-principles' : 'board-conduct';
+      await writeAsset(key, g, spot.pos, spot.ry);
+      place(label, key, 'Garden', spot.pos, spot.ry);
+    }
+  }
+
   const manifest = {
-    name: 'XR Guild Hall',
+    name: 'XR Guild Hall V3',
     generated: new Date().toISOString(),
     units: 'metres, y up; rotationY in degrees about +y; each asset is baked around its own pivot',
     spawn: { position: SPAWN.pos.toArray().map(r3), lookAt: SPAWN.look.toArray() },

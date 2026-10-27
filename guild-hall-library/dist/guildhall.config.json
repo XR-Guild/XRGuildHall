@@ -1,0 +1,21 @@
+{
+  "_comment": "Run-time settings for the XR Guild Hall V3. Edit inside the VIVERSE upload zip (or dist/) without rebuilding; a blank value or 0 keeps the build-time setting from .env. Nothing here is secret: it ships to every visitor. Optional keys: photonMaxPlayers, viverseRoomCap (numbers). See V3.md.",
+  "photonAppId": "",
+  "photonRegion": "",
+  "photonMaxPlayers": 0,
+  "adminMode": "",
+  "viverseAppId": "",
+  "viverseRoomCap": 0,
+  "media": {
+    "_comment": "tokenUrl = your deployed proxy/media-token-worker.js. Empty = HLS links only, no live screenshare or RTMP.",
+    "tokenUrl": "",
+    "room": "guild-hall-media",
+    "hlsDefault": ""
+  },
+  "defaults": {
+    "hallSeating": "benches",
+    "librarySeating": "table",
+    "audio": "conversation"
+  },
+  "askProxy": ""
+}

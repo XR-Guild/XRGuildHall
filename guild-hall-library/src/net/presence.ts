@@ -29,7 +29,7 @@ export class Presence {
 
   constructor(name: string) {
     const id = rid();
-    this.self = { id, name: clamp(name, 32) || 'Guest', x: 0, y: 0, z: 0, ry: 0, zone: 'hall', seat: null, avatar: null, color: PALETTE[Math.floor(Math.random() * PALETTE.length)], onStage: false, t: 0 };
+    this.self = { id, name: clamp(name, 32) || 'Guest', x: 0, y: 0, z: 0, ry: 0, zone: 'hall', seat: null, avatar: null, color: PALETTE[Math.floor(Math.random() * PALETTE.length)], onStage: false, megaphone: false, t: 0 };
   }
   emit() { this.listeners.forEach(f => f()); }
   get connected() { return !!this.transport; }
@@ -47,17 +47,20 @@ export class Presence {
     this.lastSend = 0; this.lastMeta = '';
     this.emit();
   }
-  disconnect() { this.transport?.disconnect(); this.transport = null; this.peers.clear(); this.status = 'Solo'; this.emit(); }
+  disconnect() { this.transport?.disconnect(); this.transport = null; this.peers.clear(); this.self.megaphone = false; this.status = 'Solo'; this.emit(); }
+  setMegaphone(on: boolean) { this.self.megaphone = on && this.self.onStage; this.emit(); }
 
   /** Called every frame with the local player's pose. Sends ~10 Hz while moving, 1 Hz heartbeat when still. */
   tick(pos: THREE.Vector3, ry: number, now: number) {
     const s = this.self;
     s.x = pos.x; s.y = pos.y; s.z = pos.z; s.ry = ry;
     s.zone = zoneOf(pos);
+    const wasOnStage = s.onStage;
     s.onStage = Math.hypot(pos.x - STAGE.center.x, pos.z - STAGE.center.z) < STAGE.r && pos.y > STAGE.h * 0.5;
+    if (s.onStage !== wasOnStage) { if (!s.onStage) s.megaphone = false; this.emit(); }
     const t = this.transport; if (!t) return;
     const moved = pos.distanceTo(this.lastSent) > 0.04 || Math.abs(ry - this.lastRy) > 0.05;
-    const meta = `${s.name}|${s.seat}|${s.avatar}|${s.zone}|${s.onStage}`;
+    const meta = `${s.name}|${s.seat}|${s.avatar}|${s.zone}|${s.onStage}|${s.megaphone}`;
     const gap = now - this.lastSend;
     if ((moved && gap > 100) || gap > 1000 || meta !== this.lastMeta) {
       s.t = now; t.sendState({ ...s }); this.lastSend = now; this.lastSent.copy(pos); this.lastRy = ry; this.lastMeta = meta;
@@ -67,6 +70,7 @@ export class Presence {
   private receive(s: PeerState) {
     if (s.id === this.self.id || this.blocked.has(s.id)) return;
     s.name = clamp(String(s.name ?? 'Guest'), 32) || 'Guest';
+    s.megaphone = !!s.megaphone && !!s.onStage;
     let p = this.peers.get(s.id);
     const now = performance.now();
     if (!p) { p = { ...s, rp: new THREE.Vector3(s.x, s.y, s.z), rry: s.ry, speed: 0, lastSeen: now, speaking: false, bubble: null }; this.peers.set(s.id, p); this.emit(); }

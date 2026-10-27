@@ -13,6 +13,10 @@ precision highp float;
 varying vec3 vDir;
 uniform float uTime;
 uniform float uIntensity;
+uniform float uMode;        // 0 = procedural aurora, 1 = equirectangular image (V3 skies)
+uniform sampler2D uImage;
+uniform float uRot;         // image yaw, radians
+uniform float uTwinkle;     // star shimmer on night images
 float hash(vec3 p){ p = fract(p*0.3183099+.1); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
 float hash2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
 float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
@@ -67,9 +71,17 @@ vec3 stars(vec3 p){
   }
   return c*c*1.1;
 }
+vec3 image(vec3 rd){
+  float a = atan(rd.z, rd.x) + uRot;
+  vec2 uv = vec2(a * 0.15915494 + 0.5, asin(clamp(rd.y, -1.0, 1.0)) * 0.31830989 + 0.5);
+  vec3 c = texture2D(uImage, uv).rgb;
+  if (uTwinkle > 0.0) c += stars(rd) * 0.35 * uTwinkle * (0.6 + 0.4 * sin(uTime * 2.3 + hash(floor(rd * 400.0)) * 6.28)) * smoothstep(0.0, 0.2, rd.y);
+  return c;
+}
 void main(){
   vec3 rd = normalize(vDir);
   float h = rd.y;
+  if (uMode > 0.5) { gl_FragColor = vec4(image(rd), 1.0); return; }
   vec3 zen = vec3(0.006,0.012,0.035), hor = vec3(0.03,0.07,0.11);
   vec3 col = mix(hor, zen, smoothstep(-0.05, 0.6, h));
   // faint milky band
@@ -99,7 +111,7 @@ export class AuroraSky {
     this.rt.texture.colorSpace = THREE.LinearSRGBColorSpace;
     this.mat = new THREE.ShaderMaterial({
       vertexShader: vert, fragmentShader: frag, side: THREE.BackSide, depthWrite: false,
-      uniforms: { uTime: { value: 0 }, uIntensity: { value: 1.0 } },
+      uniforms: { uTime: { value: 0 }, uIntensity: { value: 1.0 }, uMode: { value: 0 }, uImage: { value: null as THREE.Texture | null }, uRot: { value: Math.PI }, uTwinkle: { value: 0 } },
     });
     this.scene.add(new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), this.mat));
     const cube = new THREE.CubeCamera(0.1, 100, this.rt);
@@ -134,9 +146,19 @@ export class AuroraSky {
     r.toneMapping = prevTM;
   }
 
+  /** Switch to an equirectangular image sky (null = back to the procedural aurora). Re-renders all six faces. */
+  setImage(tex: THREE.Texture | null, opts: { twinkle?: number; rot?: number } = {}) {
+    const u = this.mat.uniforms;
+    u.uMode.value = tex ? 1 : 0; u.uImage.value = tex; u.uTwinkle.value = opts.twinkle ?? 0; u.uRot.value = opts.rot ?? Math.PI;
+    this.still = !!tex && !opts.twinkle;
+    this.renderAll(u.uTime.value);
+  }
+  /** An image sky without twinkle never changes, so it costs nothing per frame. */
+  private still = false;
+
   /** One face per call; call once per frame. `every` throttles in XR. */
   update(time: number, every = 1) {
-    if (!this.animate) return;
+    if (!this.animate || this.still) return;
     this.frame++;
     if (this.frame % every) return;
     if (this.face === 0) this.mat.uniforms.uTime.value = time;

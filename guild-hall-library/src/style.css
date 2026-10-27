@@ -211,6 +211,7 @@ a.primary { color: #1a1206; }
 .soc-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 5px 6px 5px 14px; backdrop-filter: blur(10px); }
 .soc-status { font: 12px var(--mono); color: var(--dim); margin-right: 4px; }
 #socMic[aria-pressed="true"] { border-color: #ff6b6b; color: #ffd4d4; background: rgba(255,80,80,.14); }
+#socMega[aria-pressed="true"] { border-color: #f1d58f; color: #fff2cf; background: rgba(241,213,143,.16); }
 .soc-pop { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; backdrop-filter: blur(12px); max-height: 42vh; overflow-y: auto; }
 .chat-log { display: grid; gap: 6px; max-height: 30vh; overflow-y: auto; font-size: 14px; margin-bottom: 8px; }
 .chat-log .me b { color: var(--gold-hi); }
@@ -234,3 +235,23 @@ a.primary { color: #1a1206; }
   #drawer { bottom: calc(env(safe-area-inset-bottom, 0px) + 152px); max-height: 56vh; }
   .soc-pop { max-height: 34vh; }
 }
+
+/* ---------- V3: admin panel, sky picker ---------- */
+.admin-inner { max-width: 600px; }
+.admin-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.admin-head h2 { margin: 0; }
+.admin-inner h3 { font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); margin: 16px 0 4px; }
+.admin-inner h4 { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin: 12px 0 4px; }
+.admin-inner fieldset { border: 0; padding: 0; margin: 0; }
+.admin-inner fieldset:disabled { opacity: .5; }
+.admin-inner .row { display: flex; gap: 8px; align-items: center; }
+.admin-inner .row.wrap { flex-wrap: wrap; margin-top: 8px; }
+.admin-signin input, .scr input { flex: 1; min-width: 0; background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; }
+.admin-signin label { font-size: 14px; }
+.adm-list { display: grid; gap: 4px; max-height: 160px; overflow-y: auto; font-size: 14px; }
+.adm-list .person { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.scr { display: grid; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); }
+.scr .t { font-weight: 600; font-size: 14px; }
+.scr select { background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; color: inherit; }
+.scr .row { display: flex; gap: 6px; }
+#skySeg button { font-size: 12px; padding: 3px 10px; }

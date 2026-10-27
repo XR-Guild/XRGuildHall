@@ -1,4 +1,6 @@
-# XR Guild Hall · Guild Hall + Library (v3)
+# XR Guild Hall · Guild Hall + Library
+
+> **V3 for VIVERSE (Oct 2026):** admin room settings, three seating layouts, spatial audio modes, stream screens and screenshare, four skies, and the Arrival.space garden additions. Start with **[V3.md](V3.md)**. Blender files: [blender/](blender/README.md).
 
 An immersive WebXR home for the XR Guild. It has two chambers joined by an open labradorite colonnade, set in a garden under an aurora sky. It runs in any modern browser (desktop, phone, Quest, Pico, and other WebXR headsets) with no install, and it is ready to publish to VIVERSE.
 
@@ -75,7 +77,8 @@ Needs Node 20.19+.
 | Variable | What it turns on |
 |---|---|
 | `VITE_VIVERSE_APP_ID` | VIVERSE login, the visitor's own VRM avatar, and shared rooms through the VIVERSE Play SDK |
-| `VITE_LIVEKIT_TOKEN_URL` | Spatial voice through LiveKit Cloud. Deploy [`proxy/livekit-token-worker.js`](proxy/livekit-token-worker.js) first. Off VIVERSE, this also carries presence and chat. |
+| `VITE_PHOTON_APP_ID` | Spatial voice through Photon Voice. Needs the Photon Voice JavaScript SDK in `public/photon/` (gitignored; see [`MULTIPLAYER.md`](MULTIPLAYER.md)). Off VIVERSE, this also carries presence and chat. |
+| `VITE_PHOTON_REGION` | Photon Cloud region, default `us` (override per visit with `?region=eu`) |
 | `VITE_ASK_PROXY` | Inline answers from the library's GitBook assistant ([`proxy/ask-worker.js`](proxy/ask-worker.js)) |
 
 URL flags: `?sim=N` runs a simulated crowd of N (up to 300) that never leaves the browser.
@@ -117,20 +120,20 @@ guild-hall-library/
 │   ├── library3d.ts        Library category lanterns
 │   ├── garden.ts           pool, maples (leaf cards), flower beds, benches, folly
 │   ├── avatars.ts          crowd renderer: instanced mannequins + nearest-N VRM (three-vrm), tags, bubbles
-│   ├── net/                presence core, VIVERSE Play SDK, LiveKit voice/data, simulated crowd
+│   ├── net/                presence core, VIVERSE Play SDK, Photon voice/data, simulated crowd
 │   ├── social.ts           social dock, chat, people list, seating toggles, events list
 │   ├── panel.ts / xrpanels.ts / interact.ts / ui.ts   panels and the 2D guide
 │   ├── sky.ts / tex.ts / mats.ts / bake.ts            aurora, procedural materials, static batching
 │   └── data/               library.json, timeline.json, events.json, news.ts
 ├── public/models/hall.glb  Evo's white colonnade (garden folly)
 ├── models-source/          Evo's fantasy-library GLB (kept, not shipped: see below)
-├── proxy/                  ask-worker.js, livekit-token-worker.js
+├── proxy/                  ask-worker.js
 └── scripts/refresh-data.py re-pull the library, timeline and events snapshots
 ```
 
 **Performance:**
 - With 100 simulated people in view in the hall, a frame measured about 140 draw calls and 0.5 M triangles.
-- The main code is about 1.7 MB (0.5 MB gzipped). Voice (0.55 MB) and VRM (0.14 MB) load only when someone connects.
+- The main code is about 1.7 MB (0.5 MB gzipped). Voice (the 0.3 MB Photon script plus its 1.3 MB wasm, served from `public/photon/`) and VRM (0.14 MB) load only when someone connects.
 - **The fantasy-library GLB (8.4 MB) is no longer loaded.** The Library is now a real chamber, and dropping the model cut the download by about 80%, which matters for 100+ people arriving at once. The file is kept in `models-source/` if the team wants it back, for example as a separate reading-room scene.
 
 **Data:** run `python3 scripts/refresh-data.py` to refresh the library, timeline, and events snapshots, then rebuild.
@@ -140,4 +143,4 @@ guild-hall-library/
 - Design direction, concept art, sketches, and 3D models: **Evo** (Realitycraft), artist and technologist, for the XR Guild
 - Library data: [XR Guild Library](https://library.xrguild.org) volunteers
 - Timeline data: the XR Guild community [Timeline of XR](https://www.xrguild.org/timeline)
-- Built with the [Immersive Web SDK](https://github.com/facebook/immersive-web-sdk) (MIT), [three.js](https://threejs.org) (MIT), [three-vrm](https://github.com/pixiv/three-vrm) (MIT), [LiveKit client](https://github.com/livekit/client-sdk-js) (Apache-2.0), and the VIVERSE JS SDK
+- Built with the [Immersive Web SDK](https://github.com/facebook/immersive-web-sdk) (MIT), [three.js](https://threejs.org) (MIT), [three-vrm](https://github.com/pixiv/three-vrm) (MIT), the [Photon Voice JavaScript SDK](https://www.photonengine.com/sdks) (Exit Games, proprietary; not included in this repository), and the VIVERSE JS SDK

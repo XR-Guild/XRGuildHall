@@ -239,18 +239,18 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
  * Round labradorite column with a gilt base and the v3 capital: a gilt neck ring, a square
  * labradorite abacus edged in gilt, and a shiny XR monogram on its front and back faces (local +z / -z).
  */
-export function labradoriteColumn(m: Mats, capY: number, r = 0.3) {
+export function labradoriteColumn(m: Mats, capY: number, r = 0.3, subtleMark = false) {
   const g = new THREE.Group();
   g.add(lathe([[0, 0], [r + 0.25, 0], [r + 0.25, 0.28], [r + 0.2, 0.3], [r + 0.2, 0.36], [r + 0.12, 0.42], [r + 0.16, 0.48], [r + 0.06, 0.56], [r + 0.03, 0.62], [0, 0.62]], m.gilt, 28));
   const shaftH = capY - 0.62;
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(r, r + 0.03, shaftH, 32, 1, true), m.labradoriteDark); shaft.position.y = 0.62 + shaftH / 2; g.add(shaft);
   for (const f of [0.2, 0.82]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(r + 0.015, 0.025, 6, 32), m.gilt); ring.rotation.x = Math.PI / 2; ring.position.y = 0.62 + shaftH * f; g.add(ring); }
-  g.add(xrCapital(m, capY, r));
+  g.add(xrCapital(m, capY, r, 2, subtleMark));
   return g;
 }
 
 /** Square XR capital that sits on a column or pillar of radius / half-width `r` at height `y`. */
-export function xrCapital(m: Mats, y: number, r: number, faces: 2 | 4 = 2) {
+export function xrCapital(m: Mats, y: number, r: number, faces: 2 | 4 = 2, subtle = false) {
   const g = new THREE.Group();
   const neck = lathe([[r, 0], [r + 0.05, 0.05], [r + 0.08, 0.12], [0, 0.12]], m.gilt, 28); neck.position.y = y; g.add(neck);
   const W = 2 * r + 0.34, H = Math.max(0.62, W * 0.8);
@@ -259,6 +259,12 @@ export function xrCapital(m: Mats, y: number, r: number, faces: 2 | 4 = 2) {
   const mh = H * 0.62;
   for (let k = 0; k < faces; k++) {
     const a = faces === 2 ? k * Math.PI : k * Math.PI / 2;
+    if (subtle) {
+      // embossed into the stone: a shallow labradorite monogram over a slightly larger gilt one, so only a faint gold edge shows
+      const edge = xrMonogram(m.giltSatin, mh * 1.06); edge.position.set(Math.sin(a) * (W / 2 + 0.006), y + 0.12 + H / 2, Math.cos(a) * (W / 2 + 0.006)); edge.rotation.y = a; edge.scale.z = 0.12; g.add(edge);
+      const mono = xrMonogram(m.labradoriteDark, mh); mono.position.set(Math.sin(a) * (W / 2 + 0.012), y + 0.12 + H / 2, Math.cos(a) * (W / 2 + 0.012)); mono.rotation.y = a; mono.scale.z = 0.22; g.add(mono);
+      continue;
+    }
     const mono = xrMonogram(m.gilt, mh); mono.position.set(Math.sin(a) * (W / 2 + 0.035), y + 0.12 + H / 2, Math.cos(a) * (W / 2 + 0.035)); mono.rotation.y = a; mono.scale.z = mh * 0.8; g.add(mono);
   }
   return g;

@@ -1,0 +1,2430 @@
+{
+  "name": "XR Guild Hall V3",
+  "generated": "2026-10-25T15:33:47.116Z",
+  "units": "metres, y up; rotationY in degrees about +y; each asset is baked around its own pivot",
+  "spawn": {
+    "position": [
+      8.09,
+      0,
+      5.878
+    ],
+    "lookAt": [
+      0,
+      2.2,
+      -8
+    ]
+  },
+  "assets": {
+    "guild-hall": {
+      "file": "assets/guild-hall.glb",
+      "bytes": 9099932,
+      "triangles": 147445,
+      "collision": "assets/guild-hall-collision.glb"
+    },
+    "hall-stage": {
+      "file": "assets/hall-stage.glb",
+      "bytes": 1069484,
+      "triangles": 10768,
+      "collision": "assets/hall-stage-collision.glb"
+    },
+    "welcome-desk": {
+      "file": "assets/welcome-desk.glb",
+      "bytes": 1175136,
+      "triangles": 5776,
+      "collision": "assets/welcome-desk-collision.glb"
+    },
+    "events-board": {
+      "file": "assets/events-board.glb",
+      "bytes": 700920,
+      "triangles": 878
+    },
+    "hall-bench-r5_6-4": {
+      "file": "assets/hall-bench-r5_6-4.glb",
+      "bytes": 591964,
+      "triangles": 980
+    },
+    "hall-bench-r5_6-3": {
+      "file": "assets/hall-bench-r5_6-3.glb",
+      "bytes": 587860,
+      "triangles": 916
+    },
+    "hall-bench-r6_9-4": {
+      "file": "assets/hall-bench-r6_9-4.glb",
+      "bytes": 592216,
+      "triangles": 980
+    },
+    "hall-bench-r6_9-3": {
+      "file": "assets/hall-bench-r6_9-3.glb",
+      "bytes": 588244,
+      "triangles": 916
+    },
+    "hall-bench-r8_2-4": {
+      "file": "assets/hall-bench-r8_2-4.glb",
+      "bytes": 592280,
+      "triangles": 980
+    },
+    "hall-bench-r9_5-4": {
+      "file": "assets/hall-bench-r9_5-4.glb",
+      "bytes": 592028,
+      "triangles": 980
+    },
+    "hall-bench-r9_5-3": {
+      "file": "assets/hall-bench-r9_5-3.glb",
+      "bytes": 588248,
+      "triangles": 916
+    },
+    "hall-bench-r10_8-4": {
+      "file": "assets/hall-bench-r10_8-4.glb",
+      "bytes": 592732,
+      "triangles": 980
+    },
+    "hall-bench-r12_1-4": {
+      "file": "assets/hall-bench-r12_1-4.glb",
+      "bytes": 591964,
+      "triangles": 980
+    },
+    "hall-bench-r13_4-4": {
+      "file": "assets/hall-bench-r13_4-4.glb",
+      "bytes": 592604,
+      "triangles": 980
+    },
+    "hall-bench-r13_4-3": {
+      "file": "assets/hall-bench-r13_4-3.glb",
+      "bytes": 588252,
+      "triangles": 916
+    },
+    "hall-bench-r14_7-4": {
+      "file": "assets/hall-bench-r14_7-4.glb",
+      "bytes": 592224,
+      "triangles": 980
+    },
+    "library": {
+      "file": "assets/library.glb",
+      "bytes": 7814868,
+      "triangles": 116359,
+      "collision": "assets/library-collision.glb"
+    },
+    "library-lanterns": {
+      "file": "assets/library-lanterns.glb",
+      "bytes": 123352,
+      "triangles": 4104
+    },
+    "connect-table": {
+      "file": "assets/connect-table.glb",
+      "bytes": 2903080,
+      "triangles": 67638,
+      "collision": "assets/connect-table-collision.glb"
+    },
+    "library-chair": {
+      "file": "assets/library-chair.glb",
+      "bytes": 562952,
+      "triangles": 428
+    },
+    "colonnade": {
+      "file": "assets/colonnade.glb",
+      "bytes": 4229556,
+      "triangles": 74876,
+      "collision": "assets/colonnade-collision.glb"
+    },
+    "reflecting-pool": {
+      "file": "assets/reflecting-pool.glb",
+      "bytes": 233720,
+      "triangles": 158,
+      "collision": "assets/reflecting-pool-collision.glb"
+    },
+    "garden-bench": {
+      "file": "assets/garden-bench.glb",
+      "bytes": 31440,
+      "triangles": 344
+    },
+    "garden-lantern": {
+      "file": "assets/garden-lantern.glb",
+      "bytes": 16068,
+      "triangles": 416
+    },
+    "portal-pad": {
+      "file": "assets/portal-pad.glb",
+      "bytes": 355272,
+      "triangles": 2096
+    },
+    "cypress": {
+      "file": "assets/cypress.glb",
+      "bytes": 15292,
+      "triangles": 168
+    },
+    "maple-1": {
+      "file": "assets/maple-1.glb",
+      "bytes": 693600,
+      "triangles": 4504
+    },
+    "maple-2": {
+      "file": "assets/maple-2.glb",
+      "bytes": 692532,
+      "triangles": 4504
+    },
+    "maple-3": {
+      "file": "assets/maple-3.glb",
+      "bytes": 670384,
+      "triangles": 4154
+    },
+    "maple-4": {
+      "file": "assets/maple-4.glb",
+      "bytes": 692892,
+      "triangles": 4504
+    },
+    "maple-5": {
+      "file": "assets/maple-5.glb",
+      "bytes": 692756,
+      "triangles": 4504
+    },
+    "maple-6": {
+      "file": "assets/maple-6.glb",
+      "bytes": 670908,
+      "triangles": 4154
+    },
+    "maple-7": {
+      "file": "assets/maple-7.glb",
+      "bytes": 693728,
+      "triangles": 4504
+    },
+    "maple-8": {
+      "file": "assets/maple-8.glb",
+      "bytes": 692492,
+      "triangles": 4504
+    },
+    "flower-bed-1": {
+      "file": "assets/flower-bed-1.glb",
+      "bytes": 461924,
+      "triangles": 4016
+    },
+    "flower-bed-2": {
+      "file": "assets/flower-bed-2.glb",
+      "bytes": 461960,
+      "triangles": 4016
+    },
+    "flower-bed-3": {
+      "file": "assets/flower-bed-3.glb",
+      "bytes": 748764,
+      "triangles": 6460
+    },
+    "flower-bed-4": {
+      "file": "assets/flower-bed-4.glb",
+      "bytes": 748820,
+      "triangles": 6460
+    },
+    "flower-bed-5": {
+      "file": "assets/flower-bed-5.glb",
+      "bytes": 681720,
+      "triangles": 5888
+    },
+    "flower-bed-6": {
+      "file": "assets/flower-bed-6.glb",
+      "bytes": 681736,
+      "triangles": 5888
+    },
+    "flower-bed-7": {
+      "file": "assets/flower-bed-7.glb",
+      "bytes": 681708,
+      "triangles": 5888
+    },
+    "flower-bed-8": {
+      "file": "assets/flower-bed-8.glb",
+      "bytes": 748868,
+      "triangles": 6460
+    },
+    "flower-bed-9": {
+      "file": "assets/flower-bed-9.glb",
+      "bytes": 867852,
+      "triangles": 7474
+    },
+    "flower-bed-10": {
+      "file": "assets/flower-bed-10.glb",
+      "bytes": 880120,
+      "triangles": 7578
+    },
+    "flower-bed-11": {
+      "file": "assets/flower-bed-11.glb",
+      "bytes": 1011312,
+      "triangles": 8696
+    },
+    "lawn": {
+      "file": "assets/lawn.glb",
+      "bytes": 32688,
+      "triangles": 2,
+      "collision": "assets/lawn-collision.glb"
+    },
+    "backdrop-hills": {
+      "file": "assets/backdrop-hills.glb",
+      "bytes": 212668,
+      "triangles": 4160
+    },
+    "garden-folly": {
+      "file": "assets/garden-folly.glb",
+      "bytes": 217284,
+      "triangles": 7896,
+      "collision": "assets/garden-folly-collision.glb"
+    },
+    "fountain": {
+      "file": "assets/fountain.glb",
+      "bytes": 459672,
+      "triangles": 7960,
+      "collision": "assets/fountain-collision.glb"
+    },
+    "pond-and-stream": {
+      "file": "assets/pond-and-stream.glb",
+      "bytes": 186948,
+      "triangles": 2814
+    },
+    "colonnade-grapevine": {
+      "file": "assets/colonnade-grapevine.glb",
+      "bytes": 634996,
+      "triangles": 18210
+    },
+    "colonnade-ivy-jasmine": {
+      "file": "assets/colonnade-ivy-jasmine.glb",
+      "bytes": 165012,
+      "triangles": 2216
+    },
+    "board-principles": {
+      "file": "assets/board-principles.glb",
+      "bytes": 746272,
+      "triangles": 422
+    },
+    "board-conduct": {
+      "file": "assets/board-conduct.glb",
+      "bytes": 703412,
+      "triangles": 422
+    }
+  },
+  "placements": [
+    {
+      "label": "Guild Hall",
+      "asset": "guild-hall",
+      "group": "Architecture",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Stage",
+      "asset": "hall-stage",
+      "group": "Guild Hall",
+      "position": [
+        0,
+        0,
+        -9.4
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Welcome desk",
+      "asset": "welcome-desk",
+      "group": "Guild Hall",
+      "position": [
+        10.755,
+        0,
+        4.345
+      ],
+      "rotationY": -112,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Events board",
+      "asset": "events-board",
+      "group": "Guild Hall",
+      "position": [
+        7.842,
+        0,
+        9.346
+      ],
+      "rotationY": -140,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 1 (4 seats)",
+      "asset": "hall-bench-r5_6-4",
+      "group": "Hall benches",
+      "position": [
+        -5.263,
+        0,
+        -7.487
+      ],
+      "rotationY": 109.971,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 2 (3 seats)",
+      "asset": "hall-bench-r5_6-3",
+      "group": "Hall benches",
+      "position": [
+        -2.103,
+        0,
+        -4.21
+      ],
+      "rotationY": 157.941,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 3 (3 seats)",
+      "asset": "hall-bench-r5_6-3",
+      "group": "Hall benches",
+      "position": [
+        1.617,
+        0,
+        -4.038
+      ],
+      "rotationY": -163.221,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 4 (4 seats)",
+      "asset": "hall-bench-r5_6-4",
+      "group": "Hall benches",
+      "position": [
+        4.666,
+        0,
+        -6.304
+      ],
+      "rotationY": -123.564,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 5 (4 seats)",
+      "asset": "hall-bench-r6_9-4",
+      "group": "Hall benches",
+      "position": [
+        -6.573,
+        0,
+        -7.3
+      ],
+      "rotationY": 107.715,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 6 (3 seats)",
+      "asset": "hall-bench-r6_9-3",
+      "group": "Hall benches",
+      "position": [
+        -5.427,
+        0,
+        -5.138
+      ],
+      "rotationY": 128.143,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 7 (4 seats)",
+      "asset": "hall-bench-r6_9-4",
+      "group": "Hall benches",
+      "position": [
+        -2.663,
+        0,
+        -3.035
+      ],
+      "rotationY": 157.298,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 8 (4 seats)",
+      "asset": "hall-bench-r6_9-4",
+      "group": "Hall benches",
+      "position": [
+        1.895,
+        0,
+        -2.765
+      ],
+      "rotationY": -164.057,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 9 (4 seats)",
+      "asset": "hall-bench-r6_9-4",
+      "group": "Hall benches",
+      "position": [
+        5.505,
+        0,
+        -5.241
+      ],
+      "rotationY": -127.072,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 10 (3 seats)",
+      "asset": "hall-bench-r6_9-3",
+      "group": "Hall benches",
+      "position": [
+        6.611,
+        0,
+        -7.424
+      ],
+      "rotationY": -106.645,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 11 (4 seats)",
+      "asset": "hall-bench-r8_2-4",
+      "group": "Hall benches",
+      "position": [
+        -7.875,
+        0,
+        -7.116
+      ],
+      "rotationY": 106.175,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 12 (4 seats)",
+      "asset": "hall-bench-r8_2-4",
+      "group": "Hall benches",
+      "position": [
+        -6.691,
+        0,
+        -4.659
+      ],
+      "rotationY": 125.32,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 13 (4 seats)",
+      "asset": "hall-bench-r8_2-4",
+      "group": "Hall benches",
+      "position": [
+        -3.478,
+        0,
+        -1.974
+      ],
+      "rotationY": 154.902,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 14 (4 seats)",
+      "asset": "hall-bench-r8_2-4",
+      "group": "Hall benches",
+      "position": [
+        1.903,
+        0,
+        -1.424
+      ],
+      "rotationY": -166.584,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 15 (4 seats)",
+      "asset": "hall-bench-r8_2-4",
+      "group": "Hall benches",
+      "position": [
+        6.33,
+        0,
+        -4.188
+      ],
+      "rotationY": -129.468,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 16 (4 seats)",
+      "asset": "hall-bench-r8_2-4",
+      "group": "Hall benches",
+      "position": [
+        7.69,
+        0,
+        -6.552
+      ],
+      "rotationY": -110.323,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 17 (4 seats)",
+      "asset": "hall-bench-r9_5-4",
+      "group": "Hall benches",
+      "position": [
+        -9.174,
+        0,
+        -6.932
+      ],
+      "rotationY": 105.056,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 18 (4 seats)",
+      "asset": "hall-bench-r9_5-4",
+      "group": "Hall benches",
+      "position": [
+        -8.093,
+        0,
+        -4.425
+      ],
+      "rotationY": 121.582,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 19 (4 seats)",
+      "asset": "hall-bench-r9_5-4",
+      "group": "Hall benches",
+      "position": [
+        -4.289,
+        0,
+        -0.923
+      ],
+      "rotationY": 153.161,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 20 (3 seats)",
+      "asset": "hall-bench-r9_5-3",
+      "group": "Hall benches",
+      "position": [
+        -1.975,
+        0,
+        -0.108
+      ],
+      "rotationY": 167.998,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 21 (4 seats)",
+      "asset": "hall-bench-r9_5-4",
+      "group": "Hall benches",
+      "position": [
+        1.907,
+        0,
+        -0.093
+      ],
+      "rotationY": -168.42,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 22 (3 seats)",
+      "asset": "hall-bench-r9_5-3",
+      "group": "Hall benches",
+      "position": [
+        4.226,
+        0,
+        -0.892
+      ],
+      "rotationY": -153.584,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 23 (4 seats)",
+      "asset": "hall-bench-r9_5-4",
+      "group": "Hall benches",
+      "position": [
+        7.147,
+        0,
+        -3.141
+      ],
+      "rotationY": -131.208,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 24 (4 seats)",
+      "asset": "hall-bench-r9_5-4",
+      "group": "Hall benches",
+      "position": [
+        8.632,
+        0,
+        -5.433
+      ],
+      "rotationY": -114.683,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 25 (4 seats)",
+      "asset": "hall-bench-r10_8-4",
+      "group": "Hall benches",
+      "position": [
+        -10.111,
+        0,
+        -5.605
+      ],
+      "rotationY": 110.573,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 26 (4 seats)",
+      "asset": "hall-bench-r10_8-4",
+      "group": "Hall benches",
+      "position": [
+        -8.835,
+        0,
+        -3.188
+      ],
+      "rotationY": 125.109,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 27 (4 seats)",
+      "asset": "hall-bench-r10_8-4",
+      "group": "Hall benches",
+      "position": [
+        -5.097,
+        0,
+        0.122
+      ],
+      "rotationY": 151.84,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 28 (4 seats)",
+      "asset": "hall-bench-r10_8-4",
+      "group": "Hall benches",
+      "position": [
+        -2.544,
+        0,
+        1.096
+      ],
+      "rotationY": 166.376,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 29 (4 seats)",
+      "asset": "hall-bench-r10_8-4",
+      "group": "Hall benches",
+      "position": [
+        1.91,
+        0,
+        1.23
+      ],
+      "rotationY": -169.814,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 30 (4 seats)",
+      "asset": "hall-bench-r10_8-4",
+      "group": "Hall benches",
+      "position": [
+        4.517,
+        0,
+        0.41
+      ],
+      "rotationY": -155.278,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 31 (4 seats)",
+      "asset": "hall-bench-r10_8-4",
+      "group": "Hall benches",
+      "position": [
+        7.959,
+        0,
+        -2.1
+      ],
+      "rotationY": -132.529,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 32 (4 seats)",
+      "asset": "hall-bench-r10_8-4",
+      "group": "Hall benches",
+      "position": [
+        9.536,
+        0,
+        -4.331
+      ],
+      "rotationY": -117.993,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 33 (4 seats)",
+      "asset": "hall-bench-r12_1-4",
+      "group": "Hall benches",
+      "position": [
+        -10.845,
+        0,
+        -4.034
+      ],
+      "rotationY": 116.325,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 34 (4 seats)",
+      "asset": "hall-bench-r12_1-4",
+      "group": "Hall benches",
+      "position": [
+        -9.364,
+        0,
+        -1.736
+      ],
+      "rotationY": 129.3,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 35 (4 seats)",
+      "asset": "hall-bench-r12_1-4",
+      "group": "Hall benches",
+      "position": [
+        -5.903,
+        0,
+        1.163
+      ],
+      "rotationY": 150.803,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 36 (4 seats)",
+      "asset": "hall-bench-r12_1-4",
+      "group": "Hall benches",
+      "position": [
+        -3.38,
+        0,
+        2.218
+      ],
+      "rotationY": 163.777,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 37 (4 seats)",
+      "asset": "hall-bench-r12_1-4",
+      "group": "Hall benches",
+      "position": [
+        1.912,
+        0,
+        2.548
+      ],
+      "rotationY": -170.908,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 38 (4 seats)",
+      "asset": "hall-bench-r12_1-4",
+      "group": "Hall benches",
+      "position": [
+        4.546,
+        0,
+        1.814
+      ],
+      "rotationY": -157.934,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 39 (4 seats)",
+      "asset": "hall-bench-r12_1-4",
+      "group": "Hall benches",
+      "position": [
+        8.971,
+        0,
+        -1.281
+      ],
+      "rotationY": -132.146,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 40 (4 seats)",
+      "asset": "hall-bench-r12_1-4",
+      "group": "Hall benches",
+      "position": [
+        10.565,
+        0,
+        -3.502
+      ],
+      "rotationY": -119.172,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 41 (4 seats)",
+      "asset": "hall-bench-r13_4-4",
+      "group": "Hall benches",
+      "position": [
+        -11.334,
+        0,
+        -2.251
+      ],
+      "rotationY": 122.244,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 42 (4 seats)",
+      "asset": "hall-bench-r13_4-4",
+      "group": "Hall benches",
+      "position": [
+        -9.646,
+        0,
+        -0.098
+      ],
+      "rotationY": 133.96,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 43 (4 seats)",
+      "asset": "hall-bench-r13_4-4",
+      "group": "Hall benches",
+      "position": [
+        -6.707,
+        0,
+        2.201
+      ],
+      "rotationY": 149.967,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 44 (4 seats)",
+      "asset": "hall-bench-r13_4-4",
+      "group": "Hall benches",
+      "position": [
+        -4.211,
+        0,
+        3.321
+      ],
+      "rotationY": 161.682,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 45 (3 seats)",
+      "asset": "hall-bench-r13_4-3",
+      "group": "Hall benches",
+      "position": [
+        -1.818,
+        0,
+        3.876
+      ],
+      "rotationY": 172.201,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 46 (4 seats)",
+      "asset": "hall-bench-r13_4-4",
+      "group": "Hall benches",
+      "position": [
+        1.913,
+        0,
+        3.863
+      ],
+      "rotationY": -171.79,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 47 (4 seats)",
+      "asset": "hall-bench-r13_4-4",
+      "group": "Hall benches",
+      "position": [
+        4.567,
+        0,
+        3.198
+      ],
+      "rotationY": -160.075,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 48 (3 seats)",
+      "asset": "hall-bench-r13_4-3",
+      "group": "Hall benches",
+      "position": [
+        6.79,
+        0,
+        2.153
+      ],
+      "rotationY": -149.556,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 49 (4 seats)",
+      "asset": "hall-bench-r14_7-4",
+      "group": "Hall benches",
+      "position": [
+        -11.539,
+        0,
+        -0.292
+      ],
+      "rotationY": 128.285,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 50 (4 seats)",
+      "asset": "hall-bench-r14_7-4",
+      "group": "Hall benches",
+      "position": [
+        -7.51,
+        0,
+        3.237
+      ],
+      "rotationY": 149.279,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 51 (4 seats)",
+      "asset": "hall-bench-r14_7-4",
+      "group": "Hall benches",
+      "position": [
+        -5.038,
+        0,
+        4.41
+      ],
+      "rotationY": 159.958,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hall bench 52 (4 seats)",
+      "asset": "hall-bench-r14_7-4",
+      "group": "Hall benches",
+      "position": [
+        -2.391,
+        0,
+        5.104
+      ],
+      "rotationY": 170.638,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library",
+      "asset": "library",
+      "group": "Architecture",
+      "position": [
+        37.5,
+        0,
+        -6
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library category lanterns",
+      "asset": "library-lanterns",
+      "group": "Library",
+      "position": [
+        37.5,
+        0,
+        -6
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Connect table",
+      "asset": "connect-table",
+      "group": "Library",
+      "position": [
+        37.5,
+        0,
+        -6
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 1",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        37.967,
+        0,
+        -8.303
+      ],
+      "rotationY": -11.459,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 2",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        38.863,
+        0,
+        -7.914
+      ],
+      "rotationY": -35.459,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 3",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        39.524,
+        0,
+        -7.194
+      ],
+      "rotationY": -59.459,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 4",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        39.835,
+        0,
+        -6.268
+      ],
+      "rotationY": -83.459,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 5",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        39.742,
+        0,
+        -5.295
+      ],
+      "rotationY": -107.459,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 6",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        39.261,
+        0,
+        -4.444
+      ],
+      "rotationY": -131.459,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 7",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        38.476,
+        0,
+        -3.862
+      ],
+      "rotationY": -155.459,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 8",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        37.522,
+        0,
+        -3.65
+      ],
+      "rotationY": -179.459,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 9",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        36.564,
+        0,
+        -3.844
+      ],
+      "rotationY": 156.541,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 10",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        35.769,
+        0,
+        -4.411
+      ],
+      "rotationY": 132.541,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 11",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        35.272,
+        0,
+        -5.253
+      ],
+      "rotationY": 108.541,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 12",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        35.161,
+        0,
+        -6.224
+      ],
+      "rotationY": 84.541,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 13",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        35.454,
+        0,
+        -7.156
+      ],
+      "rotationY": 60.541,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 14",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        36.101,
+        0,
+        -7.888
+      ],
+      "rotationY": 36.541,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Library chair 15",
+      "asset": "library-chair",
+      "group": "Library chairs",
+      "position": [
+        36.99,
+        0,
+        -8.294
+      ],
+      "rotationY": 12.541,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Colonnade",
+      "asset": "colonnade",
+      "group": "Architecture",
+      "position": [
+        22.7,
+        0,
+        -2.005
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Reflecting pool",
+      "asset": "reflecting-pool",
+      "group": "Garden",
+      "position": [
+        25,
+        0,
+        17
+      ],
+      "rotationY": 56.785,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Garden bench 1",
+      "asset": "garden-bench",
+      "group": "Garden benches",
+      "position": [
+        19.437,
+        0,
+        21.844
+      ],
+      "rotationY": 131.053,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Garden bench 2",
+      "asset": "garden-bench",
+      "group": "Garden benches",
+      "position": [
+        30.563,
+        0,
+        12.156
+      ],
+      "rotationY": -48.947,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Pool lantern 1",
+      "asset": "garden-lantern",
+      "group": "Garden lanterns",
+      "position": [
+        15.419,
+        0,
+        18.855
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Pool lantern 2",
+      "asset": "garden-lantern",
+      "group": "Garden lanterns",
+      "position": [
+        19.323,
+        0,
+        21.411
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Pool lantern 3",
+      "asset": "garden-lantern",
+      "group": "Garden lanterns",
+      "position": [
+        23.227,
+        0,
+        23.967
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Pool lantern 4",
+      "asset": "garden-lantern",
+      "group": "Garden lanterns",
+      "position": [
+        27.131,
+        0,
+        26.524
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Pool lantern 5",
+      "asset": "garden-lantern",
+      "group": "Garden lanterns",
+      "position": [
+        22.869,
+        0,
+        7.476
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Pool lantern 6",
+      "asset": "garden-lantern",
+      "group": "Garden lanterns",
+      "position": [
+        26.773,
+        0,
+        10.033
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Pool lantern 7",
+      "asset": "garden-lantern",
+      "group": "Garden lanterns",
+      "position": [
+        30.677,
+        0,
+        12.589
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Pool lantern 8",
+      "asset": "garden-lantern",
+      "group": "Garden lanterns",
+      "position": [
+        34.581,
+        0,
+        15.145
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Portal site 1",
+      "asset": "portal-pad",
+      "group": "Portal sites",
+      "position": [
+        -27,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Portal site 2",
+      "asset": "portal-pad",
+      "group": "Portal sites",
+      "position": [
+        24,
+        0,
+        -21
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Portal site 3",
+      "asset": "portal-pad",
+      "group": "Portal sites",
+      "position": [
+        54,
+        0,
+        -10
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Cypress 1",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        3.442,
+        0,
+        21.729
+      ],
+      "rotationY": 0,
+      "scale": [
+        1.4,
+        1.33,
+        1.4
+      ]
+    },
+    {
+      "label": "Cypress 2",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        -5.471,
+        0,
+        21.309
+      ],
+      "rotationY": 137.508,
+      "scale": [
+        1.4,
+        1.442,
+        1.4
+      ]
+    },
+    {
+      "label": "Cypress 3",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        -13.484,
+        0,
+        17.383
+      ],
+      "rotationY": 275.015,
+      "scale": [
+        1.4,
+        1.554,
+        1.4
+      ]
+    },
+    {
+      "label": "Cypress 4",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        -19.279,
+        0,
+        10.599
+      ],
+      "rotationY": 52.523,
+      "scale": [
+        1.4,
+        1.666,
+        1.4
+      ]
+    },
+    {
+      "label": "Cypress 5",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        -21.902,
+        0,
+        2.07
+      ],
+      "rotationY": 190.03,
+      "scale": [
+        1.4,
+        1.33,
+        1.4
+      ]
+    },
+    {
+      "label": "Cypress 6",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        -20.923,
+        0,
+        -6.798
+      ],
+      "rotationY": 327.538,
+      "scale": [
+        1.4,
+        1.442,
+        1.4
+      ]
+    },
+    {
+      "label": "Cypress 7",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        -16.502,
+        0,
+        -14.549
+      ],
+      "rotationY": 105.045,
+      "scale": [
+        1.4,
+        1.554,
+        1.4
+      ]
+    },
+    {
+      "label": "Cypress 8",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        -9.367,
+        0,
+        -19.906
+      ],
+      "rotationY": 242.553,
+      "scale": [
+        1.4,
+        1.666,
+        1.4
+      ]
+    },
+    {
+      "label": "Cypress 9",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        -0.691,
+        0,
+        -21.989
+      ],
+      "rotationY": 20.061,
+      "scale": [
+        1.4,
+        1.33,
+        1.4
+      ]
+    },
+    {
+      "label": "Cypress 10",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        30.153,
+        0,
+        -16.113
+      ],
+      "rotationY": 157.568,
+      "scale": [
+        1.1,
+        1.133,
+        1.1
+      ]
+    },
+    {
+      "label": "Cypress 11",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        34.391,
+        0,
+        -18.107
+      ],
+      "rotationY": 295.076,
+      "scale": [
+        1.1,
+        1.221,
+        1.1
+      ]
+    },
+    {
+      "label": "Cypress 12",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        39.067,
+        0,
+        -18.401
+      ],
+      "rotationY": 72.583,
+      "scale": [
+        1.1,
+        1.309,
+        1.1
+      ]
+    },
+    {
+      "label": "Cypress 13",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        43.522,
+        0,
+        -16.954
+      ],
+      "rotationY": 210.091,
+      "scale": [
+        1.1,
+        1.045,
+        1.1
+      ]
+    },
+    {
+      "label": "Cypress 14",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        47.131,
+        0,
+        -13.968
+      ],
+      "rotationY": 347.599,
+      "scale": [
+        1.1,
+        1.133,
+        1.1
+      ]
+    },
+    {
+      "label": "Cypress 15",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        49.388,
+        0,
+        -9.863
+      ],
+      "rotationY": 125.106,
+      "scale": [
+        1.1,
+        1.221,
+        1.1
+      ]
+    },
+    {
+      "label": "Cypress 16",
+      "asset": "cypress",
+      "group": "Trees",
+      "position": [
+        49.975,
+        0,
+        -5.215
+      ],
+      "rotationY": 262.614,
+      "scale": [
+        1.1,
+        1.309,
+        1.1
+      ]
+    },
+    {
+      "label": "Maple 1",
+      "asset": "maple-1",
+      "group": "Trees",
+      "position": [
+        44,
+        0,
+        14
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Maple 2",
+      "asset": "maple-2",
+      "group": "Trees",
+      "position": [
+        -20,
+        0,
+        17
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Maple 3",
+      "asset": "maple-3",
+      "group": "Trees",
+      "position": [
+        12,
+        0,
+        -20
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Maple 4",
+      "asset": "maple-4",
+      "group": "Trees",
+      "position": [
+        47,
+        0,
+        -24
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Maple 5",
+      "asset": "maple-5",
+      "group": "Trees",
+      "position": [
+        -9,
+        0,
+        -24
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Maple 6",
+      "asset": "maple-6",
+      "group": "Trees",
+      "position": [
+        37,
+        0,
+        30
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Maple 7",
+      "asset": "maple-7",
+      "group": "Trees",
+      "position": [
+        -13,
+        0,
+        26
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Maple 8",
+      "asset": "maple-8",
+      "group": "Trees",
+      "position": [
+        6,
+        0,
+        24
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 1",
+      "asset": "flower-bed-1",
+      "group": "Flower beds",
+      "position": [
+        24.746,
+        0,
+        6.435
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 2",
+      "asset": "flower-bed-2",
+      "group": "Flower beds",
+      "position": [
+        24.417,
+        0,
+        27.018
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 3",
+      "asset": "flower-bed-3",
+      "group": "Flower beds",
+      "position": [
+        13.455,
+        0,
+        9.441
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 4",
+      "asset": "flower-bed-4",
+      "group": "Flower beds",
+      "position": [
+        36.545,
+        0,
+        24.559
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 5",
+      "asset": "flower-bed-5",
+      "group": "Flower beds",
+      "position": [
+        22,
+        0,
+        -10
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 6",
+      "asset": "flower-bed-6",
+      "group": "Flower beds",
+      "position": [
+        19,
+        0,
+        4.5
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 7",
+      "asset": "flower-bed-7",
+      "group": "Flower beds",
+      "position": [
+        41,
+        0,
+        3.4
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 8",
+      "asset": "flower-bed-8",
+      "group": "Flower beds",
+      "position": [
+        47.1,
+        0,
+        -4.5
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 9",
+      "asset": "flower-bed-9",
+      "group": "Flower beds",
+      "position": [
+        -5,
+        0,
+        18.5
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 10",
+      "asset": "flower-bed-10",
+      "group": "Flower beds",
+      "position": [
+        -18.5,
+        0,
+        5
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Flower bed 11",
+      "asset": "flower-bed-11",
+      "group": "Flower beds",
+      "position": [
+        -13,
+        0,
+        -13.5
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Lawn",
+      "asset": "lawn",
+      "group": "Grounds",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Hills and far forest",
+      "asset": "backdrop-hills",
+      "group": "Grounds",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Garden folly (Evo colonnade)",
+      "asset": "garden-folly",
+      "group": "Garden",
+      "position": [
+        0,
+        0,
+        33
+      ],
+      "rotationY": 180,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Labradorite fountain",
+      "asset": "fountain",
+      "group": "Garden",
+      "position": [
+        6,
+        0,
+        -24
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Pond and spring stream",
+      "asset": "pond-and-stream",
+      "group": "Garden",
+      "position": [
+        -4,
+        0,
+        -30
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Colonnade grapevine",
+      "asset": "colonnade-grapevine",
+      "group": "Colonnade vines",
+      "position": [
+        22.7,
+        0,
+        -2.005
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Colonnade ivy with jasmine",
+      "asset": "colonnade-ivy-jasmine",
+      "group": "Colonnade vines",
+      "position": [
+        22.7,
+        0,
+        -2.005
+      ],
+      "rotationY": 0,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "hidden": true
+    },
+    {
+      "label": "XR Guild Principles board",
+      "asset": "board-principles",
+      "group": "Garden",
+      "position": [
+        19.5,
+        0,
+        -12.6
+      ],
+      "rotationY": -8.594,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "label": "Code of conduct board (I’m in)",
+      "asset": "board-conduct",
+      "group": "Garden",
+      "position": [
+        23.6,
+        0,
+        -13.2
+      ],
+      "rotationY": 6.875,
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  ]
+}

@@ -4,3 +4,12 @@ artifact/
 scratch/
 *.log
 .DS_Store
+.env
+.env.local
+# Photon Voice JS SDK: download is gated, not redistributable here (see README)
+public/photon/
+dist/photon/
+guild-hall-library-viverse.zip
+# VIVERSE upload zips are build output: npm run viverse-zip, or the CI artifact
+guild-hall-v3-viverse.zip
+release/

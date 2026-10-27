@@ -3,18 +3,20 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Mats } from './mats';
 import { HALL, LIB, STAGE, DESK, BOARD, SPAWN, HALL_DOOR, V } from './site';
 
-export type HallPreset = 'proscenium' | 'cabaret' | 'open';
+export type HallPreset = 'benches' | 'tables' | 'open';
 export type LibPreset = 'table' | 'circle' | 'seminar';
 export const HALL_PRESETS: { id: HallPreset; name: string; hint: string }[] = [
-  { id: 'proscenium', name: 'Proscenium benches', hint: 'Curved velvet benches for 3 to 4, facing the stage' },
-  { id: 'cabaret', name: 'Cabaret tables', hint: 'Small tables for mixers and workshops' },
-  { id: 'open', name: 'Open floor', hint: 'No seating, for mingling and dancing' },
+  { id: 'benches', name: 'Benches', hint: 'Curved backless benches for 3 to 4, facing the stage: talks and launches (up to 200 seats)' },
+  { id: 'tables', name: 'Small group tables', hint: 'Round tables for 4 to 6: workshops, mentorship and mixers (up to 120 seats)' },
+  { id: 'open', name: 'Open floor', hint: 'No seating: dances, parties and standing events' },
 ];
 export const LIB_PRESETS: { id: LibPreset; name: string; hint: string }[] = [
   { id: 'table', name: 'Round table', hint: '15 seats around the Connect table' },
   { id: 'circle', name: 'Reading circle', hint: 'A wide circle for discussion' },
   { id: 'seminar', name: 'Seminar', hint: 'Rows facing the Library search shelf' },
 ];
+/** Older preset ids (v2/v3 builds, saved links) mapped to the V3 names. */
+export const PRESET_ALIAS: Record<string, string> = { proscenium: 'benches', cabaret: 'tables' };
 export const HALL_MAX = 200, CHAIR_MAX = 120, LIB_MAX = 15;
 
 export interface Seat { pos: THREE.Vector3; rotY: number; }
@@ -39,7 +41,7 @@ function hallOk(p: THREE.Vector3, stageClear: number, wall = 1.3) {
 export function hallLayout(id: HallPreset): Layout {
   const seats: Seat[] = [], tables: THREE.Vector3[] = [], benches: Bench[] = [];
   const S = STAGE.center, clear = STAGE.r + 1.6;
-  if (id === 'proscenium') {
+  if (id === 'benches') {
     const SEAT = 0.56, GAP = 0.4, ALPHA = (82 * Math.PI) / 180;
     for (let row = 0; row < 12; row++) {
       const r = STAGE.r + 2.4 + row * 1.3;
@@ -64,7 +66,7 @@ export function hallLayout(id: HallPreset): Layout {
         }
       }
     }
-  } else if (id === 'cabaret') {
+  } else if (id === 'tables') {
     const sp = 2.5; const cands: THREE.Vector3[] = [];
     for (let gz = -7; gz <= 7; gz++) for (let gx = -7; gx <= 7; gx++) {
       const t = V(gx * sp + (gz % 2 ? sp / 2 : 0), 0, gz * sp * 0.9 + 0.4);
@@ -125,7 +127,11 @@ function sector(r0: number, r1: number, a0: number, a1: number, top: number, dep
   return g.index ? g.toNonIndexed() : g;
 }
 
-/** Curved green-velvet benches whose arcs follow the stage curve: walnut base and back, gilt rail. Merged per material. */
+/**
+ * Curved backless benches whose arcs follow the stage curve: green-velvet cushion on a walnut board and supports.
+ * Backless is the V3 standard for event seating in every Guild Hall build (easier to get in and out of in VR,
+ * and avatars can turn to talk). Merged per material.
+ */
 export function benchMeshes(m: Mats, benches: Bench[]) {
   const vel: THREE.BufferGeometry[] = [], wood: THREE.BufferGeometry[] = [], gold: THREE.BufferGeometry[] = [];
   for (const b of benches) {
@@ -133,10 +139,8 @@ export function benchMeshes(m: Mats, benches: Bench[]) {
     wood.push(sector(r - 0.27, r + 0.27, a0, a1, 0.42, 0.07));                 // seat board
     vel.push(sector(r - 0.25, r + 0.23, a0 + 0.02 / r, a1 - 0.02 / r, 0.52, 0.1, 0.025)); // cushion
     for (const f of [0.02, 0.5, 0.98]) { const a = a0 + (a1 - a0) * f; wood.push(sector(r - 0.22, r + 0.22, a - 0.05 / r, a + 0.05 / r, 0.35, 0.35)); } // supports
-    wood.push(sector(r + 0.25, r + 0.31, a0, a1, 1.0, 0.58));                  // back
-    vel.push(sector(r + 0.21, r + 0.25, a0 + 0.05 / r, a1 - 0.05 / r, 0.93, 0.36)); // back pad
-    const rail: THREE.Vector3[] = []; for (let i = 0; i <= 16; i++) { const a = a0 + (a1 - a0) * (i / 16); rail.push(onArc(r + 0.28, a).setY(1.01)); }
-    gold.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rail), 32, 0.022, 6).toNonIndexed());
+    // thin gilt edge on both long sides of the seat board
+    for (const rr of [r - 0.27, r + 0.27]) { const edge: THREE.Vector3[] = []; for (let i = 0; i <= 12; i++) edge.push(onArc(rr, a0 + (a1 - a0) * (i / 12)).setY(0.4)); gold.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edge), 24, 0.012, 5).toNonIndexed()); }
   }
   const out = new THREE.Group();
   const add = (geos: THREE.BufferGeometry[], mat: THREE.Material) => { if (!geos.length) return; const g = mergeGeometries(geos.map(x => { for (const k of Object.keys(x.attributes)) if (!['position', 'normal', 'uv'].includes(k)) x.deleteAttribute(k); x.clearGroups(); return x; })); geos.forEach(x => x.dispose()); if (g) out.add(new THREE.Mesh(g, mat)); };
@@ -173,7 +177,7 @@ export function buildSeating(m: Mats): Seating {
   for (const im of [tTop, tBase, tRim]) { im.count = 0; im.frustumCulled = false; group.add(im); }
   let benchGroup: THREE.Group | null = null;
 
-  const preset = { hall: 'proscenium' as HallPreset, library: 'table' as LibPreset };
+  const preset = { hall: 'benches' as HallPreset, library: 'table' as LibPreset };
   const current = { hall: hallLayout(preset.hall), library: libLayout(preset.library) };
   const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
   const apply = (set: ReturnType<typeof make>, seats: Seat[]) => {
@@ -181,7 +185,7 @@ export function buildSeating(m: Mats): Seating {
     for (const im of [set.wood, set.vel, set.gold]) { im.count = seats.length; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); }
   };
   const applyHall = (L: Layout) => {
-    apply(chairs, preset.hall === 'cabaret' ? L.seats : []);
+    apply(chairs, preset.hall === 'tables' ? L.seats : []);
     L.seats.forEach((s, i) => { mtx.compose(s.pos, q.setFromAxisAngle(up, s.rotY), one); pads.setMatrixAt(i, mtx); });
     pads.count = L.seats.length; pads.instanceMatrix.needsUpdate = true; pads.computeBoundingSphere();
     L.tables.forEach((t, i) => { mtx.compose(t, q.identity(), one); tTop.setMatrixAt(i, mtx); tBase.setMatrixAt(i, mtx); tRim.setMatrixAt(i, mtx); });
@@ -199,6 +203,9 @@ export function buildSeating(m: Mats): Seating {
     preset,
     onChange: null,
     setPreset(zone, id) {
+      id = PRESET_ALIAS[id] ?? id;
+      if (zone === 'hall' && id === preset.hall) return;
+      if (zone === 'library' && id === preset.library) return;
       if (zone === 'hall') { if (!HALL_PRESETS.some(p => p.id === id)) return; preset.hall = id as HallPreset; current.hall = hallLayout(preset.hall); applyHall(current.hall); }
       else { if (!LIB_PRESETS.some(p => p.id === id)) return; preset.library = id as LibPreset; current.library = libLayout(preset.library); apply(lib, current.library.seats); }
       api.onChange?.(zone, id);

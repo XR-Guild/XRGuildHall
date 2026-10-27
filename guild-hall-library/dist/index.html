@@ -8,11 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus+SC&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap" />
-  <script type="module" crossorigin src="./assets/index-DtXKNfSg.js"></script>
+  <script type="module" crossorigin src="./assets/main-C5F06bPU.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/three.core-Ca4piDvP.js">
   <link rel="modulepreload" crossorigin href="./assets/three.module-DM3saolS.js">
+  <link rel="modulepreload" crossorigin href="./assets/config-CH4PsehU.js">
   <link rel="modulepreload" crossorigin href="./assets/physicsShape-lBMWtulb.js">
-  <link rel="stylesheet" crossorigin href="./assets/index-BVvAhx-m.css">
+  <link rel="stylesheet" crossorigin href="./assets/main-DpX-TYSA.css">
 </head>
 <body>
 <div id="scene" aria-hidden="true"></div>
@@ -146,6 +147,7 @@
       <span id="socStatus" class="soc-status">Solo</span>
       <button id="socJoin" class="ghost sm" hidden>Join others</button>
       <button id="socMic" class="ghost sm" hidden aria-pressed="false">Mic off</button>
+      <button id="socMega" class="ghost sm" hidden aria-pressed="false" title="Everyone hears you at full volume, wherever they are. Only on the stage.">Megaphone</button>
       <button id="socChatBtn" class="ghost sm" hidden aria-expanded="false" aria-controls="socChat">Chat <span id="socUnread" class="badge"></span></button>
       <button id="socPeopleBtn" class="ghost sm" hidden aria-expanded="false" aria-controls="socPeople">People <span id="socCount" class="badge"></span></button>
     </div>
@@ -168,8 +170,9 @@
       <ul>
         <li>Be kind and respectful. Harassment, hate, and unwanted contact are not welcome here.</li>
         <li>Respect personal space. Anyone who walks into you fades out; you can mute or block anyone.</li>
-        <li>Your mic stays <strong>off</strong> until you press Mic. Voice is carried by LiveKit Cloud and is not recorded by this world.</li>
+        <li>Your mic stays <strong>off</strong> until you press Mic. Voice is carried by Photon Cloud and is not recorded by this world.</li>
         <li>Others will see your display name, avatar, position, and seat while you are connected. No gaze, hand, or device data is shared.</li>
+        <li>At events, Guild admins may spotlight speakers, ask the hall to mute, change the seating and show streams on the screens.</li>
         <li>Read the XR Guild <a href="https://www.xrguild.org/principles" target="_blank" rel="noopener">principles ↗</a>.</li>
       </ul>
       <label class="fine" for="cocName">Display name</label>
@@ -183,17 +186,49 @@
   <footer class="bottom">
     <p class="hint"><span class="desk">Drag to look · WASD to walk · double-click the floor to move · click objects</span><span class="touch">Drag to look · double-tap the floor to move · tap objects</span></p>
     <div class="actions">
+      <button id="adminBtn" class="ghost" aria-expanded="false" aria-controls="admin" title="Room settings for Guild admins and hosts">Admin</button>
       <button id="settingsBtn" class="ghost" aria-expanded="false" aria-controls="settings">Comfort</button>
       <button id="enterVR" class="primary" hidden>Enter VR</button>
     </div>
     <div id="settings" class="settings" hidden>
       <label><input type="checkbox" id="setReduce" /> Reduce motion</label>
-      <label><input type="checkbox" id="setAurora" checked /> Animate the aurora</label>
+      <div class="seg" id="skySeg" role="group" aria-label="Sky"><span class="lbl">Sky (just for you)</span><button data-sky="aurora" aria-pressed="true">Aurora</button><button data-sky="blue" aria-pressed="false">Blue sky</button><button data-sky="meteors" aria-pressed="false">Meteors</button><button data-sky="sunset" aria-pressed="false">Sunset</button></div>
+      <label><input type="checkbox" id="setAurora" checked /> Animate the sky</label>
+      <label><input type="checkbox" id="setAmbient" checked /> Garden sounds (birdsong and water)</label>
+      <label><input type="checkbox" id="setStream" checked /> Stream sound from the screens</label>
       <label><input type="checkbox" id="setRefl" checked /> Mirror reflections (desktop)</label>
       <p class="fine">In VR: teleport with the thumbstick, snap turn 45°. Squeeze or pinch to pick up devices on the table.</p>
     </div>
   </footer>
   <div id="fade" aria-hidden="true"></div>
+  <!-- Admin: room settings for everyone (seating, audio mode, spotlight, media screens). See docs/ADMIN.md -->
+  <div id="admin" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <div class="modal-inner admin-inner">
+      <div class="admin-head"><h2 id="adminTitle" class="display">Room settings</h2><button id="adminClose" class="ghost sm" aria-label="Close">Close</button></div>
+      <p id="adminWho" class="note"></p>
+      <form id="adminSignIn" class="admin-signin" hidden>
+        <label for="adminKey">Admin passphrase</label>
+        <div class="row"><input id="adminKey" type="password" autocomplete="current-password" maxlength="128" placeholder="From the Guild's admin vault" /><button class="primary sm">Sign in</button></div>
+        <p class="fine">Checked by the Guild's sign-in service, never stored in this page. Signing in reconnects your voice.</p>
+      </form>
+      <fieldset id="adminControls">
+        <h3>Guild Hall seating</h3>
+        <div id="admSeatHall" class="seg" role="group" aria-label="Hall seating"></div>
+        <h3>Library seating</h3>
+        <div id="admSeatLib" class="seg" role="group" aria-label="Library seating"></div>
+        <h3>Spatial audio</h3>
+        <div id="admAudio" class="seg" role="group" aria-label="Audio mode"></div>
+        <p class="fine" id="admAudioHint"></p>
+        <div class="row wrap"><button id="admMuteHall" type="button" class="ghost sm">Ask the hall to mute</button><button id="admClearSpot" type="button" class="ghost sm">Clear all spotlights</button></div>
+        <h4>Spotlight a guest</h4>
+        <div id="admSpot" class="adm-list"></div>
+        <h3>Media screens</h3>
+        <div id="admScreens"></div>
+        <div id="admScreenAudio" class="seg" role="group" aria-label="Screen sound"></div>
+        <p class="fine">RTMP: point OBS at the Guild's LiveKit ingress (docs/MEDIA.md), then choose <b>Live: RTMP stream</b>. Slides: open the <a id="admPresenter" href="presenter.html" target="_blank" rel="noopener">presenter page ↗</a> on a laptop and share a window, then choose <b>Live: screenshare</b>.</p>
+      </fieldset>
+    </div>
+  </div>
 </div>
 </body>
 </html>

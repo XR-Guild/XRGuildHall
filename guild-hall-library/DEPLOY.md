@@ -28,7 +28,7 @@ jobs:
       - run: npm run build
         env:
           VITE_VIVERSE_APP_ID: ${{ vars.VIVERSE_APP_ID }}
-          VITE_LIVEKIT_TOKEN_URL: ${{ vars.LIVEKIT_TOKEN_URL }}
+          VITE_PHOTON_APP_ID: ${{ vars.PHOTON_APP_ID }}
       - uses: actions/upload-pages-artifact@v3
         with: { path: guild-hall-library/dist }
   deploy:
@@ -47,17 +47,9 @@ jobs:
 Both are optional; without them the Hall runs solo with an offline crowd preview. Details and the reasoning are in [`MULTIPLAYER.md`](MULTIPLAYER.md).
 
 1. **VIVERSE:** create an app in VIVERSE Studio to get an App ID, and request microphone permission for the world there. Build with `VITE_VIVERSE_APP_ID=<id>` (or set the repo variable `VIVERSE_APP_ID` for the Action above).
-2. **LiveKit Cloud voice:** deploy the token worker.
-
-   ```bash
-   npx wrangler deploy proxy/livekit-token-worker.js --name guild-hall-voice
-   npx wrangler secret put LIVEKIT_API_KEY
-   npx wrangler secret put LIVEKIT_API_SECRET
-   npx wrangler secret put HOST_KEYS           # optional, comma list of host passphrases
-   # plain vars: LIVEKIT_URL=wss://<project>.livekit.cloud  ALLOWED_ORIGINS=https://hall.xrguild.org,<viverse world origin>
-   ```
-
-   Then build with `VITE_LIVEKIT_TOKEN_URL=https://guild-hall-voice.<account>.workers.dev`. Hosts join with `?hostKey=<passphrase>` on a self-hosted build.
+2. **Photon voice:** create a Voice app in the Photon dashboard, and build with `VITE_PHOTON_APP_ID=<app id>` (or set the repo variable `PHOTON_APP_ID` for the Action above). There is no server to deploy.
+   - The build also needs the Photon Voice JavaScript SDK in `public/photon/` (see [`MULTIPLAYER.md`](MULTIPLAYER.md)). That folder is gitignored because the SDK download is limited to Photon Circle members, so the Action above has no copy of it. Until the SDK has a private source the Action can fetch, build voice-enabled versions locally.
+   - The host is the room's master client, so `?hostKey` no longer applies.
 
 ## Netlify / Cloudflare Pages / Vercel
 
