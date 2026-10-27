@@ -31,7 +31,7 @@ export interface RoomState {
   seating: { hall: string; library: string };
   audio: AudioMode;
   spotlight: string[];                      // presence ids heard by everyone at full volume
-  screens: Record<string, ScreenSource>;    // keyed by screen id: 'stage', 'west', 'east'
+  screens: Record<string, ScreenSource>;    // keyed by screen id: 'stage'
   screenAudio: 'room' | 'positional';
   v: number;                                // bumps on every change, so a stale answer never wins
 }

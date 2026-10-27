@@ -1,6 +1,6 @@
 # Media screens: RTMP streams, screenshare and HLS
 
-The Guild Hall has three screens: **Stage** (above the stage, 7 m wide), **West** and **East** (either side). When idle they show the XR Guild slide (logo, mission line, xrguild.org). Admins pick each screen's source in **Room settings → Media screens**.
+The Guild Hall has one screen, **Stage**, above the stage (9.1 m wide, as in the Arrival.space build). When idle it shows the XR Guild slide (logo, mission line, xrguild.org). Admins pick its source in **Room settings → Media screens**.
 
 | Source | Needs | Latency |
 |---|---|---|

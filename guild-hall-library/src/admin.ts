@@ -13,7 +13,7 @@ export const AUDIO_MODES: { id: AudioMode; name: string; hint: string }[] = [
   { id: 'event', name: 'Large group', hint: 'For full rooms. You hear your 6 nearest neighbours within 10 m, a little softer, so the room stays calm; the stage still carries.' },
   { id: 'spotlight', name: 'Stage spotlight', hint: 'For talks and panels. Everyone on the stage, and anyone you spotlight, is heard by everyone at full volume. Guests can still whisper to their 3 nearest neighbours.' },
 ];
-const SCREEN_NAMES: Record<string, string> = { stage: 'Stage screen (above the stage)', west: 'West screen', east: 'East screen' };
+const SCREEN_NAMES: Record<string, string> = { stage: 'Stage screen (above the stage)' };
 
 export interface AdminHooks {
   room: Room;

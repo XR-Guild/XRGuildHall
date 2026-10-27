@@ -9,7 +9,7 @@ The **Admin** button (bottom right) opens **Room settings**. Changes apply to ev
 | Spatial audio | Conversation · Large group · Stage spotlight. See [AUDIO.md](AUDIO.md) |
 | Spotlight a guest | Anyone you spotlight is heard by everyone at full volume (for example an audience question). Also on the People list. |
 | Ask the hall to mute | Turns off the mic of everyone in the hall who is not on the stage or spotlit. They can turn it back on. |
-| Media screens | Stage, West and East screens: XR Guild slide, live screenshare, RTMP stream, or an HLS/MP4 link. See [MEDIA.md](MEDIA.md) |
+| Media screens | The stage screen: XR Guild slide, live screenshare, RTMP stream, or an HLS/MP4 link. See [MEDIA.md](MEDIA.md) |
 
 When you are on your own (not joined), every setting works locally so you can try it.
 

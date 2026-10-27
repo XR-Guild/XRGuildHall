@@ -9,7 +9,7 @@ import type { Control, RoomState, AudioMode, ScreenSource } from './net/types';
  *   random delay, so a room with several admins doesn't answer in a burst.
  * - Solo (not connected), you can try every setting locally.
  */
-export const SCREEN_IDS = ['stage', 'west', 'east'] as const;
+export const SCREEN_IDS = ['stage'] as const;
 export type ScreenId = typeof SCREEN_IDS[number];
 
 export function defaultState(d: { hallSeating: string; librarySeating: string; audio: AudioMode }): RoomState {

@@ -6,8 +6,8 @@ import { TAGLINE } from './hallfeatures';
 /**
  * Media screens in the Guild Hall (V3).
  *
- *  stage  the big screen above the stage: slides (screenshare), the RTMP stream, or the XR Guild slide when idle
- *  west / east  wall screens either side of the stage, for streams, captions or a second camera
+ *  stage  the one screen, above the stage: slides (screenshare), the RTMP stream, or the XR Guild slide when idle.
+ *         Sized and placed like the screen in the Arrival.space build (V4), standing clear of the media wall.
  *
  * Sources (chosen by an admin, shared by everyone through the room state):
  *  idle  the XR Guild slide (logo, mission line, xrguild.org)
@@ -19,7 +19,7 @@ import { TAGLINE } from './hallfeatures';
  * Video always starts muted (browsers require it); stream sound starts with the visitor's first click, and the
  * "Stream sound" setting in Comfort turns it off for that visitor.
  */
-export type ScreenId = 'stage' | 'west' | 'east';
+export type ScreenId = 'stage';
 interface Screen {
   id: ScreenId; group: THREE.Group; mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial;
   idle: THREE.CanvasTexture; w: number; h: number;
@@ -29,7 +29,7 @@ interface Screen {
 }
 export interface MediaOptions { tokenUrl: string; room: string; identity: () => string; name: () => string; logoUrl: string; fonts: { display: string; body: string; mono: string } }
 
-const BAYS: { id: ScreenId; bay: number; w: number }[] = [{ id: 'stage', bay: 0, w: 7.0 }, { id: 'west', bay: 11, w: 5.6 }, { id: 'east', bay: 1, w: 5.6 }];
+const BAYS: { id: ScreenId; bay: number; w: number; at: [number, number, number] }[] = [{ id: 'stage', bay: 0, w: 9.12, at: [0, -0.05, 1.15] }];
 
 function idleTexture(o: MediaOptions, logo: HTMLImageElement | null, label: string, note = '') {
   const W = 1920, H = 1080, c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -65,12 +65,12 @@ export class MediaScreens {
   constructor(private m: Mats, private o: MediaOptions) {}
   get liveAvailable() { return !!this.o.tokenUrl; }
 
-  /** Build the three screens onto the hall's media bays. Call before the hall is baked. */
+  /** Build the screens onto the hall's media bays. Call before the hall is baked. */
   build(mounts: Map<number, THREE.Object3D>) {
     for (const b of BAYS) {
       const mount = mounts.get(b.bay); if (!mount) continue;
       const w = b.w, h = w * 9 / 16;
-      const group = new THREE.Group(); group.name = `Screen:${b.id}`; group.userData.keep = true;
+      const group = new THREE.Group(); group.name = `Screen:${b.id}`; group.userData.keep = true; group.position.set(...b.at);
       const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.36, h + 0.36, 0.1), this.m.walnutDark); frame.position.z = -0.03; group.add(frame);
       const rim = new THREE.Mesh(new THREE.BoxGeometry(w + 0.16, h + 0.16, 0.06), this.m.gilt); rim.position.z = 0.0; group.add(rim);
       const idle = idleTexture(this.o, null, 'XR Guild Hall');
