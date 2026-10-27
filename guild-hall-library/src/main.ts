@@ -392,11 +392,11 @@ async function main() {
         if (!name) presence.self.name = id.name;
         presence.self.avatar = id.vrmUrl;
         avatars.fetchAvatar = url => id.avatarClient.getAvatarFileWithSDK(url);
-        await presence.connect(new ViverseTransport(VIVERSE_APP_ID, id, CONFIG.viverseRoomCap));
-        if (PhotonSession) {
-          // presence stays on VIVERSE; a voice problem (e.g. the CCU cap) must not drop people from the room.
-          // Voice joins the Photon room for this world's VIVERSE room (overflow rooms get their own voice room).
-          const vt = presence.transport as InstanceType<typeof ViverseTransport>;
+        const vt = new ViverseTransport(VIVERSE_APP_ID, id, CONFIG.viverseRoomCap);
+        // presence stays on VIVERSE; a voice problem (e.g. the CCU cap) must not drop people from the room.
+        // Voice joins the Photon room for this world's VIVERSE room (overflow rooms get their own voice room).
+        const joinVoice = async () => {
+          if (!PhotonSession) return;
           const v: PhotonSession = voice = new PhotonSession(PHOTON_APP_ID, vt.voiceRoom, PHOTON_REGION, photonOpts());
           v.setAudioMode(room.state.audio); v.spotlight = new Set(room.state.spotlight);
           // room controls over Photon (verified sender); VIVERSE `general` controls are ignored while voice is up
@@ -407,7 +407,19 @@ async function main() {
           try { await v.connect(presence.self.id, presence.self.name); } catch (e: any) { v.disconnect(); if (voice === v) { voice = null; social.sys('Voice is unavailable right now. ' + (e?.message ?? '')); } }
           // Leave pressed while voice was still joining: the listener below already dropped it, so close this one too
           if (voice !== v) v.disconnect();
-        }
+        };
+        // we were alone and moved to a room with people in it: voice and room settings follow
+        vt.onRoomChange = async () => {
+          if (presence.transport !== vt) return;
+          const micWasOn = !!voice?.micOn;
+          voice?.disconnect(); voice = null;
+          social.sys(`You were alone, so we moved you to ${vt.roomName} to join the others.${micWasOn ? ' Your mic is off; press Mic to talk.' : ''}`);
+          await joinVoice();
+          social.drawDock();
+          room.hello();
+        };
+        await presence.connect(vt);
+        await joinVoice();
         return;
       }
       if (PhotonSession) {
