@@ -341,6 +341,9 @@ function buildVines() {
  * water is filtered noise placed at the fountain, the spring and the stream. Starts after the visitor's first click
  * (browsers require a gesture), and Comfort → Garden sounds turns it off.
  */
+// Kept well under voice level (about 16 dB below the original 0.5) so conversations carry over the garden.
+const GARDEN_VOLUME = 0.08;
+
 export class GardenSound {
   ctx: AudioContext | null = null;
   enabled = true;
@@ -352,7 +355,7 @@ export class GardenSound {
   start() {
     if (this.ctx || !this.enabled) { this.ctx?.resume(); return; }
     const ctx = this.ctx = new AudioContext();
-    this.master = new GainNode(ctx, { gain: 0.5 }); this.master.connect(ctx.destination);
+    this.master = new GainNode(ctx, { gain: GARDEN_VOLUME }); this.master.connect(ctx.destination);
     // one shared noise buffer, looped
     const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -367,7 +370,7 @@ export class GardenSound {
       src.connect(bp).connect(lp).connect(g).connect(pan).connect(this.master!); src.start();
     });
   }
-  setEnabled(on: boolean) { this.enabled = on; if (this.master) this.master.gain.setTargetAtTime(on ? 0.5 : 0, this.ctx!.currentTime, 0.3); if (on) this.start(); }
+  setEnabled(on: boolean) { this.enabled = on; if (this.master) this.master.gain.setTargetAtTime(on ? GARDEN_VOLUME : 0, this.ctx!.currentTime, 0.3); if (on) this.start(); }
   private song(at: THREE.Vector3) {
     const ctx = this.ctx!, t0 = ctx.currentTime + 0.05;
     const pan = new PannerNode(ctx, { panningModel: 'HRTF', distanceModel: 'inverse', refDistance: 4, rolloffFactor: 1.2, maxDistance: 60, positionX: at.x, positionY: at.y, positionZ: at.z });

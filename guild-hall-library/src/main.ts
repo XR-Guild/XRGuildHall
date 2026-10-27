@@ -451,7 +451,6 @@ async function main() {
   window.addEventListener('keydown', firstGesture, { once: true });
   (document.getElementById('setAmbient') as HTMLInputElement).addEventListener('change', e => adds.sound.setEnabled((e.target as HTMLInputElement).checked));
   (document.getElementById('setStream') as HTMLInputElement).addEventListener('change', e => media.setSound((e.target as HTMLInputElement).checked));
-  if (VIVERSE_APP_ID && /viverse/i.test(location.hostname) && !SIM) setTimeout(() => document.getElementById('socJoin')?.click(), 1200);
   if (SIM > 0) setTimeout(() => { social.drawDock(); document.getElementById('socJoin')?.click(); (document.getElementById('cocName') as HTMLInputElement).value = 'You'; }, 800);
 
   // ---- per-frame system ----
@@ -501,11 +500,13 @@ async function main() {
   setTimeout(() => world.setAuthoredPlayerPosition(SPAWN.pos), 600);
   await step(1, 'Welcome to the Guild Hall');
   document.getElementById('loading')!.classList.add('done');
+  if (!SIM) setTimeout(social.welcome, 1400);
+  import('./arrival').then(m => m.loadArrival(world.scene)).catch(e => console.error('[arrival]', e));
   (window as any).__xrgh = { THREE, world, voice: () => voice, goTo, room, media, skies, adds, setView: (y: number, p: number) => { yaw = y; pitch = p; }, TABLE_TOP, presence, seating, sitAt, zone: () => zone };
 }
 
 main().catch(err => {
   console.error(err);
   const msg = document.getElementById('loadMsg');
-  if (msg) msg.textContent = 'The hall could not open in this browser. WebGL 2 is required. ' + (err?.message ?? '');
+  if (msg) { msg.classList.remove('sr'); msg.textContent = 'The hall could not open in this browser. WebGL 2 is required. ' + (err?.message ?? ''); }
 });

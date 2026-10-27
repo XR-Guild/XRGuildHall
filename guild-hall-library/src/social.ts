@@ -73,17 +73,22 @@ export function initSocial(h: SocialHooks) {
   const coc = $('#coc'), ok = $<HTMLInputElement>('#cocOk'), go = $<HTMLButtonElement>('#cocGo'), nm = $<HTMLInputElement>('#cocName');
   nm.value = h.defaultName();
   $('#cocSim').hidden = h.joinLabel !== 'Preview a crowd';
-  ok.addEventListener('change', () => { go.disabled = !ok.checked; });
-  $('#cocCancel').addEventListener('click', () => { coc.hidden = true; });
+  go.hidden = !h.canConnect;
+  const syncGo = () => { go.disabled = !(ok.checked && nm.value.trim()); };
+  ok.addEventListener('change', syncGo); nm.addEventListener('input', syncGo);
+  const closeWelcome = () => $('#welcome').classList.add('gone');
+  $('#cocCancel').addEventListener('click', () => { coc.hidden = true; closeWelcome(); });
+  /** Title screen: the welcome dialog opens over the screenshot once the world has loaded. */
+  const welcome = () => { coc.hidden = false; syncGo(); nm.focus(); };
   join.addEventListener('click', () => { if (P.connected) { P.disconnect(); drawDock(); return; } coc.hidden = false; nm.focus(); });
   for (const ev of ['keydown', 'keyup'] as const) coc.addEventListener(ev, e => e.stopPropagation());
   let lastName = '';
   go.addEventListener('click', async () => {
-    coc.hidden = true; go.disabled = true;
-    lastName = nm.value.trim() || h.defaultName();
+    coc.hidden = true; go.disabled = true; closeWelcome();
+    lastName = nm.value.trim();
     try { await h.connect(lastName); sys(h.voice() ? 'Connected. Your mic is off; press Mic to talk.' : h.joinLabel === 'Preview a crowd' ? 'Previewing a simulated crowd. Nothing is sent anywhere.' : 'Connected without voice.'); }
     catch (e: any) { sys('Could not connect: ' + (e?.message ?? e)); P.disconnect(); }
-    go.disabled = !ok.checked; drawDock(); drawSeats();
+    syncGo(); drawDock(); drawSeats();
   });
 
   // ---------- rendering ----------
@@ -133,5 +138,5 @@ export function initSocial(h: SocialHooks) {
     catch (e: any) { sys('Could not reconnect: ' + (e?.message ?? e)); P.disconnect(); }
     drawDock(); drawSeats();
   };
-  return { sys, drawDock, drawSeats, rejoin };
+  return { sys, drawDock, drawSeats, rejoin, welcome };
 }

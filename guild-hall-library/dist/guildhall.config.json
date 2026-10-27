@@ -2,7 +2,7 @@
   "_comment": "Run-time settings for the XR Guild Hall V3. Edit inside the VIVERSE upload zip (or dist/) without rebuilding; a blank value or 0 keeps the build-time setting from .env. Nothing here is secret: it ships to every visitor. Optional keys: photonMaxPlayers, viverseRoomCap (numbers). See V3.md.",
   "photonAppId": "",
   "photonRegion": "",
-  "photonMaxPlayers": 0,
+  "photonMaxPlayers": 100,
   "adminMode": "",
   "viverseAppId": "",
   "viverseRoomCap": 0,
