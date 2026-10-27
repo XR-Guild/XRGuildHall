@@ -34,6 +34,7 @@ import { initAdmin } from './admin';
 import { MediaScreens } from './media';
 import { makeSkySwitcher, savedSky, type SkyId } from './skies';
 import { buildArrivalAdds } from './arrivaladds';
+import { dressStainedGlass } from './stainedglass';
 import type { Control, RoomState } from './net/types';
 
 const FONTS = {
@@ -164,6 +165,7 @@ async function main() {
 
   await step(0.55, 'Gilding the details…');
   for (const g of [hall.group, lib.group, colonnade.group, stage.group, table.group, garden.group, libIn.group, adds.group]) bakeStatic(g);
+  const glass = dressStainedGlass(hall);
 
   // ---- IWSDK entities ----
   const addEntity = (o: THREE.Object3D) => world.createTransformEntity(o, { persistent: true });
@@ -209,9 +211,9 @@ async function main() {
     hallDaylight: hall.lights.find(l => (l as THREE.HemisphereLight).isHemisphereLight) as THREE.HemisphereLight | undefined,
   });
   const drawSkySeg = () => document.querySelectorAll<HTMLButtonElement>('#skySeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sky === skies.current)));
-  document.getElementById('skySeg')!.addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b?.dataset.sky) skies.set(b.dataset.sky as SkyId).then(() => { drawSkySeg(); adds.sound.night = skies.isNight(); }); });
+  document.getElementById('skySeg')!.addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b?.dataset.sky) skies.set(b.dataset.sky as SkyId).then(() => { drawSkySeg(); adds.sound.night = skies.isNight(); glass.setNight(skies.isNight()); }); });
   if (savedSky() !== 'aurora') await skies.set(savedSky());
-  drawSkySeg();
+  drawSkySeg(); glass.setNight(skies.isNight());
 
   // desktop mirror floors: only the one in your zone renders
   const floorRefls: { zone: Zone; refl: Reflector; mat: THREE.MeshPhysicalMaterial }[] = [];
