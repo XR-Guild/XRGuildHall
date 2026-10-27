@@ -18,6 +18,8 @@ export const LIB_PRESETS: { id: LibPreset; name: string; hint: string }[] = [
 /** Older preset ids (v2/v3 builds, saved links) mapped to the V3 names. */
 export const PRESET_ALIAS: Record<string, string> = { proscenium: 'benches', cabaret: 'tables' };
 export const HALL_MAX = 200, CHAIR_MAX = 120, LIB_MAX = 15;
+/** Top of every seat cushion (benches and chairs); seated avatars are fitted to it. */
+export const SEAT_TOP = 0.52;
 
 export interface Seat { pos: THREE.Vector3; rotY: number; }
 /** A curved bench: seat-centre radius around the stage centre, angular extent (0 = due south of the stage). */
@@ -108,7 +110,7 @@ export function chairGeometries() {
   const bx = (arr: THREE.BufferGeometry[], w: number, h: number, d: number, x: number, y: number, z: number, rx = 0) => { const g = new THREE.BoxGeometry(w, h, d); if (rx) g.rotateX(rx); g.translate(x, y, z); arr.push(g); };
   for (const sx of [-0.2, 0.2]) for (const sz of [-0.18, 0.18]) { const g = new THREE.CylinderGeometry(0.018, 0.024, 0.44, 8); g.translate(sx, 0.22, sz); wood.push(g); }
   bx(wood, 0.46, 0.05, 0.42, 0, 0.45, 0);
-  bx(vel, 0.42, 0.05, 0.38, 0, 0.495, 0.01);
+  bx(vel, 0.42, 0.05, 0.38, 0, SEAT_TOP - 0.025, 0.01);
   for (const sx of [-0.2, 0.2]) bx(wood, 0.035, 0.55, 0.035, sx, 0.72, -0.2, -0.1);
   const back = new THREE.BoxGeometry(0.36, 0.34, 0.035); back.rotateX(-0.1); back.translate(0, 0.74, -0.205); vel.push(back);
   const crest = new THREE.TorusGeometry(0.2, 0.012, 6, 20, Math.PI); crest.rotateX(-0.1); crest.translate(0, 0.9, -0.22); gold.push(crest);
@@ -137,7 +139,7 @@ export function benchMeshes(m: Mats, benches: Bench[]) {
   for (const b of benches) {
     const { r, a0, a1 } = b;
     wood.push(sector(r - 0.27, r + 0.27, a0, a1, 0.42, 0.07));                 // seat board
-    vel.push(sector(r - 0.25, r + 0.23, a0 + 0.02 / r, a1 - 0.02 / r, 0.52, 0.1, 0.025)); // cushion
+    vel.push(sector(r - 0.25, r + 0.23, a0 + 0.02 / r, a1 - 0.02 / r, SEAT_TOP, 0.1, 0.025)); // cushion
     for (const f of [0.02, 0.5, 0.98]) { const a = a0 + (a1 - a0) * f; wood.push(sector(r - 0.22, r + 0.22, a - 0.05 / r, a + 0.05 / r, 0.35, 0.35)); } // supports
     // thin gilt edge on both long sides of the seat board
     for (const rr of [r - 0.27, r + 0.27]) { const edge: THREE.Vector3[] = []; for (let i = 0; i <= 12; i++) edge.push(onArc(rr, a0 + (a1 - a0) * (i / 12)).setY(0.4)); gold.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edge), 24, 0.012, 5).toNonIndexed()); }
