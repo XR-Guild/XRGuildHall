@@ -21,6 +21,7 @@ import { newsPanel, libraryPanel, timelinePanel } from './xrpanels';
 import { Interactor } from './interact';
 import { initUI, lineageCard } from './ui';
 import { initSocial } from './social';
+import { XRMenu } from './xrmenu';
 import { store } from './store';
 import { bakeStatic } from './bake';
 import { loadArrival, removeV3 } from './arrival';
@@ -356,11 +357,15 @@ async function main() {
   // ---- XR session hooks ----
   renderer.xr.addEventListener('sessionstart', () => {
     const s = renderer.xr.getSession()!;
-    s.addEventListener('select', (e: XRInputSourceEvent) => inter.selectXR(e.inputSource.handedness));
+    const hand = (e: XRInputSourceEvent) => e.inputSource.handedness as 'left' | 'right';
+    s.addEventListener('selectstart', (e: XRInputSourceEvent) => inter.pressXR(hand(e)));
+    s.addEventListener('select', (e: XRInputSourceEvent) => { if (!xrMenu.endDrag(hand(e))) inter.selectXR(hand(e)); });
+    s.addEventListener('selectend', (e: XRInputSourceEvent) => xrMenu.endDrag(hand(e)));
+    xrMenu.sessionStart();
     setReflections(false);
     try { renderer.xr.setFoveation(0.6); } catch { /* optional */ }
   });
-  renderer.xr.addEventListener('sessionend', () => { setReflections(reflectionsWanted); camera.position.y = seat ? 1.2 : 1.7; });
+  renderer.xr.addEventListener('sessionend', () => { xrMenu.sessionEnd(); setReflections(reflectionsWanted); camera.position.y = seat ? 1.2 : 1.7; });
 
   // ---- UI ----
   const ui = initUI({
@@ -458,6 +463,7 @@ async function main() {
       }
     },
   });
+  const xrMenu = new XRMenu(world, inter, presence, social, FONTS);
   // Leave only disconnects the presence transport; on VIVERSE the voice session is separate and must not keep the mic live
   presence.listeners.add(() => { if (!presence.connected && voice) { voice.disconnect(); voice = null; } });
   // controls from the presence transport: Photon (verified) off VIVERSE, VIVERSE `general` otherwise.
@@ -532,6 +538,7 @@ async function main() {
       } else if (avatars.group.children.length) avatars.update(new Map(), pp, camera, delta, time, speaking);
       media.update(camera, zone === 'hall');
       adds.update(time, delta, reduced, camera);
+      xrMenu.update();
       inter.update();
     }
   }
@@ -543,7 +550,7 @@ async function main() {
   await step(1, 'Welcome to the Guild Hall');
   document.getElementById('loading')!.classList.add('done');
   if (!SIM) setTimeout(social.welcome, 1400);
-  (window as any).__xrgh = { THREE, world, voice: () => voice, goTo, room, media, skies, adds, setView: (y: number, p: number) => { yaw = y; pitch = p; }, TABLE_TOP, presence, seating, sitAt, zone: () => zone };
+  (window as any).__xrgh = { THREE, world, voice: () => voice, goTo, room, media, skies, adds, setView: (y: number, p: number) => { yaw = y; pitch = p; }, TABLE_TOP, presence, seating, sitAt, xrMenu, zone: () => zone };
 }
 
 main().catch(err => {

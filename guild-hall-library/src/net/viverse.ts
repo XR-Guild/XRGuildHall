@@ -64,7 +64,11 @@ export async function viverseIdentity(appId: string, promptLogin: boolean): Prom
   await loadViverseSdk();
   const V = (globalThis as any).viverse;
   const client = new V.client({ clientId: appId, domain: 'account.htcvive.com' });
-  const auth = await timed('checkAuth', () => client.checkAuth());
+  // checkAuth never settles on an origin VIVERSE doesn't recognise (e.g. a localhost dev server), which left Join stuck
+  const auth = await timed('checkAuth', () => Promise.race([
+    client.checkAuth(),
+    new Promise((_, rej) => setTimeout(() => rej(new Error('VIVERSE sign-in timed out; use ?sim=12 when testing locally.')), 15000)),
+  ]));
   if (!auth?.access_token) { if (promptLogin) client.loginWithWorlds(); return null; }
   const token = (await timed('getToken', () => client.getToken?.())) ?? auth.access_token;
   const avatarClient = new V.avatar({ baseURL: 'https://sdk-api.viverse.com/', token });

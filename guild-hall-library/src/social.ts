@@ -21,6 +21,9 @@ export interface SocialHooks {
   defaultName: () => string;
 }
 
+export type ChatLine = { sys: true; text: string } | { sys?: false; name: string; text: string; me: boolean };
+export type Social = ReturnType<typeof initSocial>;
+
 export function renderEvents() {
   const now = Date.now();
   const evs = (EVENTS.events as any[]).filter(e => Date.parse(e.end || e.start) > now).sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
@@ -54,17 +57,20 @@ export function initSocial(h: SocialHooks) {
   let unread = 0;
   chatBtn.addEventListener('click', () => { if (toggle(chatBtn, $('#socChat'))) { unread = 0; $('#socUnread').textContent = ''; $<HTMLInputElement>('#chatIn').focus(); } });
   peopleBtn.addEventListener('click', () => toggle(peopleBtn, $('#socPeople')));
-  mic.addEventListener('click', async () => {
-    const v = h.voice(); if (!v) return;
-    mic.disabled = true;
+  let micBusy = false;
+  const toggleMic = async () => {
+    const v = h.voice(); if (!v || micBusy) return;
+    micBusy = mic.disabled = true; drawDock();
     try { await v.setMic(!v.micOn); sys(v.micOn ? 'Your mic is on. People near you can hear you.' : 'Your mic is off.'); } catch (e: any) { sys('Microphone unavailable: ' + (e?.message ?? e)); }
-    mic.disabled = false; drawDock();
-  });
-  mega.addEventListener('click', () => {
+    micBusy = mic.disabled = false; drawDock();
+  };
+  mic.addEventListener('click', toggleMic);
+  const toggleMegaphone = () => {
     P.setMegaphone(!P.self.megaphone);
     sys(P.self.megaphone ? 'Megaphone on. Everyone can hear you at full volume while you stay on the stage.' : 'Megaphone off.');
     drawDock();
-  });
+  };
+  mega.addEventListener('click', toggleMegaphone);
   $('#chatForm').addEventListener('submit', e => { e.preventDefault(); const i = $<HTMLInputElement>('#chatIn'); P.say(i.value); i.value = ''; });
   for (const ev of ['keydown', 'keyup'] as const) $('#social').addEventListener(ev, e => { if ((e.target as HTMLElement).closest('input')) e.stopPropagation(); });
   $('#muteHall').addEventListener('click', () => { h.room.muteHall(); sys('You asked everyone in the hall to mute.'); });
@@ -80,20 +86,32 @@ export function initSocial(h: SocialHooks) {
   $('#cocCancel').addEventListener('click', () => { coc.hidden = true; closeWelcome(); });
   /** Title screen: the welcome dialog opens over the screenshot once the world has loaded. */
   const welcome = () => { coc.hidden = false; syncGo(); nm.focus(); };
-  join.addEventListener('click', () => { if (P.connected) { P.disconnect(); drawDock(); return; } coc.hidden = false; nm.focus(); });
+  const leave = () => { P.disconnect(); drawDock(); };
+  join.addEventListener('click', () => { if (P.connected) { leave(); return; } coc.hidden = false; nm.focus(); });
   for (const ev of ['keydown', 'keyup'] as const) coc.addEventListener(ev, e => e.stopPropagation());
-  let lastName = '';
-  go.addEventListener('click', async () => {
-    coc.hidden = true; go.disabled = true; closeWelcome();
-    lastName = nm.value.trim();
+  let lastName = '', joining = false;
+  /** Caller has already shown the code of conduct, the person agreed, and gave a name. */
+  const joinRoom = async (name: string) => {
+    if (joining || P.connected) return;
+    coc.hidden = true; closeWelcome();
+    joining = true; drawDock();
+    lastName = name.trim();
     try { await h.connect(lastName); sys(h.voice() ? 'Connected. Your mic is off; press Mic to talk.' : h.joinLabel === 'Preview a crowd' ? 'Previewing a simulated crowd. Nothing is sent anywhere.' : 'Connected without voice.'); }
     catch (e: any) { failed('Could not connect', e); }
-    syncGo(); drawDock(); drawSeats();
+    joining = false; drawDock(); drawSeats();
+  };
+  go.addEventListener('click', async () => {
+    go.disabled = true;
+    await joinRoom(nm.value);
+    syncGo();
   });
 
   // ---------- rendering ----------
   const log = $('#chatLog');
-  const sys = (t: string) => { log.insertAdjacentHTML('beforeend', `<div class="sys">${esc(t)}</div>`); log.scrollTop = log.scrollHeight; };
+  const lines: ChatLine[] = [];
+  const listeners = new Set<() => void>();
+  const changed = () => { for (const f of listeners) f(); };
+  const sys = (t: string) => { lines.push({ sys: true, text: t }); log.insertAdjacentHTML('beforeend', `<div class="sys">${esc(t)}</div>`); log.scrollTop = log.scrollHeight; changed(); };
   /** The chat log is hidden while solo, so a failed join also shows in the dock status. */
   const failed = (what: string, e: any) => {
     const msg = `${what}: ${e?.message ?? e}`;
@@ -103,8 +121,8 @@ export function initSocial(h: SocialHooks) {
   let seen = 0;
   const drawChat = () => {
     const msgs = P.chat.slice(seen); seen = P.chat.length;
-    for (const m of msgs) log.insertAdjacentHTML('beforeend', `<div class="${m.from === P.self.id ? 'me' : ''}"><b>${esc(m.name)}</b> ${esc(m.text)}</div>`);
-    if (msgs.length) { log.scrollTop = log.scrollHeight; if ($('#socChat').hidden) { unread += msgs.filter(m => m.from !== P.self.id).length; $('#socUnread').textContent = unread ? String(unread) : ''; } }
+    for (const m of msgs) { lines.push({ name: m.name, text: m.text, me: m.from === P.self.id }); log.insertAdjacentHTML('beforeend', `<div class="${m.from === P.self.id ? 'me' : ''}"><b>${esc(m.name)}</b> ${esc(m.text)}</div>`); }
+    if (msgs.length) { log.scrollTop = log.scrollHeight; if ($('#socChat').hidden) { unread += msgs.filter(m => m.from !== P.self.id).length; $('#socUnread').textContent = unread ? String(unread) : ''; } changed(); }
   };
   const drawPeople = () => {
     const v = h.voice();
@@ -118,25 +136,30 @@ export function initSocial(h: SocialHooks) {
     const b = (e.target as HTMLElement).closest('button') as HTMLButtonElement | null; if (!b) return;
     if (b.dataset.act === 'unblock') { P.unblockAll(); return; }
     const id = (b.closest('.person') as HTMLElement).dataset.id!;
-    if (b.dataset.act === 'block') { P.block(id); h.voice()?.muteLocal(id, true); }
-    if (b.dataset.act === 'mute') { const v = h.voice(); if (v) v.muteLocal(id, !v.localMuted.has(id)); drawPeople(); }
-    if (b.dataset.act === 'spot') { h.room.setSpotlight(id, !h.room.state.spotlight.includes(id)); drawPeople(); }
+    if (b.dataset.act === 'block') block(id);
+    if (b.dataset.act === 'mute') toggleMute(id);
+    if (b.dataset.act === 'spot') toggleSpotlight(id);
   });
+  const peopleChanged = () => { if (!$('#socPeople').hidden) drawPeople(); changed(); };
+  const block = (id: string) => { P.block(id); h.voice()?.muteLocal(id, true); changed(); };
+  const toggleMute = (id: string) => { const v = h.voice(); if (v) v.muteLocal(id, !v.localMuted.has(id)); peopleChanged(); };
+  const toggleSpotlight = (id: string) => { h.room.setSpotlight(id, !h.room.state.spotlight.includes(id)); peopleChanged(); };
   const drawDock = () => {
     const c = P.connected, v = h.voice();
     $('#socStatus').textContent = P.status;
-    join.textContent = c ? 'Leave' : h.joinLabel;
+    join.textContent = c ? 'Leave' : joining ? 'Joining…' : h.joinLabel;
     mic.hidden = !c || !v; mic.setAttribute('aria-pressed', String(!!v?.micOn)); mic.textContent = v?.micOn ? 'Mic on' : 'Mic off';
     mega.hidden = mic.hidden || !P.self.onStage; mega.setAttribute('aria-pressed', String(P.self.megaphone));
     chatBtn.hidden = !c; peopleBtn.hidden = !c;
     $('#socCount').textContent = c ? String(P.peers.size + 1) : '';
     if (!c) { $('#socChat').hidden = true; $('#socPeople').hidden = true; }
+    changed();
   };
   let pend = 0;
   P.listeners.add(() => { drawChat(); if (!pend) pend = window.setTimeout(() => { pend = 0; drawDock(); if (!$('#socPeople').hidden) drawPeople(); drawSeats(); }, 400); });
   peopleBtn.addEventListener('click', drawPeople);
   h.seating.onChange = () => { drawSeats(); };
-  h.room.listeners.add(() => { drawSeats(); if (!$('#socPeople').hidden) drawPeople(); });
+  h.room.listeners.add(() => { drawSeats(); peopleChanged(); });
   drawDock();
   /** Reconnect with the same name (used after an admin signs in, so Photon re-authenticates). */
   const rejoin = async () => {
@@ -144,5 +167,12 @@ export function initSocial(h: SocialHooks) {
     catch (e: any) { failed('Could not reconnect', e); }
     drawDock(); drawSeats();
   };
-  return { sys, drawDock, drawSeats, rejoin, welcome };
+  return {
+    sys, drawDock, drawSeats, rejoin, welcome, lines, listeners,
+    joinLabel: h.joinLabel, defaultName: h.defaultName, voice: h.voice, canAdmin: h.canAdmin,
+    get joining() { return joining; }, get micBusy() { return micBusy; },
+    isSpotlit: (id: string) => h.room.state.spotlight.includes(id),
+    toggleMic, toggleMegaphone, join: joinRoom, leave, block, toggleMute, toggleSpotlight,
+    say: (t: string) => P.say(t), unblockAll: () => P.unblockAll(),
+  };
 }
