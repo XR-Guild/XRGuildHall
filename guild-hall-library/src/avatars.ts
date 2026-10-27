@@ -145,7 +145,12 @@ function pose(vrm: any, p: Peer, t: number) {
   const seated = !!p.seat;
   const walk = Math.min(1, p.speed / 1.2) * (seated ? 0 : 1);
   const ph = t * 7;
-  if (hips) { hips.position.y = seated ? -0.42 : Math.abs(Math.sin(ph)) * 0.03 * walk; hips.position.z = seated ? -0.06 : 0; }
+  if (hips) {
+    // Normalized hips position is the rest hip height above the root, so offsets are applied on top of it.
+    const rest: THREE.Vector3 = (hips.userData.rest ??= hips.position.clone());
+    hips.position.y = rest.y + (seated ? -0.42 : Math.abs(Math.sin(ph)) * 0.03 * walk);
+    hips.position.z = rest.z + (seated ? -0.06 : 0);
+  }
   const swing = Math.sin(ph) * 0.55 * walk;
   if (lUL) lUL.rotation.x = seated ? -1.45 : swing;
   if (rUL) rUL.rotation.x = seated ? -1.45 : -swing;
