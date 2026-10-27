@@ -1,4 +1,1532 @@
 {
-  "hideV3": [],
-  "items": []
+ "source": "Arrival V2 export 2026-10-27",
+ "items": [
+  {
+   "name": "Reflecting Pool Water — Waves and Splash",
+   "group": "Garden and Landscape",
+   "pos": [
+    25,
+    -0.0339,
+    17
+   ],
+   "quat": [
+    0,
+    0.4755,
+    0,
+    0.8797
+   ],
+   "file": "baked/9b82fb15-ecc8-4d11-9b1d-12abe2a85970.glb"
+  },
+  {
+   "name": "labradorite-coffee-table",
+   "group": "Furniture and Props",
+   "pos": [
+    4.7833,
+    0,
+    10.2579
+   ],
+   "quat": [
+    0,
+    0.3007,
+    0,
+    0.9537
+   ],
+   "file": "models/labradorite-coffee-table.glb"
+  },
+  {
+   "name": "labradorite-coffee-table",
+   "group": "Furniture and Props",
+   "pos": [
+    -5.8991,
+    0,
+    8.5318
+   ],
+   "quat": [
+    0,
+    -0.3007,
+    0,
+    0.9537
+   ],
+   "file": "models/labradorite-coffee-table.glb"
+  },
+  {
+   "name": "XR Guild Credits Sign",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    0,
+    2.86,
+    36.5
+   ],
+   "quat": [
+    0,
+    1,
+    0,
+    0
+   ],
+   "file": "baked/credits-sign-xrguild.glb"
+  },
+  {
+   "name": "Garden Ground Cover — Pond & Spring",
+   "group": "Garden and Landscape",
+   "pos": [
+    12,
+    0,
+    -38
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "baked/groundcover-pond.glb"
+  },
+  {
+   "name": "Garden Ground Cover — Reflecting Pool Border",
+   "group": "Garden and Landscape",
+   "pos": [
+    25,
+    0,
+    17
+   ],
+   "quat": [
+    0,
+    0.4755,
+    0,
+    0.8797
+   ],
+   "file": "baked/groundcover-reflecting-pool.glb"
+  },
+  {
+   "name": "trees-merged",
+   "group": "Garden and Landscape",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/trees-merged.glb"
+  },
+  {
+   "name": "Labradorite Flower Planter",
+   "group": "Garden and Landscape",
+   "pos": [
+    9.1,
+    0,
+    -15.1965
+   ],
+   "quat": [
+    0,
+    0.9848,
+    0,
+    -0.1736
+   ],
+   "scale": [
+    1.05,
+    1.05,
+    1.05
+   ],
+   "file": "models/labradorite-flower-planter.glb"
+  },
+  {
+   "name": "Labradorite Flower Planter",
+   "group": "Garden and Landscape",
+   "pos": [
+    9.7079,
+    0,
+    -18.3382
+   ],
+   "quat": [
+    0,
+    0.1305,
+    0,
+    0.9914
+   ],
+   "scale": [
+    1.05,
+    1.05,
+    1.05
+   ],
+   "file": "models/labradorite-flower-planter.glb"
+  },
+  {
+   "name": "Labradorite Flower Planter",
+   "group": "Garden and Landscape",
+   "pos": [
+    22.4556,
+    -0.0263,
+    -12.2733
+   ],
+   "quat": [
+    0,
+    0.9962,
+    0,
+    0.0872
+   ],
+   "file": "models/labradorite-flower-planter.glb"
+  },
+  {
+   "name": "Labradorite Flower Planter",
+   "group": "Garden and Landscape",
+   "pos": [
+    17.4232,
+    -0.0211,
+    -12.28
+   ],
+   "quat": [
+    0,
+    0.3007,
+    0,
+    0.9537
+   ],
+   "file": "models/labradorite-flower-planter.glb"
+  },
+  {
+   "name": "Labradorite Flower Planter",
+   "group": "Garden and Landscape",
+   "pos": [
+    29.63,
+    0.01,
+    -29.14
+   ],
+   "quat": [
+    0,
+    0.8192,
+    0,
+    -0.5736
+   ],
+   "file": "models/labradorite-flower-planter.glb"
+  },
+  {
+   "name": "Labradorite Flower Planter",
+   "group": "Garden and Landscape",
+   "pos": [
+    22.96,
+    0.01,
+    -30.71
+   ],
+   "quat": [
+    0,
+    0.4226,
+    0,
+    -0.9063
+   ],
+   "scale": [
+    1.1,
+    1.1,
+    1.1
+   ],
+   "file": "models/labradorite-flower-planter.glb"
+  },
+  {
+   "name": "Labradorite Flower Planter",
+   "group": "Garden and Landscape",
+   "pos": [
+    17.04,
+    0.01,
+    -30.71
+   ],
+   "quat": [
+    0,
+    0.6428,
+    0,
+    0.766
+   ],
+   "scale": [
+    1.1,
+    1.1,
+    1.1
+   ],
+   "file": "models/labradorite-flower-planter.glb"
+  },
+  {
+   "name": "Labradorite Flower Planter",
+   "group": "Garden and Landscape",
+   "pos": [
+    9.2963,
+    -0.0705,
+    -29.2611
+   ],
+   "quat": [
+    0,
+    0.9397,
+    0,
+    0.342
+   ],
+   "file": "models/labradorite-flower-planter.glb"
+  },
+  {
+   "name": "xrdeviceartifact",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    40.575,
+    3.52,
+    -11.3261
+   ],
+   "quat": [
+    0,
+    -0.2588,
+    0,
+    0.9659
+   ],
+   "file": "baked/plugin-mvmr94y8-v0dk.glb",
+   "collide": true
+  },
+  {
+   "name": "xrdeviceartifact",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    42.8261,
+    3.52,
+    -9.075
+   ],
+   "quat": [
+    0,
+    -0.5,
+    0,
+    0.866
+   ],
+   "file": "baked/plugin-mvmrewqw-vr4m.glb",
+   "collide": true
+  },
+  {
+   "name": "xrdeviceartifact",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    43.65,
+    3.52,
+    -6
+   ],
+   "quat": [
+    0,
+    -0.7071,
+    0,
+    0.7071
+   ],
+   "file": "baked/plugin-mvmrexz9-0dc8.glb",
+   "collide": true
+  },
+  {
+   "name": "xrdeviceartifact",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    42.8261,
+    3.52,
+    -2.925
+   ],
+   "quat": [
+    0,
+    -0.866,
+    0,
+    0.5
+   ],
+   "file": "baked/plugin-mvmrez12-bl1i.glb",
+   "collide": true
+  },
+  {
+   "name": "xrdeviceartifact",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    40.575,
+    3.52,
+    -0.6739
+   ],
+   "quat": [
+    0,
+    -0.9659,
+    0,
+    0.2588
+   ],
+   "file": "baked/plugin-mvmrf062-xopn.glb",
+   "collide": true
+  },
+  {
+   "name": "xrdeviceartifact",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    32.1739,
+    3.52,
+    -2.925
+   ],
+   "quat": [
+    0,
+    0.866,
+    0,
+    0.5
+   ],
+   "file": "baked/plugin-mvmrf19v-jfv1.glb",
+   "collide": true
+  },
+  {
+   "name": "xrdeviceartifact",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    34.425,
+    3.52,
+    -11.3261
+   ],
+   "quat": [
+    0,
+    0.2588,
+    0,
+    0.9659
+   ],
+   "file": "baked/plugin-mvmrf2gg-7lx2.glb",
+   "collide": true
+  },
+  {
+   "name": "libraryplacard",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    41.1245,
+    1.605,
+    -10.7779
+   ],
+   "quat": [
+    0,
+    -0.2588,
+    0,
+    0.9659
+   ],
+   "file": "baked/plugin-mvmrkm5k-4749.glb",
+   "collide": true
+  },
+  {
+   "name": "xrstageseating",
+   "group": "Furniture and Props",
+   "pos": [
+    0,
+    0.4334,
+    -9.4
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "baked/plugin-mvms84uv-yukn.glb",
+   "collide": true
+  },
+  {
+   "name": "picnicblanket",
+   "group": "Furniture and Props",
+   "pos": [
+    -14.71,
+    -0.05,
+    -37.22
+   ],
+   "quat": [
+    0,
+    0.1736,
+    0,
+    0.9848
+   ],
+   "file": "baked/plugin-mvmtrl4q-ln1i.glb",
+   "collide": true
+  },
+  {
+   "name": "steppingstones",
+   "group": "Garden and Landscape",
+   "pos": [
+    20,
+    -0.03,
+    -2.8
+   ],
+   "quat": [
+    0,
+    1,
+    0,
+    0
+   ],
+   "file": "baked/plugin-mvmvf9qm-30qy.glb",
+   "collide": true
+  },
+  {
+   "name": "blueridgelayers",
+   "group": "Garden and Landscape",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "baked/plugin-mvnh7cum-tplp.glb",
+   "collide": true
+  },
+  {
+   "name": "immersive-x-poster-stand",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    12.6705,
+    0,
+    10.3262
+   ],
+   "quat": [
+    0,
+    0.9287,
+    0,
+    0.3708
+   ],
+   "file": "baked/plugin-mvni6efs-tod9.glb",
+   "collide": true
+  },
+  {
+   "name": "xrguildsealhunt",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "baked/plugin-mvnjsub4-dzif.glb",
+   "collide": true
+  },
+  {
+   "name": "buildingtrim",
+   "group": "Architecture",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "baked/trim-guild-hall.glb",
+   "collide": true
+  },
+  {
+   "name": "buildingtrim-2",
+   "group": "Architecture",
+   "pos": [
+    37.5,
+    0,
+    -6
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "baked/trim-library.glb",
+   "collide": true
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    24.607,
+    0,
+    -12.121
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "flower-bed-3",
+   "group": "Garden and Landscape",
+   "pos": [
+    33.4228,
+    -0.0752,
+    7.6751
+   ],
+   "quat": [
+    0,
+    0.4302,
+    0,
+    0.9027
+   ],
+   "file": "models/flower-bed-3.glb"
+  },
+  {
+   "name": "hall-stage",
+   "group": "Architecture",
+   "pos": [
+    0,
+    0,
+    -9.4
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/hall-stage.glb",
+   "collide": true,
+   "collision": "collision/hall-stage-collision.glb"
+  },
+  {
+   "name": "flower-bed-1",
+   "group": "Garden and Landscape",
+   "pos": [
+    24.063,
+    0,
+    3.1425
+   ],
+   "quat": [
+    0,
+    0.9751,
+    0,
+    0.2218
+   ],
+   "file": "models/flower-bed-1.glb"
+  },
+  {
+   "name": "flower-bed-10",
+   "group": "Garden and Landscape",
+   "pos": [
+    -18.5,
+    0,
+    5
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/flower-bed-10.glb"
+  },
+  {
+   "name": "flower-bed-4",
+   "group": "Garden and Landscape",
+   "pos": [
+    37.545,
+    -0.0169,
+    25.559
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/flower-bed-4.glb"
+  },
+  {
+   "name": "portal-pad",
+   "group": "Architecture",
+   "pos": [
+    13.239,
+    0,
+    -23.812
+   ],
+   "quat": [
+    0,
+    0.6088,
+    0,
+    0.7934
+   ],
+   "file": "models/portal-pad.glb"
+  },
+  {
+   "name": "redwood-2",
+   "group": "Garden and Landscape",
+   "pos": [
+    47,
+    0,
+    35
+   ],
+   "quat": [
+    0,
+    0.0084,
+    0,
+    1
+   ],
+   "scale": [
+    1.05,
+    1.05,
+    1.05
+   ],
+   "file": "models/redwood-2.glb",
+   "collide": true,
+   "collision": "collision/redwood-2-collision.glb"
+  },
+  {
+   "name": "redwood-1",
+   "group": "Garden and Landscape",
+   "pos": [
+    -33,
+    0,
+    -4
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/redwood-1.glb",
+   "collide": true,
+   "collision": "collision/redwood-1-collision.glb"
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    15,
+    0,
+    18.581
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    15.917,
+    0.0442,
+    -32.106
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    24.083,
+    0,
+    -32.106
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "portal-pad",
+   "group": "Architecture",
+   "pos": [
+    26.761,
+    0,
+    -23.812
+   ],
+   "quat": [
+    0,
+    -0.6088,
+    0,
+    0.7934
+   ],
+   "file": "models/portal-pad.glb"
+  },
+  {
+   "name": "xrguildhall-screen-clean",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    -0.0021,
+    4.9497,
+    -12.9398
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "scale": [
+    3.7975,
+    3.7975,
+    3.7975
+   ],
+   "file": "models/xrguildhall-screen-clean.glb",
+   "collide": true
+  },
+  {
+   "name": "portal-pad",
+   "group": "Architecture",
+   "pos": [
+    24.261,
+    0,
+    -27.553
+   ],
+   "quat": [
+    0,
+    -0.3214,
+    0,
+    0.9469
+   ],
+   "file": "models/portal-pad.glb"
+  },
+  {
+   "name": "flower-bed-2",
+   "group": "Garden and Landscape",
+   "pos": [
+    24.417,
+    -0.0278,
+    28.5801
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/flower-bed-2.glb"
+  },
+  {
+   "name": "portal-plaza-no-walkway.opt",
+   "group": "Architecture",
+   "pos": [
+    20,
+    0,
+    -22
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/portal-plaza-no-walkway.opt.glb"
+  },
+  {
+   "name": "lawn",
+   "group": "Garden and Landscape",
+   "pos": [
+    0,
+    -0.03,
+    0
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/lawn.glb",
+   "collide": true,
+   "collision": "collision/lawn-collision.glb"
+  },
+  {
+   "name": "portal-pad",
+   "group": "Architecture",
+   "pos": [
+    15.739,
+    -0.039,
+    -27.553
+   ],
+   "quat": [
+    0,
+    0.3214,
+    0,
+    0.9469
+   ],
+   "file": "models/portal-pad.glb"
+  },
+  {
+   "name": "hall-stone-warm.opt",
+   "group": "Architecture",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/hall-stone-warm.opt.glb",
+   "collide": true,
+   "collision": "collision/guild-hall-doors-collision.glb"
+  },
+  {
+   "name": "reflecting-pool",
+   "group": "Garden and Landscape",
+   "pos": [
+    25,
+    -0.0339,
+    17
+   ],
+   "quat": [
+    0,
+    0.4755,
+    0,
+    0.8797
+   ],
+   "file": "models/reflecting-pool.glb",
+   "collide": true,
+   "collision": "collision/reflecting-pool-collision.glb"
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    25.462,
+    0,
+    9.175
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    15.393,
+    0,
+    -12.121
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "labradorite-fountain",
+   "group": "Garden and Landscape",
+   "pos": [
+    6.8393,
+    0,
+    -22.7901
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/labradorite-fountain.glb",
+   "collide": true
+  },
+  {
+   "name": "libraryartifacts",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    37.5,
+    0,
+    -6
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "baked/user-model-hko5lk.glb",
+   "collide": true
+  },
+  {
+   "name": "flower-bed-11",
+   "group": "Garden and Landscape",
+   "pos": [
+    -13,
+    0,
+    -13.5
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/flower-bed-11.glb"
+  },
+  {
+   "name": "flower-bed-7",
+   "group": "Garden and Landscape",
+   "pos": [
+    36.08,
+    -0.0723,
+    4.8594
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/flower-bed-7.glb"
+  },
+  {
+   "name": "redwood-2",
+   "group": "Garden and Landscape",
+   "pos": [
+    44,
+    0,
+    42
+   ],
+   "quat": [
+    0,
+    0.8589,
+    0,
+    -0.5121
+   ],
+   "file": "models/redwood-2.glb",
+   "collide": true,
+   "collision": "collision/redwood-2-collision.glb"
+  },
+  {
+   "name": "backdrop-hills-blueridge",
+   "group": "Garden and Landscape",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/backdrop-hills-blueridge.glb"
+  },
+  {
+   "name": "vines-grapevine",
+   "group": "Garden and Landscape",
+   "pos": [
+    22.7,
+    0,
+    -2.005
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/vines-grapevine.glb"
+  },
+  {
+   "name": "flower-bed-6",
+   "group": "Garden and Landscape",
+   "pos": [
+    28.3653,
+    -0.0371,
+    -0.8098
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/flower-bed-6.glb"
+  },
+  {
+   "name": "flower-bed-5",
+   "group": "Garden and Landscape",
+   "pos": [
+    25.5,
+    0,
+    -10.5
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/flower-bed-5.glb"
+  },
+  {
+   "name": "colonnade.opt",
+   "group": "Architecture",
+   "pos": [
+    22.7,
+    -0.0605,
+    -2.005
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/colonnade.opt.glb",
+   "collide": true,
+   "collision": "collision/colonnade-collision.glb"
+  },
+  {
+   "name": "welcome-desk-v2",
+   "group": "Furniture and Props",
+   "pos": [
+    1.0131,
+    0,
+    11.6415
+   ],
+   "quat": [
+    0,
+    0.9696,
+    0,
+    0.2448
+   ],
+   "file": "models/welcome-desk-v2.glb",
+   "collide": true,
+   "collision": "collision/welcome-desk-collision.glb"
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    35,
+    0,
+    15.419
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "redwood-2",
+   "group": "Garden and Landscape",
+   "pos": [
+    -36,
+    0,
+    4
+   ],
+   "quat": [
+    0,
+    0.8674,
+    0,
+    0.4976
+   ],
+   "scale": [
+    1.08,
+    1.08,
+    1.08
+   ],
+   "file": "models/redwood-2.glb",
+   "collide": true,
+   "collision": "collision/redwood-2-collision.glb"
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    24.538,
+    0,
+    24.825
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    27.55,
+    0,
+    26.797
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    31.988,
+    0,
+    13.447
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "fountain-water",
+   "group": "Garden and Landscape",
+   "pos": [
+    6.8393,
+    0,
+    -22.7901
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "baked/user-model-okfvww.glb",
+   "collide": true
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    18.012,
+    0,
+    20.553
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "portal-pad",
+   "group": "Architecture",
+   "pos": [
+    20,
+    -0.041,
+    -29
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/portal-pad.glb"
+  },
+  {
+   "name": "redwood-1",
+   "group": "Garden and Landscape",
+   "pos": [
+    -31,
+    0,
+    11
+   ],
+   "quat": [
+    0,
+    0.8632,
+    0,
+    -0.5048
+   ],
+   "scale": [
+    0.94,
+    0.94,
+    0.94
+   ],
+   "file": "models/redwood-1.glb",
+   "collide": true,
+   "collision": "collision/redwood-1-collision.glb"
+  },
+  {
+   "name": "garden-bench",
+   "group": "Furniture and Props",
+   "pos": [
+    30.563,
+    0,
+    12.156
+   ],
+   "quat": [
+    0,
+    -0.4143,
+    0,
+    0.9102
+   ],
+   "scale": [
+    0.85,
+    0.85,
+    0.85
+   ],
+   "file": "models/garden-bench.glb"
+  },
+  {
+   "name": "vines-ivy-jasmine",
+   "group": "Garden and Landscape",
+   "pos": [
+    22.7,
+    0,
+    -2.005
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/vines-ivy-jasmine.glb"
+  },
+  {
+   "name": "garden-lantern",
+   "group": "Furniture and Props",
+   "pos": [
+    22.45,
+    0,
+    7.203
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "garden-folly",
+   "group": "Garden and Landscape",
+   "pos": [
+    0,
+    -0.0704,
+    33
+   ],
+   "quat": [
+    0,
+    1,
+    0,
+    0
+   ],
+   "file": "models/garden-folly.glb",
+   "collide": true,
+   "collision": "collision/garden-folly-collision.glb"
+  },
+  {
+   "name": "library-fresco5",
+   "group": "Architecture",
+   "pos": [
+    37.5,
+    0,
+    -6
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/library-fresco5.glb",
+   "collide": true,
+   "collision": "collision/library-collision.glb"
+  },
+  {
+   "name": "garden-bench",
+   "group": "Furniture and Props",
+   "pos": [
+    19.437,
+    0,
+    21.844
+   ],
+   "quat": [
+    0,
+    0.9102,
+    0,
+    0.4143
+   ],
+   "scale": [
+    0.85,
+    0.85,
+    0.85
+   ],
+   "file": "models/garden-bench.glb"
+  },
+  {
+   "name": "flower-bed-8",
+   "group": "Garden and Landscape",
+   "pos": [
+    47.1,
+    -0.0136,
+    -1.1504
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/flower-bed-8.glb"
+  },
+  {
+   "name": "garden-pond",
+   "group": "Garden and Landscape",
+   "pos": [
+    12,
+    -0.0559,
+    -38
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "baked/user-model-x7gbj3.glb",
+   "collide": true
+  },
+  {
+   "name": "redwood-1",
+   "group": "Garden and Landscape",
+   "pos": [
+    54,
+    0,
+    33
+   ],
+   "quat": [
+    0,
+    0.8716,
+    0,
+    0.4903
+   ],
+   "scale": [
+    0.95,
+    0.95,
+    0.95
+   ],
+   "file": "models/redwood-1.glb",
+   "collide": true,
+   "collision": "collision/redwood-1-collision.glb"
+  },
+  {
+   "name": "events-board-immersive-x-v2",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    8.51,
+    -0.054,
+    9.9063
+   ],
+   "quat": [
+    0,
+    0.9397,
+    0,
+    -0.342
+   ],
+   "file": "models/events-board-immersive-x-v2.glb"
+  },
+  {
+   "name": "flower-bed-9",
+   "group": "Garden and Landscape",
+   "pos": [
+    -5,
+    0,
+    18.5
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/flower-bed-9.glb"
+  },
+  {
+   "name": "library-lanterns",
+   "group": "Furniture and Props",
+   "pos": [
+    39.7866,
+    -0.0223,
+    -7.1345
+   ],
+   "quat": [
+    0,
+    -0.5035,
+    0,
+    0.864
+   ],
+   "scale": [
+    0.6209,
+    0.6209,
+    0.6209
+   ],
+   "file": "models/library-lanterns.glb"
+  },
+  {
+   "name": "xrguild-principles-boards",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    8.3,
+    0,
+    -17
+   ],
+   "quat": [
+    0,
+    0.7071,
+    0,
+    0.7071
+   ],
+   "file": "baked/user-model-zbgi2f.glb",
+   "collide": true
+  },
+  {
+   "name": "xrguild-portal",
+   "group": "Boards, Screens and Artifacts",
+   "pos": [
+    13.287,
+    1.24,
+    -23.797
+   ],
+   "quat": [
+    0,
+    0.6088,
+    0,
+    0.7934
+   ],
+   "scale": [
+    2,
+    2,
+    2
+   ],
+   "image": "textures/xrguild-portal.webp",
+   "size": [
+    0.6667,
+    1
+   ]
+  }
+ ]
 }

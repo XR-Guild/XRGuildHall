@@ -16,7 +16,7 @@ const WINDOWS: Record<number, string> = {
   120: 'rotunda-window-05', 150: 'rotunda-window-06', 180: 'rotunda-window-01', 210: 'rotunda-window-07',
   240: 'rotunda-window-08', 270: 'rotunda-window-09', 300: 'rotunda-window-10', 330: 'rotunda-window-11',
 };
-const PANE = { glow: 1.36, imageFill: 0.98, outsideOffset: 0.03, dayGlow: 0.35, nightGlow: 0.8 };
+const PANE = { glow: 1.36, imageFill: 0.98, outsideOffset: 0.05, dayGlow: 0.35, nightGlow: 0.8 };
 const DOME = { glow: 0.95, oculusGlow: 1.2, shrink: 0.985, drop: 0.1, firstPanel: 10 };
 
 // [height, radius] of the hall dome's inner surface (GH.wallTop + 0.2, radius CR + 0.05, rise 0.5), base to oculus edge

@@ -1,66 +1,76 @@
 #!/usr/bin/env node
-// make-manifest.mjs: turn an `arrival pull` workspace into public/arrival/ (models + manifest.json) for src/arrival.ts.
+// make-manifest.mjs: turn Evo's engine export of the Arrival space (the XRGuildHall-PlayCanvas package) into
+// public/arrival/ (models + manifest.json) for src/arrival.ts.
 //
-// Usage (from guild-hall-library/):  node scripts/arrival/make-manifest.mjs <arrival-workspace>/space [public/arrival] [scripts/arrival/dedupe.json]
-// Needs Node 22+ (compress.sh runs gltf-transform v4 through npx). Uncompressed originals and plugins-to-port.json go to
-// .arrival-cache/ (gitignored) so they never ship. hideV3 in an existing manifest.json is kept.
+// Usage (from guild-hall-library/):  node scripts/arrival/make-manifest.mjs <XRGuildHall-PlayCanvas> [public/arrival]
+// Needs Node 22+ (compress.sh runs gltf-transform v4 through npx).
 //
-// Reads every entity JSON in space/entities, keeps the GLB models (plugins are listed separately in
-// plugins-to-port.json because they are Arrival code, not models), copies or downloads each GLB once,
-// compresses it with compress.sh (WebP textures <= 2048 px + Draco), and writes manifest.json with
-// position (m), rotation (deg, PlayCanvas order, applied as three.js 'ZYX'), scale, hidden and collision.
-// UNTESTED against a real pull: written from the entity fields the Arrival API returns
-// (glbUrl, position, rotation, scale, hidden, noCollision, collisionUrl, scriptName, params). Check the first run.
-import fs from 'node:fs'; import path from 'node:path'; import crypto from 'node:crypto';
+// Reads scene/xrguildhall.scene.json (glTF/PlayCanvas coordinates, the same as this world's) and keeps every visible
+// model, baked plugin mesh and image panel, minus scripts/arrival/exclude.json. Markers (portals, gates, spawn) and
+// plugins that only exist as code are left out. Each GLB is compressed once with compress.sh (WebP textures <= 2048 px
+// + Draco).
+import fs from 'node:fs'; import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const here = path.dirname(new URL(import.meta.url).pathname);
-const [spaceDir, outDir = 'public/arrival', dedupeFile = path.join(here, 'dedupe.json')] = process.argv.slice(2);
-if (!spaceDir) { console.error('usage: node scripts/arrival/make-manifest.mjs <space> [out arrival dir] [dedupe.json]'); process.exit(1); }
-const dedupe = JSON.parse(fs.readFileSync(dedupeFile, 'utf8')).map;
-const modelsDir = path.join(outDir, 'models'); fs.mkdirSync(modelsDir, { recursive: true });
-const cacheDir = '.arrival-cache'; fs.mkdirSync(path.join(cacheDir, 'orig'), { recursive: true });
+const [pkg, outDir = 'public/arrival'] = process.argv.slice(2);
+if (!pkg) { console.error('usage: node scripts/arrival/make-manifest.mjs <XRGuildHall-PlayCanvas> [out arrival dir]'); process.exit(1); }
+const scene = JSON.parse(fs.readFileSync(path.join(pkg, 'scene/xrguildhall.scene.json'), 'utf8'));
+const exclude = JSON.parse(fs.readFileSync(path.join(here, 'exclude.json'), 'utf8'));
 const manifestPath = path.join(outDir, 'manifest.json');
-const hideV3 = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')).hideV3 ?? [] : [];
 
-const stem = (u) => decodeURIComponent(u.split('?')[0].split('/').pop()).replace(/^[0-9a-f]{64}_/, '');
-const v3 = (o, d = 0) => o ? [o.x ?? o[0] ?? d, o.y ?? o[1] ?? d, o.z ?? o[2] ?? d].map(Number) : [d, d, d];
-
-async function fetchTo(src, dest) {
-  if (fs.existsSync(dest)) return;
-  const local = [path.join(spaceDir, src), path.join(spaceDir, 'assets', path.basename(src))].find((p) => fs.existsSync(p));
-  if (local) { fs.copyFileSync(local, dest); return; }
-  if (!/^https?:/.test(src)) throw new Error('not found: ' + src);
-  const r = await fetch(src); if (!r.ok) throw new Error(r.status + ' ' + src);
-  fs.writeFileSync(dest, Buffer.from(await r.arrayBuffer()));
-}
-
-const items = [], plugins = [], fileFor = new Map();
-for (const f of fs.readdirSync(path.join(spaceDir, 'entities')).filter((f) => f.endsWith('.json'))) {
-  const ent = JSON.parse(fs.readFileSync(path.join(spaceDir, 'entities', f), 'utf8'));
-  let d = ent.data ?? ent; if (typeof d === 'string') d = JSON.parse(d);
-  const url = d.glbUrl || d.url || '';
-  if (d.scriptName || /\.m?js$/.test(url)) { plugins.push({ entity: f, script: d.scriptName, url, params: d.params, position: v3(d.position), hidden: !!d.hidden }); continue; }
-  if (!/\.glb$/i.test(url.split('?')[0])) continue;
-  let name = stem(url); name = dedupe[name] ?? name;           // repeats share one file
-  items.push({ name: d.name || name.replace(/\.glb$/, ''), file: name, pos: v3(d.position), rot: v3(d.rotation),
-    scale: typeof d.scale === 'number' ? d.scale : v3(d.scale, 1), hidden: !!d.hidden || !!d.disableRendering,
-    collide: !d.noCollision, collisionFile: d.collisionUrl ? stem(d.collisionUrl) : undefined, collisionSrc: d.collisionUrl ? d.collisionUrl.split('?')[0] : undefined, src: url.split('?')[0], entity: f });
-}
-
-const seen = new Set();
-for (const it of items) {
-  for (const [file, src] of [[it.file, it.src], ...(it.collisionFile ? [[it.collisionFile, it.collisionSrc]] : [])]) {
-    if (seen.has(file)) continue; seen.add(file);
-    const orig = path.join(cacheDir, 'orig', file), opt = path.join(modelsDir, file);
-    try {
-      await fetchTo(src, orig);
-      execFileSync(path.join(here, 'compress.sh'), [orig, opt], { stdio: 'inherit' });
-      console.log(`${file}: ${(fs.statSync(orig).size / 1e6).toFixed(2)} MB -> ${(fs.statSync(opt).size / 1e6).toFixed(2)} MB`);
-    } catch (e) { console.warn('SKIPPED', file, e.message); }
+const r4 = (a) => a.map((v) => Math.round(v * 1e4) / 1e4);
+const skipped = [], items = [], files = new Set();
+for (const e of scene.entities) {
+  const why = e.hidden ? 'hidden in Arrival' : e.kind === 'marker' ? 'marker' : !e.model && !e.image ? 'code only'
+    : exclude.files[path.basename(e.model ?? '')] ?? exclude.plugins[e.plugin ?? ''];
+  if (why) { skipped.push(`${e.name}: ${why}`); continue; }
+  const it = { name: e.name, group: e.group, pos: r4(e.position), quat: r4(e.quaternion) };
+  if (e.scale.some((s) => s !== 1)) it.scale = r4(e.scale);
+  if (e.kind === 'image') {
+    const webp = e.image.replace(/\.(png|jpe?g)$/i, '.webp');
+    Object.assign(it, { image: fs.existsSync(path.join(pkg, webp)) ? webp : e.image, size: e.imageSize });
   }
-  delete it.src; delete it.collisionSrc;
+  else it.file = e.model;
+  if (e.collision) it.collide = true;
+  if (e.collisionModel) it.collision = e.collisionModel;
+  items.push(it);
+  for (const f of [it.file, it.collision, it.image]) if (f) files.add(f);
 }
-fs.writeFileSync(manifestPath, JSON.stringify({ generated: new Date().toISOString(), hideV3, items }, null, 1));
-fs.writeFileSync(path.join(cacheDir, 'plugins-to-port.json'), JSON.stringify(plugins, null, 1));
-console.log(`manifest: ${items.length} placements, ${seen.size} files; ${plugins.length} plugins listed in ${cacheDir}/plugins-to-port.json`);
+
+// Corrections to Evo's export that belong upstream in Arrival: patches/<glb name>.jpg replaces that GLB's only image.
+// credits-sign-xrguild: the name on the credits sign is Patrick O'Shaughnessey.
+function patchImage(glb, jpg) {
+  const b = fs.readFileSync(glb), jsonLen = b.readUInt32LE(12), json = JSON.parse(b.subarray(20, 20 + jsonLen));
+  const bin = b.subarray(28 + jsonLen), img = json.images.length === 1 && json.images[0];
+  if (!img) throw new Error(`${glb}: expected exactly one image`);
+  const parts = json.bufferViews.map((v, i) => i === img.bufferView ? fs.readFileSync(jpg) : bin.subarray(v.byteOffset ?? 0, (v.byteOffset ?? 0) + v.byteLength));
+  let off = 0; const chunks = [];
+  parts.forEach((p, i) => { const pad = (4 - (p.length % 4)) % 4; json.bufferViews[i].byteOffset = off; json.bufferViews[i].byteLength = p.length; chunks.push(p, Buffer.alloc(pad)); off += p.length + pad; });
+  img.mimeType = 'image/jpeg'; json.buffers[0].byteLength = off;
+  let js = Buffer.from(JSON.stringify(json)); js = Buffer.concat([js, Buffer.alloc((4 - (js.length % 4)) % 4, 0x20)]);
+  const body = Buffer.concat(chunks), head = Buffer.alloc(12);
+  head.write('glTF'); head.writeUInt32LE(2, 4); head.writeUInt32LE(12 + 8 + js.length + 8 + body.length, 8);
+  const ch = (len, type) => { const h = Buffer.alloc(8); h.writeUInt32LE(len); h.write(type, 4); return h; };
+  const out = path.join(fs.mkdtempSync(path.join(cacheDir, 'patch-')), path.basename(glb));
+  fs.writeFileSync(out, Buffer.concat([head, ch(js.length, 'JSON'), js, ch(body.length, 'BIN\0'), body]));
+  return out;
+}
+const cacheDir = '.arrival-cache'; fs.mkdirSync(cacheDir, { recursive: true });
+
+let before = 0, after = 0;
+for (const f of files) {
+  const patch = path.join(here, 'patches', path.basename(f, '.glb') + '.jpg');
+  let src = path.join(pkg, f); const dest = path.join(outDir, f);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  before += fs.statSync(src).size;
+  if (!f.endsWith('.glb')) fs.copyFileSync(src, dest);
+  else if (!fs.existsSync(dest) || fs.statSync(dest).mtimeMs < Math.max(fs.statSync(src).mtimeMs, fs.existsSync(patch) ? fs.statSync(patch).mtimeMs : 0)) {
+    if (fs.existsSync(patch)) src = patchImage(src, patch);
+    execFileSync(path.join(here, 'compress.sh'), [src, dest], { stdio: 'inherit' });
+  }
+  after += fs.statSync(dest).size;
+}
+fs.writeFileSync(manifestPath, JSON.stringify({ source: scene.version, items }, null, 1));
+console.log(`manifest: ${items.length} placements, ${files.size} files, ${(before / 1e6).toFixed(1)} MB -> ${(after / 1e6).toFixed(1)} MB`);
+console.log(`left out ${skipped.length}:\n  ` + [...new Set(skipped)].sort().join('\n  '));

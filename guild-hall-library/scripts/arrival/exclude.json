@@ -1,0 +1,27 @@
+{
+  "_comment": "Arrival entities kept out of this build. Files by name (models/, baked/), plugins by script path. Remove an entry once it is cleared.",
+  "files": {
+    "velvetsofa3dmodel.glb": "licence not cleared for the public repo (CREDITS-AND-LICENSING.md in Evo's export)",
+    "velvetsofa3dmodel_1.glb": "licence not cleared",
+    "greenvelvetsofa3dmodel.glb": "licence not cleared",
+    "velvet-tufted-swivel-chair-3d-model-1-.glb": "licence not cleared",
+    "armillarysphere3dmodel.glb": "licence not cleared",
+    "round-succulent-planter-3d-model.glb": "licence not cleared",
+    "round-succulent-planter-3d-model.opt.glb": "licence not cleared",
+    "park_picnic.glb": "licence not cleared",
+    "park_picnic.opt.glb": "licence not cleared",
+    "benches-merged.glb": "V3's seating presets draw the hall benches (admins can switch layouts)",
+    "library-chair.glb": "V3's seating presets draw the library chairs",
+    "connect-table.glb": "V3's own table export with the devices baked in; V3's table keeps them grabbable"
+  },
+  "plugins": {
+    "plugins/fractal-tree-in-3d-1775809050978-606as9.mjs": "remixed from another creator's Arrival vibe",
+    "plugins/insectswarm.mjs": "remixed from another creator's Arrival vibe",
+    "plugins/splat-grass.mjs": "remixed from another creator's Arrival vibe",
+    "plugins/stainedglasswindow.mjs": "ported to three.js in src/stainedglass.ts (day and night glow)",
+    "plugins/stained-glass-rotunda.mjs": "ported to three.js in src/stainedglass.ts",
+    "plugins/welcome-desk-kiosk.mjs": "V3's live Join panel stands on Evo's desk instead (the baked kiosk's buttons would not work)",
+    "plugins/garden-birds.mjs": "a frozen capture of the flock; V3's animated birds fly instead",
+    "plugins/xrlibraryscreen.mjs": "baked video player would not play, and it covers one of V3's live library panels; port its click-to-play first"
+  }
+}

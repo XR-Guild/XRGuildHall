@@ -60,6 +60,9 @@ export class Interactor {
   }
 
   add(obj: THREE.Object3D, h: Handler) { this.targets.set(obj, h); this.list.push(obj); }
+  /** Every registered click target. */
+  get objects() { return [...this.targets.keys()]; }
+
   addPanel(panel: CanvasPanel, label?: string) {
     this.add(panel.mesh, {
       label,

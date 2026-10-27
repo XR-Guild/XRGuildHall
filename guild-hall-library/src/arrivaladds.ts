@@ -181,7 +181,7 @@ export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, open
     const sw = waterMaterial(env, { deep: 0x123c3a, tint: 0xcfeee6, amp: 0.02, center: SPRING, flow: true }); waters.push(sw);
     const stream = new THREE.Mesh(sg, sw); stream.userData.exportMat = exportWater(0x123c3a); stream.userData.keep = true; pond.add(stream);
     // pond collider (low walls so you walk round it, not across it)
-    for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; const c = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3, 0.4), new THREE.MeshBasicMaterial()); c.position.set(P.center.x + Math.cos(a) * P.rx * 1.02, 1.5, P.center.z + Math.sin(a) * P.rz * 1.02); c.rotation.y = -a + Math.PI / 2; colliders.add(c); }
+    for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; const c = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3, 0.4), new THREE.MeshBasicMaterial()); c.position.set(P.center.x + Math.cos(a) * P.rx * 1.02, 1.5, P.center.z + Math.sin(a) * P.rz * 1.02); c.rotation.y = -a + Math.PI / 2; c.name = 'PondCollider'; colliders.add(c); }
   }
 
   // ================= colonnade vines =================
@@ -237,7 +237,7 @@ export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, open
     const holder = new THREE.Group(); holder.userData.keep = true; holder.position.set(0, 1.55, 0.0); g.add(holder);
     pnl.mesh.position.z = 0.0; holder.add(pnl.mesh);
     panels.push({ panel: pnl, label: i === 0 ? 'XR Guild principles' : 'Code of conduct · I’m in' });
-    const c = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3, 0.5), new THREE.MeshBasicMaterial()); c.position.set(b.pos.x, 1.5, b.pos.z); c.rotation.y = b.ry; colliders.add(c);
+    const c = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3, 0.5), new THREE.MeshBasicMaterial()); c.position.set(b.pos.x, 1.5, b.pos.z); c.rotation.y = b.ry; c.name = 'BoardCollider'; colliders.add(c);
   });
 
   // ================= garden sound =================

@@ -23,6 +23,7 @@ import { initUI, lineageCard } from './ui';
 import { initSocial } from './social';
 import { store } from './store';
 import { bakeStatic } from './bake';
+import { loadArrival, removeV3 } from './arrival';
 import { HALL, LIB, STAGE, DESK, SPAWN, POOL, BENCHES, PATH_CURVE, V, zoneOf, type Zone } from './site';
 import { Presence } from './net/presence';
 import { SimTransport } from './net/sim';
@@ -176,16 +177,24 @@ async function main() {
     e.addComponent(Interactable);
     e.addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveTowardsTarget, returnToOrigin: true, scale: false } as any);
   }
+  // ---- Evo's Arrival.space art (V4): the world as built in Arrival, with its own collision meshes ----
+  await step(0.62, 'Planting the garden…');
+  const arrival = await loadArrival(f => { loadBar.style.width = `${Math.round((0.62 + f * 0.26) * 100)}%`; }).catch(e => { console.error('[arrival]', e); return null; });
+  if (arrival) {
+    scene.add(arrival.root);
+    world.createTransformEntity(arrival.colliders, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
+  } else {
+    // V3 without the Arrival art: the white colonnade GLB becomes a garden folly (the fantasy-library GLB is not loaded: see README)
+    const hallScene = await new Promise<THREE.Group | null>(res => new GLTFLoader().load(MODEL_BASE + 'hall' + MODEL_EXT, g => res(g.scene), undefined, e => { console.warn('folly model failed', e); res(null); }));
+    if (hallScene) garden.placeColonnade(hallScene);
+  }
   const colliders = new THREE.Group(); colliders.name = 'Walkable';
-  colliders.add(hall.colliders, lib.colliders, colonnade.colliders, stage.colliders, desk.colliders, table.colliders, garden.colliders, adds.colliders);
+  colliders.add(hall.colliders, lib.colliders, colonnade.colliders, stage.colliders, table.colliders, garden.colliders, adds.colliders);
+  // Evo moved the desk, the principles boards and the pond: their V3 colliders would block empty floor
+  if (arrival) adds.colliders.children.filter(c => c.name === 'PondCollider' || c.name === 'BoardCollider').forEach(c => c.removeFromParent());
+  else colliders.add(desk.colliders);
   colliders.visible = false;
   world.createTransformEntity(colliders, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
-
-  // ---- the white colonnade GLB becomes a garden folly (the fantasy-library GLB is not loaded: see README) ----
-  await step(0.62, 'Planting the garden…');
-  const loader = new GLTFLoader();
-  const hallScene = await new Promise<THREE.Group | null>(res => loader.load(MODEL_BASE + 'hall' + MODEL_EXT, g => res(g.scene), undefined, e => { console.warn('folly model failed', e); res(null); }));
-  if (hallScene) garden.placeColonnade(hallScene);
 
   // ---- reflections: environment capture from the hall (two bounces) ----
   await step(0.9, 'Polishing the floors…');
@@ -215,9 +224,9 @@ async function main() {
   if (savedSky() !== 'aurora') await skies.set(savedSky());
   drawSkySeg(); glass.setNight(skies.isNight());
 
-  // desktop mirror floors: only the one in your zone renders
+  // desktop mirror floors: only the one in your zone renders (not under Evo's opaque Arrival floors)
   const floorRefls: { zone: Zone; refl: Reflector; mat: THREE.MeshPhysicalMaterial }[] = [];
-  if (!isMobile) {
+  if (!isMobile && !arrival) {
     for (const [ch, zone, ap] of [[hall, 'hall', HALL.apothem], [lib, 'library', LIB.apothem]] as const) {
       const fg = new THREE.CircleGeometry(ap / Math.cos(Math.PI / 12), 12, Math.PI / 2 - Math.PI / 12); fg.rotateX(-Math.PI / 2);
       const refl = new Reflector(fg, { textureWidth: Math.round(innerWidth * 0.6), textureHeight: Math.round(innerHeight * 0.6), color: 0xa0a0a0, clipBias: 0.002 });
@@ -256,8 +265,13 @@ async function main() {
   inter.addPanel(libp.panel, 'Guild library');
   inter.addPanel(tlp.panel, 'Timeline of XR');
   inter.addPanel(desk.panel, 'Join the XR Guild');
-  inter.addPanel(board.panel, 'Guild notice board');
-  for (const p of adds.panels) inter.addPanel(p.panel, p.label);
+  // V4: Evo's notice board (with the featured Immersive X event) replaces V3's panel; clicking it opens the calendar
+  const evoBoard = arrival?.root.getObjectByName('events-board-immersive-x-v2');
+  if (evoBoard) { board.panel.mesh.removeFromParent(); inter.add(evoBoard, { label: 'Guild notice board · full calendar', onClick: () => { if (!inXR()) openLink(LINKS.calendar); } }); }
+  else inter.addPanel(board.panel, 'Guild notice board');
+  // V4: Evo's principles boards (baked from Arrival, by the colonnade) replace V3's pair
+  if (arrival) adds.panels.forEach(p => p.panel.mesh.removeFromParent());
+  else for (const p of adds.panels) inter.addPanel(p.panel, p.label);
   inter.add(desk.plaque, { label: 'Visit xrguild.org', onClick: () => { if (!inXR()) openLink(LINKS.home); } });
   table.devices.forEach(d => inter.add(d.object, { label: 'Lineage · click for details', onClick: () => store.showCard?.(lineageCard(d.index)) }));
   inter.add(table.featured, { label: 'Meta VR Glasses · open the news', onClick: () => store.openTab?.('news') });
@@ -303,6 +317,20 @@ async function main() {
     }, 180);
   };
   for (const hm of seating.hitMeshes) inter.add(hm, { label: 'Sit here', onClick: hit => { const r = seating.seatFromHit(hit); if (r) sitAt(r.zone, r.index); } });
+
+  // ---- V4: Evo's Arrival art replaces V3's own geometry; V3 keeps its seating presets, screen, stained glass and click targets ----
+  if (arrival) {
+    const keep = [...inter.objects, ...[...media.screens.values()].map(s => s.group), ...hall.roses, hall.group.getObjectByName('StainedGlassRotunda'), adds.group.getObjectByName('Birds')].filter((o): o is THREE.Object3D => !!o);
+    const n = removeV3([hall, lib, colonnade, stage, garden, libIn, desk, board, adds].map(x => x.group), keep);
+    console.info(`[arrival] removed ${n} V3 meshes`);
+    // Evo's screen frame around V3's live screen surface
+    arrival.root.getObjectByName('xrguildhall-screen-clean')?.getObjectByName('Screen')?.removeFromParent();
+    for (const s of media.screens.values()) for (const c of s.group.children) if (c !== s.mesh) c.visible = false;
+    for (const r of hall.roses) r.position.z += 0.02; // in front of the placeholder roses inside Evo's hall model
+    // Evo moved the welcome desk to the back of the hall; V3's live panel and plaque go with it
+    const evoDesk = arrival.root.getObjectByName('welcome-desk-v2');
+    if (evoDesk) { desk.group.position.copy(evoDesk.position); desk.group.quaternion.copy(evoDesk.quaternion); }
+  }
 
   const goTo = (id: string) => {
     const t = TOURS.find(x => x.id === id); if (!t) return;
@@ -515,7 +543,6 @@ async function main() {
   await step(1, 'Welcome to the Guild Hall');
   document.getElementById('loading')!.classList.add('done');
   if (!SIM) setTimeout(social.welcome, 1400);
-  import('./arrival').then(m => m.loadArrival(world.scene)).catch(e => console.error('[arrival]', e));
   (window as any).__xrgh = { THREE, world, voice: () => voice, goTo, room, media, skies, adds, setView: (y: number, p: number) => { yaw = y; pitch = p; }, TABLE_TOP, presence, seating, sitAt, zone: () => zone };
 }
 
