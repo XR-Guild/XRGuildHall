@@ -87,13 +87,19 @@ export function initSocial(h: SocialHooks) {
     coc.hidden = true; go.disabled = true; closeWelcome();
     lastName = nm.value.trim();
     try { await h.connect(lastName); sys(h.voice() ? 'Connected. Your mic is off; press Mic to talk.' : h.joinLabel === 'Preview a crowd' ? 'Previewing a simulated crowd. Nothing is sent anywhere.' : 'Connected without voice.'); }
-    catch (e: any) { sys('Could not connect: ' + (e?.message ?? e)); P.disconnect(); }
+    catch (e: any) { failed('Could not connect', e); }
     syncGo(); drawDock(); drawSeats();
   });
 
   // ---------- rendering ----------
   const log = $('#chatLog');
   const sys = (t: string) => { log.insertAdjacentHTML('beforeend', `<div class="sys">${esc(t)}</div>`); log.scrollTop = log.scrollHeight; };
+  /** The chat log is hidden while solo, so a failed join also shows in the dock status. */
+  const failed = (what: string, e: any) => {
+    const msg = `${what}: ${e?.message ?? e}`;
+    console.error('[join]', e); sys(msg); P.disconnect();
+    P.status = msg.length > 90 ? msg.slice(0, 89) + '…' : msg; $('#socStatus').title = msg;
+  };
   let seen = 0;
   const drawChat = () => {
     const msgs = P.chat.slice(seen); seen = P.chat.length;
@@ -135,7 +141,7 @@ export function initSocial(h: SocialHooks) {
   /** Reconnect with the same name (used after an admin signs in, so Photon re-authenticates). */
   const rejoin = async () => {
     try { await h.connect(lastName || h.defaultName()); sys('Reconnected.'); }
-    catch (e: any) { sys('Could not reconnect: ' + (e?.message ?? e)); P.disconnect(); }
+    catch (e: any) { failed('Could not reconnect', e); }
     drawDock(); drawSeats();
   };
   return { sys, drawDock, drawSeats, rejoin, welcome };
