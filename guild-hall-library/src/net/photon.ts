@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Transport, TransportEvents, PeerState, ChatMsg, Control, AudioMode } from './types';
 import type { Peer } from './presence';
 import { loadScript } from './loadScript';
+import { workerTimers } from './keepalive';
 
 /**
  * Photon Cloud session: spatial voice for everyone, and (off Viverse) presence + chat over room events.
@@ -55,7 +56,30 @@ async function loadPhoton() {
     const timer = setTimeout(() => rej(new Error('The Photon Voice SDK did not start')), JOIN_TIMEOUT_MS);
     G.Photon.setOnLoad(() => { clearTimeout(timer); res(); });
   });
+  serviceInBackground(G.Photon);
   return G.Photon;
+}
+
+/**
+ * The SDK pumps each connection (sends, acks, keepalive) from a 20 ms page timer. A hidden tab runs that at most
+ * once a second, and after five minutes about once a minute, so voice goes out in bursts and the server
+ * eventually drops us. While hidden, a worker timer pumps it as well.
+ */
+function serviceInBackground(P: any) {
+  const Peer = P.PhotonPeer, lib = P.EmPhotonPeerLib, proto = Peer?.prototype;
+  if (!proto?.startService || !proto.Destroy || !lib?.Service) { console.warn('[Photon] SDK internals changed; voice may stall in a background tab'); return; }
+  if (proto.xrghBackground) return;
+  proto.xrghBackground = true;
+  const start = proto.startService, destroy = proto.Destroy;
+  proto.startService = function (this: any) {
+    start.call(this);
+    workerTimers.clearInterval(this.xrghTimer);
+    this.xrghTimer = workerTimers.setInterval(() => { if (document.hidden && !this.closed) lib.Service(this.peer); }, Peer.serviceIntervalMs);
+  };
+  proto.Destroy = function (this: any) {
+    workerTimers.clearInterval(this.xrghTimer); this.xrghTimer = 0;
+    destroy.call(this);
+  };
 }
 
 const WORKLETS = `
@@ -112,6 +136,11 @@ class MicIn extends AudioWorkletProcessor {
 registerProcessor('xrgh-mic-in', MicIn);
 `;
 
+async function addWorklets(ctx: AudioContext) {
+  const url = URL.createObjectURL(new Blob([WORKLETS], { type: 'text/javascript' }));
+  try { await ctx.audioWorklet.addModule(url); } finally { URL.revokeObjectURL(url); }
+}
+
 interface RemoteVoice {
   actorNr: number; node: AudioWorkletNode; pan: PannerNode; gain: GainNode;
   falloff: Falloff; audible: boolean; loudAt: number; level: number;
@@ -145,13 +174,19 @@ export class PhotonSession {
   /** Presence ids an admin has spotlit: heard by everyone at full volume, wherever they stand. */
   spotlight = new Set<string>();
   private voices = new Map<string, RemoteVoice>();
-  private mic: { stream: MediaStream; src: MediaStreamAudioSourceNode; node: AudioWorkletNode; voice: any | null } | null = null;
+  private mic: { stream: MediaStream; ctx: AudioContext; src: MediaStreamAudioSourceNode; node: AudioWorkletNode; voice: any | null } | null = null;
   private closing = false;
   private self = '';
   private name = '';
   private retries = 0;
-  private retryTimer = 0;
-  private onVisible = () => { if (document.visibilityState === 'visible' && this.retryTimer) { clearTimeout(this.retryTimer); this.retryTimer = 0; this.reopen(); } };
+  private retryTimer: any = 0;
+  private onVisible = () => {
+    if (document.visibilityState !== 'visible') return;
+    // Safari suspends ("interrupts") audio while the page is in the background
+    if (this.ctx && this.ctx.state !== 'running' && this.ctx.state !== 'closed') this.ctx.resume().catch(() => {});
+    this.retryNow();
+  };
+  private retryNow = () => { if (this.retryTimer) { workerTimers.clearTimeout(this.retryTimer); this.retryTimer = 0; this.reopen(); } };
 
   constructor(private appId: string, public roomName: string, private region: string, private opts: PhotonOptions = { maxPlayers: 20, verified: false }) {}
 
@@ -164,14 +199,13 @@ export class PhotonSession {
       const V = this.P.Voice, log = V._log;
       V.setLogFunc((level: number, msg: string) => { if (!/decoder is null|options are not set for the remote voice|of not initialized player/.test(msg)) log(level, msg); });
     } else {
-      const ctx = this.ensureAudio();
-      const url = URL.createObjectURL(new Blob([WORKLETS], { type: 'text/javascript' }));
-      try { await ctx.audioWorklet.addModule(url); } finally { URL.revokeObjectURL(url); }
+      await addWorklets(this.ensureAudio());
       left();
     }
     // the presence id rides on the actor so voices (keyed by actor number) line up with avatars
     this.self = identity; this.name = name;
     document.addEventListener('visibilitychange', this.onVisible);
+    addEventListener('online', this.retryNow);
     try { await this.open(); } catch (e) { this.disconnect(); throw e; }
   }
 
@@ -241,7 +275,7 @@ export class PhotonSession {
     if (this.closing) return;
     if (!this.linkDown) { this.linkDown = true; this.onLink?.(false); }
     this.onStatus?.('Voice reconnecting…');
-    this.retryTimer = window.setTimeout(() => { this.retryTimer = 0; this.reopen(); }, Math.min(30000, 2000 * 2 ** this.retries++));
+    this.retryTimer = workerTimers.setTimeout(() => { this.retryTimer = 0; this.reopen(); }, Math.min(30000, 2000 * 2 ** this.retries++));
   }
   private reopen() { this.open().catch(() => { this.retire(); this.reconnectLater(); }); }
   private retire() {
@@ -282,14 +316,23 @@ export class PhotonSession {
     if (on && !this.mic) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       if (!this.client) { stream.getTracks().forEach(t => t.stop()); return; }
-      const src = ctx.createMediaStreamSource(stream);
-      const node = new AudioWorkletNode(ctx, 'xrgh-mic-in', { numberOfOutputs: 0, processorOptions: { frame: ctx.sampleRate * FRAME_US / 1e6 } });
+      let capture = ctx, src: MediaStreamAudioSourceNode;
+      try { src = ctx.createMediaStreamSource(stream); } catch (e) {
+        // Firefox can't feed a mic into a context whose rate differs from the device's, so capture at the device rate; the SDK resamples
+        if ((e as DOMException).name !== 'NotSupportedError') { stream.getTracks().forEach(t => t.stop()); throw e; }
+        capture = new AudioContext();
+        await addWorklets(capture);
+        if (!this.client) { stream.getTracks().forEach(t => t.stop()); capture.close(); return; }
+        src = capture.createMediaStreamSource(stream);
+      }
+      const node = new AudioWorkletNode(capture, 'xrgh-mic-in', { numberOfOutputs: 0, processorOptions: { frame: capture.sampleRate * FRAME_US / 1e6 } });
       src.connect(node);
-      this.mic = { stream, src, node, voice: null };
+      this.mic = { stream, ctx: capture, src, node, voice: null };
       this.attachMic();
     } else if (!on && this.mic) {
       const m = this.mic; this.mic = null;
       m.node.port.onmessage = null; m.src.disconnect(); m.node.disconnect(); m.stream.getTracks().forEach(t => t.stop());
+      if (m.ctx !== this.ctx) m.ctx.close();
       if (m.voice) V.dispose(m.voice);
     }
     this.micOn = on;
@@ -299,7 +342,7 @@ export class PhotonSession {
   /** (Re)creates the outgoing voice on the current client; the capture graph survives reconnects. */
   private attachMic() {
     const m = this.mic; if (!m || m.voice || !this.client?.isJoinedToRoom()) return;
-    const voice = m.voice = this.createLocalVoice(this.ctx!.sampleRate);
+    const voice = m.voice = this.createLocalVoice(m.ctx.sampleRate);
     m.node.port.onmessage = e => voice.pushData(e.data);
   }
   /** An outgoing voice on the current client; feed it mono frames of FRAME_US at `rate` (VOICE_FRAME samples at RATE) with pushData. */
@@ -414,8 +457,9 @@ export class PhotonSession {
   /** Safe to call more than once. A retired client is disposed once its socket has actually closed. */
   disconnect() {
     this.closing = true;
-    clearTimeout(this.retryTimer); this.retryTimer = 0;
+    workerTimers.clearTimeout(this.retryTimer); this.retryTimer = 0;
     document.removeEventListener('visibilitychange', this.onVisible);
+    removeEventListener('online', this.retryNow);
     if (this.mic) this.setMic(false);
     this.onStatus = null; this.onEvent = null; this.onLeave = null; this.onLink = null;
     for (const k of [...this.voices.keys()]) this.removeVoice(k);

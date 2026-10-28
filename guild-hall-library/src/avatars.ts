@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { Peer } from './net/presence';
+import { SEAT_TOP } from './seating';
 
 /**
  * Avatar renderer built for crowds:
@@ -142,19 +143,43 @@ function pose(vrm: any, p: Peer, t: number) {
   const b = (n: string) => h.getNormalizedBoneNode(n);
   const hips = b('hips'), lUL = b('leftUpperLeg'), rUL = b('rightUpperLeg'), lLL = b('leftLowerLeg'), rLL = b('rightLowerLeg');
   const lUA = b('leftUpperArm'), rUA = b('rightUpperArm'), spine = b('spine'), lLA = b('leftLowerArm'), rLA = b('rightLowerArm');
+  // rotateVRM0 turns the scene 180° but VRM 0.x normalized bones keep their -Z-facing frame, so x/z mirror
+  const k = vrm.meta?.metaVersion === '0' ? -1 : 1;
   const seated = !!p.seat;
   const walk = Math.min(1, p.speed / 1.2) * (seated ? 0 : 1);
   const ph = t * 7;
-  if (hips) { hips.position.y = seated ? -0.42 : Math.abs(Math.sin(ph)) * 0.03 * walk; hips.position.z = seated ? -0.06 : 0; }
+  const sit = seated && hips && lUL && lLL ? seatFit(hips, lUL, lLL, b('leftFoot')) : null;
+  if (hips) {
+    // Normalized hips position is the rest hip height above the root, so offsets are applied on top of it.
+    const rest: THREE.Vector3 = (hips.userData.rest ??= hips.position.clone());
+    hips.position.y = sit ? sit.hipsY : rest.y + Math.abs(Math.sin(ph)) * 0.03 * walk;
+    hips.position.z = rest.z + k * (seated ? -0.06 : 0);
+  }
   const swing = Math.sin(ph) * 0.55 * walk;
-  if (lUL) lUL.rotation.x = seated ? -1.45 : swing;
-  if (rUL) rUL.rotation.x = seated ? -1.45 : -swing;
-  if (lLL) lLL.rotation.x = seated ? 1.5 : Math.max(0, -Math.sin(ph)) * 0.8 * walk;
-  if (rLL) rLL.rotation.x = seated ? 1.5 : Math.max(0, Math.sin(ph)) * 0.8 * walk;
-  if (lUA) { lUA.rotation.z = 1.2; lUA.rotation.x = -swing * 0.6; }
-  if (rUA) { rUA.rotation.z = -1.2; rUA.rotation.x = swing * 0.6; }
-  if (lLA) lLA.rotation.y = seated ? 0.5 : 0.15; if (rLA) rLA.rotation.y = seated ? -0.5 : -0.15;
-  if (spine) spine.rotation.x = Math.sin(t * 1.6) * 0.02 + (seated ? 0.05 : 0);
+  const thigh = sit ? -(Math.PI / 2 - sit.drop) : -1.45, shin = sit ? Math.PI / 2 - sit.drop : 1.5;
+  if (lUL) lUL.rotation.x = k * (seated ? thigh : swing);
+  if (rUL) rUL.rotation.x = k * (seated ? thigh : -swing);
+  if (lLL) lLL.rotation.x = k * (seated ? shin : Math.max(0, -Math.sin(ph)) * 0.8 * walk);
+  if (rLL) rLL.rotation.x = k * (seated ? shin : Math.max(0, Math.sin(ph)) * 0.8 * walk);
+  if (lUA) { lUA.rotation.z = k * (seated ? -1.45 : -1.2); lUA.rotation.x = k * (seated ? 0 : -swing * 0.6); }
+  if (rUA) { rUA.rotation.z = k * (seated ? 1.45 : 1.2); rUA.rotation.x = k * (seated ? 0 : swing * 0.6); }
+  if (lLA) lLA.rotation.y = seated ? -0.9 : -0.15; if (rLA) rLA.rotation.y = seated ? 0.9 : 0.15;
+  if (spine) spine.rotation.x = k * (Math.sin(t * 1.6) * 0.02 + (seated ? 0.05 : 0));
+}
+
+/**
+ * Sit on the cushion whatever the avatar's proportions: hip joints just above SEAT_TOP, shins vertical,
+ * and the thighs tilted down just enough that the feet reach the floor (long legs) or dangle (short legs).
+ */
+function seatFit(hips: THREE.Object3D, ul: THREE.Object3D, ll: THREE.Object3D, foot: THREE.Object3D | null) {
+  return (hips.userData.seatFit ??= (() => {
+    const restHipsY = (hips.userData.rest ??= hips.position.clone()).y;
+    const thighLen = ll.position.length(), shinLen = foot ? foot.position.length() : thighLen;
+    const ankleY = foot ? restHipsY + ul.position.y + ll.position.y + foot.position.y : 0.08;
+    const hipJointY = SEAT_TOP + 0.09;
+    const drop = Math.asin(THREE.MathUtils.clamp((hipJointY - shinLen - ankleY) / thighLen, 0, 0.6));
+    return { hipsY: hipJointY - ul.position.y, drop };
+  })()) as { hipsY: number; drop: number };
 }
 
 function ringTex() {

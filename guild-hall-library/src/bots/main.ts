@@ -57,7 +57,7 @@ async function start(i: number, clip: Float32Array) {
   presence.listeners.add(() => { bot.state = presence.status; });
   if (VIVERSE) {
     // the Play SDK accepts a client that never logged in; the identity is only read by the app's own login flow
-    const vt = new ViverseTransport(CONFIG.viverseAppId, { accountId: '', name: presence.self.name, vrmUrl: null, token: '', avatarClient: null }, CONFIG.viverseRoomCap);
+    const vt = new ViverseTransport(CONFIG.viverseAppId, { accountId: '', name: presence.self.name, vrmUrl: null, token: '', avatarClient: null }, CONFIG.viverseRoomCap, false);
     await presence.connect(vt);
     session.roomName = vt.voiceRoom;
     await session.connect(presence.self.id, presence.self.name);

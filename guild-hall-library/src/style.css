@@ -34,16 +34,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
 [hidden] { display: none !important; }
 
 /* loading */
-#loading { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding-inline: var(--gutter);
-  background: radial-gradient(ellipse at 50% 30%, #12332c 0%, #07110f 60%); transition: opacity .8s ease; }
+#loading { position: fixed; inset: 0; z-index: 21; display: grid; place-items: center; padding-inline: var(--gutter); transition: opacity .8s ease; }
 #loading.done { opacity: 0; pointer-events: none; }
-.load-inner { max-width: 480px; text-align: center; }
-.load-inner h1 { font-size: clamp(36px, 7.5vw, 62px); margin: 0; color: var(--gold-hi); line-height: 1; }
-.load-sub { color: var(--dim); margin: 10px 0 26px; }
+.load-inner { max-width: 480px; text-align: center; background: rgba(3,8,7,.65); padding: 24px 32px; border-radius: 16px; backdrop-filter: blur(2px); }
+.load-inner h1 { font-size: clamp(36px, 7.5vw, 62px); margin: 0 0 22px; color: var(--gold-hi); line-height: 1; text-shadow: 0 2px 18px rgba(0,0,0,.8); }
+.load-inner #loadMsg:not(.sr) { margin: 16px 0 0; }
 .bar { height: 2px; background: var(--line-soft); border-radius: 2px; overflow: hidden; }
 .bar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold), var(--teal)); transition: width .3s ease; }
-.load-notes { list-style: none; padding: 0; margin: 26px 0 0; text-align: left; font-size: 14px; color: var(--dim); display: grid; gap: 8px; }
-.load-notes strong { color: var(--text); font-weight: 500; }
+
+/* title screen: stays up behind the welcome dialog until the visitor joins or enters solo */
+#welcome { position: fixed; inset: 0; z-index: 19; transition: opacity .8s ease;
+  background: linear-gradient(transparent 40%, rgba(3,8,7,.8)), url('/welcome.jpg') center / cover no-repeat, #07110f; }
+#welcome.gone { opacity: 0; pointer-events: none; }
 
 /* overlay */
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 5; }

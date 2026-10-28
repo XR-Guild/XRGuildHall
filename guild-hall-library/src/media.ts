@@ -2,12 +2,13 @@ import * as THREE from 'three';
 import type { Mats } from './mats';
 import type { RoomState, ScreenSource } from './net/types';
 import { TAGLINE } from './hallfeatures';
+import { workerTimers } from './net/keepalive';
 
 /**
  * Media screens in the Guild Hall (V3).
  *
- *  stage  the big screen above the stage: slides (screenshare), the RTMP stream, or the XR Guild slide when idle
- *  west / east  wall screens either side of the stage, for streams, captions or a second camera
+ *  stage  the one screen, above the stage: slides (screenshare), the RTMP stream, or the XR Guild slide when idle.
+ *         Sized and placed like the screen in the Arrival.space build (V4), standing clear of the media wall.
  *
  * Sources (chosen by an admin, shared by everyone through the room state):
  *  idle  the XR Guild slide (logo, mission line, xrguild.org)
@@ -19,7 +20,7 @@ import { TAGLINE } from './hallfeatures';
  * Video always starts muted (browsers require it); stream sound starts with the visitor's first click, and the
  * "Stream sound" setting in Comfort turns it off for that visitor.
  */
-export type ScreenId = 'stage' | 'west' | 'east';
+export type ScreenId = 'stage';
 interface Screen {
   id: ScreenId; group: THREE.Group; mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial;
   idle: THREE.CanvasTexture; w: number; h: number;
@@ -29,7 +30,7 @@ interface Screen {
 }
 export interface MediaOptions { tokenUrl: string; room: string; identity: () => string; name: () => string; logoUrl: string; fonts: { display: string; body: string; mono: string } }
 
-const BAYS: { id: ScreenId; bay: number; w: number }[] = [{ id: 'stage', bay: 0, w: 7.0 }, { id: 'west', bay: 11, w: 5.6 }, { id: 'east', bay: 1, w: 5.6 }];
+const BAYS: { id: ScreenId; bay: number; w: number; at: [number, number, number] }[] = [{ id: 'stage', bay: 0, w: 9.12, at: [0, -0.05, 1.15] }];
 
 function idleTexture(o: MediaOptions, logo: HTMLImageElement | null, label: string, note = '') {
   const W = 1920, H = 1080, c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -58,6 +59,7 @@ export class MediaScreens {
   private positional = false;
   private logo: HTMLImageElement | null = null;
   private lk: any = null; private room: any = null; private connecting: Promise<void> | null = null;
+  private liveRetry: any = 0; private liveTries = 0;
   private tracks = { screen: null as any, screenAudio: null as any, ingress: null as any, ingressAudio: null as any };
   private status = '';
   onStatus: ((s: string) => void) | null = null;
@@ -65,12 +67,12 @@ export class MediaScreens {
   constructor(private m: Mats, private o: MediaOptions) {}
   get liveAvailable() { return !!this.o.tokenUrl; }
 
-  /** Build the three screens onto the hall's media bays. Call before the hall is baked. */
+  /** Build the screens onto the hall's media bays. Call before the hall is baked. */
   build(mounts: Map<number, THREE.Object3D>) {
     for (const b of BAYS) {
       const mount = mounts.get(b.bay); if (!mount) continue;
       const w = b.w, h = w * 9 / 16;
-      const group = new THREE.Group(); group.name = `Screen:${b.id}`; group.userData.keep = true;
+      const group = new THREE.Group(); group.name = `Screen:${b.id}`; group.userData.keep = true; group.position.set(...b.at);
       const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.36, h + 0.36, 0.1), this.m.walnutDark); frame.position.z = -0.03; group.add(frame);
       const rim = new THREE.Mesh(new THREE.BoxGeometry(w + 0.16, h + 0.16, 0.06), this.m.gilt); rim.position.z = 0.0; group.add(rim);
       const idle = idleTexture(this.o, null, 'XR Guild Hall');
@@ -118,9 +120,7 @@ export class MediaScreens {
       else if (src.kind === 'idle') this.showIdle(s);
     }
     for (const s of this.screens.values()) if (s.audio) this.routeAudio(s);
-    const wantLive = [...this.screens.values()].some(s => s.src.kind === 'live');
-    if (wantLive) this.joinLive().then(() => this.assignLive()).catch(e => { this.setStatus('Live screens unavailable: ' + (e?.message ?? e)); for (const s of this.screens.values()) if (s.src.kind === 'live') this.showIdle(s, 'Live stream unavailable'); });
-    else this.leaveLive();
+    this.syncLive();
     this.assignLive();
   }
 
@@ -204,12 +204,25 @@ export class MediaScreens {
 
   // ---- LiveKit media room (viewer) ----
   private setStatus(s: string) { this.status = s; this.onStatus?.(s); }
+  /** Join the media room while any screen shows a live source, leave it otherwise; a failed or dropped join is retried. */
+  private syncLive() {
+    workerTimers.clearTimeout(this.liveRetry); this.liveRetry = 0;
+    if (![...this.screens.values()].some(s => s.src.kind === 'live')) { this.liveTries = 0; this.leaveLive(); return; }
+    this.joinLive().then(() => { this.liveTries = 0; this.assignLive(); }).catch(e => {
+      this.setStatus('Live screens unavailable: ' + (e?.message ?? e));
+      for (const s of this.screens.values()) if (s.src.kind === 'live') this.showIdle(s, 'Live stream unavailable');
+      this.retryLive();
+    });
+  }
+  private retryLive() { if (this.o.tokenUrl && !this.liveRetry) this.liveRetry = workerTimers.setTimeout(() => this.syncLive(), Math.min(30000, 2000 * 2 ** this.liveTries++)); }
   private async joinLive() {
     if (!this.o.tokenUrl) throw new Error('no media room configured');
     if (this.room) return;
     if (this.connecting) return this.connecting;
     this.connecting = (async () => {
       this.lk = await import('livekit-client');
+      // LiveKit's signal pings and reconnect timers; on throttled page timers a hidden tab misses pings and gets dropped
+      Object.assign(this.lk.CriticalTimers, workerTimers);
       const res = await fetch(this.o.tokenUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identity: this.o.identity(), name: this.o.name(), room: this.o.room, role: 'viewer' }) });
       if (!res.ok) throw new Error('media token refused (' + res.status + ')');
       const { token, url } = await res.json();
@@ -219,7 +232,8 @@ export class MediaScreens {
       room.on(RoomEvent.TrackSubscribed, refresh);
       room.on(RoomEvent.TrackUnsubscribed, refresh);
       room.on(RoomEvent.ParticipantDisconnected, refresh);
-      room.on(RoomEvent.Disconnected, () => { this.room = null; this.collect(null); this.assignLive(); });
+      // LiveKit has already tried to resume by itself; leaveLive clears this.room first, so only real drops retry
+      room.on(RoomEvent.Disconnected, () => { if (this.room !== room) return; this.room = null; this.collect(null); this.assignLive(); this.retryLive(); });
       await room.connect(url, token, { autoSubscribe: true });
       this.room = room; refresh();
       this.setStatus('Live screens connected');

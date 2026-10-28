@@ -1,5 +1,7 @@
 # Viverse submission kit
 
+**V4:** adds the Arrival.space art and the welcome screen; see [V4.md](V4.md). Packaging is unchanged from V3.
+
 **V3:** build the upload with `npm run viverse-zip` → `guild-hall-v3-viverse.zip` (the contents of `dist/`, with `index.html` at the zip root, plus `guildhall.config.json` you can edit inside the zip). Step by step, settings and open decisions: [V3.md](V3.md).
 
 Files: `docs/viverse/` (thumbnail, 720p trailer) and `docs/images/` (gallery, 1280×720; V3 views in `docs/images/v3/`). The 1080p trailer (14 MB) and 1920×1080 gallery are kept out of git to save space; ask Evo for them. The Immersive X walkthrough trailer (45 s and 5 s, Oct 2026) can replace the v2 trailer: ask Evo for the files.

@@ -26,6 +26,7 @@ export class Presence {
   listeners = new Set<() => void>();
   onControl: ((c: Control, from: string) => void) | null = null;
   private lastSend = 0; private lastSent = new THREE.Vector3(1e9, 0, 0); private lastRy = 0; private lastMeta = '';
+  private lastSmooth = performance.now();
 
   constructor(name: string) {
     const id = rid();
@@ -58,12 +59,20 @@ export class Presence {
     const wasOnStage = s.onStage;
     s.onStage = Math.hypot(pos.x - STAGE.center.x, pos.z - STAGE.center.z) < STAGE.r && pos.y > STAGE.h * 0.5;
     if (s.onStage !== wasOnStage) { if (!s.onStage) s.megaphone = false; this.emit(); }
-    const t = this.transport; if (!t) return;
-    const moved = pos.distanceTo(this.lastSent) > 0.04 || Math.abs(ry - this.lastRy) > 0.05;
-    const meta = `${s.name}|${s.seat}|${s.avatar}|${s.zone}|${s.onStage}|${s.megaphone}`;
+    s.away = false;
+    this.send(now, pos.distanceTo(this.lastSent) > 0.04 || Math.abs(ry - this.lastRy) > 0.05);
+  }
+  /** Called ~1 Hz while frames aren't rendering (hidden tab, covered window), so others keep us. */
+  heartbeat(now: number) {
+    this.self.away = true;
+    this.send(now, true); // ticks are ~1 s apart, so the 1 s heartbeat gap would skip every other one
+  }
+  private send(now: number, moved: boolean) {
+    const s = this.self, t = this.transport; if (!t) return;
+    const meta = `${s.name}|${s.seat}|${s.avatar}|${s.zone}|${s.onStage}|${s.megaphone}|${s.away}`;
     const gap = now - this.lastSend;
     if ((moved && gap > 100) || gap > 1000 || meta !== this.lastMeta) {
-      s.t = now; t.sendState({ ...s }); this.lastSend = now; this.lastSent.copy(pos); this.lastRy = ry; this.lastMeta = meta;
+      s.t = now; t.sendState({ ...s }); this.lastSend = now; this.lastSent.set(s.x, s.y, s.z); this.lastRy = s.ry; this.lastMeta = meta;
     }
   }
 
@@ -96,12 +105,16 @@ export class Presence {
   sendControl(c: Control) { this.transport?.sendControl(c); }
   seatTaken(key: string) { for (const p of this.peers.values()) if (p.seat === key) return true; return false; }
 
-  /** Smooth remote poses toward their latest state (called every frame). Drops peers silent for 15 s. */
+  /** Smooth remote poses toward their latest state (called every frame). Drops peers silent for 15 s, or 2 min if their tab is hidden. */
   smooth(dt: number) {
     const now = performance.now();
+    // a gap this long means the page was frozen (phone screen off, app backgrounded): nobody could reach us, so
+    // give everyone a fresh window to be heard from instead of dropping the whole room at once
+    if (now - this.lastSmooth > 5000) for (const p of this.peers.values()) p.lastSeen = Math.max(p.lastSeen, now);
+    this.lastSmooth = now;
     const k = 1 - Math.exp(-dt * 10);
     for (const [id, p] of this.peers) {
-      if (now - p.lastSeen > 15000) { this.peers.delete(id); this.emit(); continue; }
+      if (now - p.lastSeen > (p.away ? 120000 : 15000)) { this.peers.delete(id); this.emit(); continue; }
       const before = p.rp.clone();
       p.rp.lerp(new THREE.Vector3(p.x, p.y, p.z), k);
       let d = p.ry - p.rry; d = Math.atan2(Math.sin(d), Math.cos(d)); p.rry += d * k;

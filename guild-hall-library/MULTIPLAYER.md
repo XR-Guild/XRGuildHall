@@ -17,6 +17,8 @@ The Guild Hall and the Library stay **one VIVERSE world** with a colonnade betwe
 
 **Overflow:** each VIVERSE room is created with a 120-person cap (`src/net/viverse.ts`). When it is full, the next visitor opens `guild-hall-2`, then `guild-hall-3`, and so on. For big talks, a later step is to stream the stage into overflow rooms.
 
+**Join retries and merging:** a failed VIVERSE join is retried with backoff (1 s doubling to 15 s, with jitter) for up to a minute before the visitor opens a room of their own, so a service hiccup doesn't split the Hall. Anyone alone in a room checks every 20 s and moves to the busiest `guild-hall` room with space; two lone visitors meet in the room with the lower id. Voice follows the move. Every VIVERSE SDK call is timed in the console as `[VIVERSE timing]` and kept in `window.__viverseTimings`.
+
 ## Research summary: open-source options
 
 | Need | Chosen | Why | Alternatives considered |

@@ -21,10 +21,13 @@ import { newsPanel, libraryPanel, timelinePanel } from './xrpanels';
 import { Interactor } from './interact';
 import { initUI, lineageCard } from './ui';
 import { initSocial } from './social';
+import { XRMenu } from './xrmenu';
 import { store } from './store';
 import { bakeStatic } from './bake';
+import { loadArrival, removeV3 } from './arrival';
 import { HALL, LIB, STAGE, DESK, SPAWN, POOL, BENCHES, PATH_CURVE, V, zoneOf, type Zone } from './site';
 import { Presence } from './net/presence';
+import { startTicker, holdWakeLock } from './net/keepalive';
 import { SimTransport } from './net/sim';
 import { Avatars } from './avatars';
 import type { PhotonSession } from './net/photon';
@@ -34,6 +37,7 @@ import { initAdmin } from './admin';
 import { MediaScreens } from './media';
 import { makeSkySwitcher, savedSky, type SkyId } from './skies';
 import { buildArrivalAdds } from './arrivaladds';
+import { dressStainedGlass } from './stainedglass';
 import type { Control, RoomState } from './net/types';
 
 const FONTS = {
@@ -164,6 +168,7 @@ async function main() {
 
   await step(0.55, 'Gilding the details…');
   for (const g of [hall.group, lib.group, colonnade.group, stage.group, table.group, garden.group, libIn.group, adds.group]) bakeStatic(g);
+  const glass = dressStainedGlass(hall);
 
   // ---- IWSDK entities ----
   const addEntity = (o: THREE.Object3D) => world.createTransformEntity(o, { persistent: true });
@@ -174,16 +179,24 @@ async function main() {
     e.addComponent(Interactable);
     e.addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveTowardsTarget, returnToOrigin: true, scale: false } as any);
   }
+  // ---- Evo's Arrival.space art (V4): the world as built in Arrival, with its own collision meshes ----
+  await step(0.62, 'Planting the garden…');
+  const arrival = await loadArrival(f => { loadBar.style.width = `${Math.round((0.62 + f * 0.26) * 100)}%`; }).catch(e => { console.error('[arrival]', e); return null; });
+  if (arrival) {
+    scene.add(arrival.root);
+    world.createTransformEntity(arrival.colliders, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
+  } else {
+    // V3 without the Arrival art: the white colonnade GLB becomes a garden folly (the fantasy-library GLB is not loaded: see README)
+    const hallScene = await new Promise<THREE.Group | null>(res => new GLTFLoader().load(MODEL_BASE + 'hall' + MODEL_EXT, g => res(g.scene), undefined, e => { console.warn('folly model failed', e); res(null); }));
+    if (hallScene) garden.placeColonnade(hallScene);
+  }
   const colliders = new THREE.Group(); colliders.name = 'Walkable';
-  colliders.add(hall.colliders, lib.colliders, colonnade.colliders, stage.colliders, desk.colliders, table.colliders, garden.colliders, adds.colliders);
+  colliders.add(hall.colliders, lib.colliders, colonnade.colliders, stage.colliders, table.colliders, garden.colliders, adds.colliders);
+  // Evo moved the desk, the principles boards and the pond: their V3 colliders would block empty floor
+  if (arrival) adds.colliders.children.filter(c => c.name === 'PondCollider' || c.name === 'BoardCollider').forEach(c => c.removeFromParent());
+  else colliders.add(desk.colliders);
   colliders.visible = false;
   world.createTransformEntity(colliders, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
-
-  // ---- the white colonnade GLB becomes a garden folly (the fantasy-library GLB is not loaded: see README) ----
-  await step(0.62, 'Planting the garden…');
-  const loader = new GLTFLoader();
-  const hallScene = await new Promise<THREE.Group | null>(res => loader.load(MODEL_BASE + 'hall' + MODEL_EXT, g => res(g.scene), undefined, e => { console.warn('folly model failed', e); res(null); }));
-  if (hallScene) garden.placeColonnade(hallScene);
 
   // ---- reflections: environment capture from the hall (two bounces) ----
   await step(0.9, 'Polishing the floors…');
@@ -209,13 +222,13 @@ async function main() {
     hallDaylight: hall.lights.find(l => (l as THREE.HemisphereLight).isHemisphereLight) as THREE.HemisphereLight | undefined,
   });
   const drawSkySeg = () => document.querySelectorAll<HTMLButtonElement>('#skySeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sky === skies.current)));
-  document.getElementById('skySeg')!.addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b?.dataset.sky) skies.set(b.dataset.sky as SkyId).then(() => { drawSkySeg(); adds.sound.night = skies.isNight(); }); });
+  document.getElementById('skySeg')!.addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b?.dataset.sky) skies.set(b.dataset.sky as SkyId).then(() => { drawSkySeg(); adds.sound.night = skies.isNight(); glass.setNight(skies.isNight()); }); });
   if (savedSky() !== 'aurora') await skies.set(savedSky());
-  drawSkySeg();
+  drawSkySeg(); glass.setNight(skies.isNight());
 
-  // desktop mirror floors: only the one in your zone renders
+  // desktop mirror floors: only the one in your zone renders (not under Evo's opaque Arrival floors)
   const floorRefls: { zone: Zone; refl: Reflector; mat: THREE.MeshPhysicalMaterial }[] = [];
-  if (!isMobile) {
+  if (!isMobile && !arrival) {
     for (const [ch, zone, ap] of [[hall, 'hall', HALL.apothem], [lib, 'library', LIB.apothem]] as const) {
       const fg = new THREE.CircleGeometry(ap / Math.cos(Math.PI / 12), 12, Math.PI / 2 - Math.PI / 12); fg.rotateX(-Math.PI / 2);
       const refl = new Reflector(fg, { textureWidth: Math.round(innerWidth * 0.6), textureHeight: Math.round(innerHeight * 0.6), color: 0xa0a0a0, clipBias: 0.002 });
@@ -254,8 +267,13 @@ async function main() {
   inter.addPanel(libp.panel, 'Guild library');
   inter.addPanel(tlp.panel, 'Timeline of XR');
   inter.addPanel(desk.panel, 'Join the XR Guild');
-  inter.addPanel(board.panel, 'Guild notice board');
-  for (const p of adds.panels) inter.addPanel(p.panel, p.label);
+  // V4: Evo's notice board (with the featured Immersive X event) replaces V3's panel; clicking it opens the calendar
+  const evoBoard = arrival?.root.getObjectByName('events-board-immersive-x-v2');
+  if (evoBoard) { board.panel.mesh.removeFromParent(); inter.add(evoBoard, { label: 'Guild notice board · full calendar', onClick: () => { if (!inXR()) openLink(LINKS.calendar); } }); }
+  else inter.addPanel(board.panel, 'Guild notice board');
+  // V4: Evo's principles boards (baked from Arrival, by the colonnade) replace V3's pair
+  if (arrival) adds.panels.forEach(p => p.panel.mesh.removeFromParent());
+  else for (const p of adds.panels) inter.addPanel(p.panel, p.label);
   inter.add(desk.plaque, { label: 'Visit xrguild.org', onClick: () => { if (!inXR()) openLink(LINKS.home); } });
   table.devices.forEach(d => inter.add(d.object, { label: 'Lineage · click for details', onClick: () => store.showCard?.(lineageCard(d.index)) }));
   inter.add(table.featured, { label: 'Meta VR Glasses · open the news', onClick: () => store.openTab?.('news') });
@@ -302,6 +320,20 @@ async function main() {
   };
   for (const hm of seating.hitMeshes) inter.add(hm, { label: 'Sit here', onClick: hit => { const r = seating.seatFromHit(hit); if (r) sitAt(r.zone, r.index); } });
 
+  // ---- V4: Evo's Arrival art replaces V3's own geometry; V3 keeps its seating presets, screen, stained glass and click targets ----
+  if (arrival) {
+    const keep = [...inter.objects, ...[...media.screens.values()].map(s => s.group), ...hall.roses, hall.group.getObjectByName('StainedGlassRotunda'), adds.group.getObjectByName('Birds')].filter((o): o is THREE.Object3D => !!o);
+    const n = removeV3([hall, lib, colonnade, stage, garden, libIn, desk, board, adds].map(x => x.group), keep);
+    console.info(`[arrival] removed ${n} V3 meshes`);
+    // Evo's screen frame around V3's live screen surface
+    arrival.root.getObjectByName('xrguildhall-screen-clean')?.getObjectByName('Screen')?.removeFromParent();
+    for (const s of media.screens.values()) for (const c of s.group.children) if (c !== s.mesh) c.visible = false;
+    for (const r of hall.roses) r.position.z += 0.02; // in front of the placeholder roses inside Evo's hall model
+    // Evo moved the welcome desk to the back of the hall; V3's live panel and plaque go with it
+    const evoDesk = arrival.root.getObjectByName('welcome-desk-v2');
+    if (evoDesk) { desk.group.position.copy(evoDesk.position); desk.group.quaternion.copy(evoDesk.quaternion); }
+  }
+
   const goTo = (id: string) => {
     const t = TOURS.find(x => x.id === id); if (!t) return;
     fade.classList.add('on');
@@ -326,11 +358,15 @@ async function main() {
   // ---- XR session hooks ----
   renderer.xr.addEventListener('sessionstart', () => {
     const s = renderer.xr.getSession()!;
-    s.addEventListener('select', (e: XRInputSourceEvent) => inter.selectXR(e.inputSource.handedness));
+    const hand = (e: XRInputSourceEvent) => e.inputSource.handedness as 'left' | 'right';
+    s.addEventListener('selectstart', (e: XRInputSourceEvent) => inter.pressXR(hand(e)));
+    s.addEventListener('select', (e: XRInputSourceEvent) => { if (!xrMenu.endDrag(hand(e))) inter.selectXR(hand(e)); });
+    s.addEventListener('selectend', (e: XRInputSourceEvent) => xrMenu.endDrag(hand(e)));
+    xrMenu.sessionStart();
     setReflections(false);
     try { renderer.xr.setFoveation(0.6); } catch { /* optional */ }
   });
-  renderer.xr.addEventListener('sessionend', () => { setReflections(reflectionsWanted); camera.position.y = seat ? 1.2 : 1.7; });
+  renderer.xr.addEventListener('sessionend', () => { xrMenu.sessionEnd(); setReflections(reflectionsWanted); camera.position.y = seat ? 1.2 : 1.7; });
 
   // ---- UI ----
   const ui = initUI({
@@ -390,11 +426,11 @@ async function main() {
         if (!name) presence.self.name = id.name;
         presence.self.avatar = id.vrmUrl;
         avatars.fetchAvatar = url => id.avatarClient.getAvatarFileWithSDK(url);
-        await presence.connect(new ViverseTransport(VIVERSE_APP_ID, id, CONFIG.viverseRoomCap));
-        if (PhotonSession) {
-          // presence stays on VIVERSE; a voice problem (e.g. the CCU cap) must not drop people from the room.
-          // Voice joins the Photon room for this world's VIVERSE room (overflow rooms get their own voice room).
-          const vt = presence.transport as InstanceType<typeof ViverseTransport>;
+        const vt = new ViverseTransport(VIVERSE_APP_ID, id, CONFIG.viverseRoomCap);
+        // presence stays on VIVERSE; a voice problem (e.g. the CCU cap) must not drop people from the room.
+        // Voice joins the Photon room for this world's VIVERSE room (overflow rooms get their own voice room).
+        const joinVoice = async () => {
+          if (!PhotonSession) return;
           const v: PhotonSession = voice = new PhotonSession(PHOTON_APP_ID, vt.voiceRoom, PHOTON_REGION, photonOpts());
           v.setAudioMode(room.state.audio); v.spotlight = new Set(room.state.spotlight);
           // room controls over Photon (verified sender); VIVERSE `general` controls are ignored while voice is up
@@ -405,7 +441,19 @@ async function main() {
           try { await v.connect(presence.self.id, presence.self.name); } catch (e: any) { v.disconnect(); if (voice === v) { voice = null; social.sys('Voice is unavailable right now. ' + (e?.message ?? '')); } }
           // Leave pressed while voice was still joining: the listener below already dropped it, so close this one too
           if (voice !== v) v.disconnect();
-        }
+        };
+        // we moved rooms (alone, so we joined the others; or a rejoin landed elsewhere): voice and room settings follow
+        vt.onRoomChange = async (_from, rejoined) => {
+          if (presence.transport !== vt) return;
+          const micWasOn = !!voice?.micOn;
+          voice?.disconnect(); voice = null;
+          social.sys(`${rejoined ? `Reconnected in ${vt.roomName}.` : `You were alone, so we moved you to ${vt.roomName} to join the others.`}${micWasOn ? ' Your mic is off; press Mic to talk.' : ''}`);
+          await joinVoice();
+          social.drawDock();
+          room.hello();
+        };
+        await presence.connect(vt);
+        await joinVoice();
         return;
       }
       if (PhotonSession) {
@@ -416,6 +464,7 @@ async function main() {
       }
     },
   });
+  const xrMenu = new XRMenu(world, inter, presence, social, FONTS);
   // Leave only disconnects the presence transport; on VIVERSE the voice session is separate and must not keep the mic live
   presence.listeners.add(() => { if (!presence.connected && voice) { voice.disconnect(); voice = null; } });
   // controls from the presence transport: Photon (verified) off VIVERSE, VIVERSE `general` otherwise.
@@ -451,15 +500,34 @@ async function main() {
   window.addEventListener('keydown', firstGesture, { once: true });
   (document.getElementById('setAmbient') as HTMLInputElement).addEventListener('change', e => adds.sound.setEnabled((e.target as HTMLInputElement).checked));
   (document.getElementById('setStream') as HTMLInputElement).addEventListener('change', e => media.setSound((e.target as HTMLInputElement).checked));
-  if (VIVERSE_APP_ID && /viverse/i.test(location.hostname) && !SIM) setTimeout(() => document.getElementById('socJoin')?.click(), 1200);
   if (SIM > 0) setTimeout(() => { social.drawDock(); document.getElementById('socJoin')?.click(); (document.getElementById('cocName') as HTMLInputElement).value = 'You'; }, 800);
 
   // ---- per-frame system ----
-  let lastRescue = -10, lastSubs = 0;
+  let lastRescue = -10, lastSubs = 0, lastFrame = performance.now();
+  const syncVoice = (subs: boolean) => {
+    if (!voice) return;
+    voice.updatePanners(camera, presence.peers);
+    if (subs) voice.updateSubscriptions({ x: presence.self.x, z: presence.self.z, zone: presence.self.zone }, presence.peers, presence.blocked);
+  };
+  // frames stop when the tab is hidden or the window is covered; keep presence and voice routing alive without them
+  startTicker(1000, () => {
+    const now = performance.now();
+    if (now - lastFrame < 1500 || !presence.connected) return;
+    presence.heartbeat(now);
+    presence.smooth(1);
+    syncVoice(true);
+  });
+  // phones and headsets may suspend the page right after hiding it: tell others now, so they keep us for minutes, not seconds
+  const goneAway = () => { if (presence.connected) presence.heartbeat(performance.now()); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) goneAway(); });
+  addEventListener('pagehide', goneAway);
+  const syncWakeLock = holdWakeLock(() => presence.connected);
+  presence.listeners.add(syncWakeLock);
   const tmpQ = new THREE.Quaternion(), fwd = new THREE.Vector3();
   let speaking = new Set<string>();
   class HallSystem extends createSystem({}) {
     update(delta: number, time: number) {
+      lastFrame = performance.now();
       const xr = !!world.session;
       const pp = world.player.position;
       if ((pp.y < -4 || pp.y > 2.5) && time - lastRescue > 1.5) { console.warn('[hall] rescue from y=' + pp.y.toFixed(2)); lastRescue = time; world.setAuthoredPlayerPosition(SPAWN.pos); }
@@ -484,13 +552,13 @@ async function main() {
         presence.smooth(delta);
         speaking = voice ? voice.speaking : sim ? new Set(sim.speakingIds(time)) : speaking;
         avatars.update(presence.peers, pp, camera, delta, time, speaking);
-        if (voice) {
-          voice.updatePanners(camera, presence.peers);
-          if (time - lastSubs > 0.5) { lastSubs = time; voice.updateSubscriptions({ x: pp.x, z: pp.z, zone: presence.self.zone }, presence.peers, presence.blocked); }
-        }
+        const subs = time - lastSubs > 0.5;
+        if (subs) lastSubs = time;
+        syncVoice(subs);
       } else if (avatars.group.children.length) avatars.update(new Map(), pp, camera, delta, time, speaking);
       media.update(camera, zone === 'hall');
       adds.update(time, delta, reduced, camera);
+      xrMenu.update();
       inter.update();
     }
   }
@@ -501,11 +569,12 @@ async function main() {
   setTimeout(() => world.setAuthoredPlayerPosition(SPAWN.pos), 600);
   await step(1, 'Welcome to the Guild Hall');
   document.getElementById('loading')!.classList.add('done');
-  (window as any).__xrgh = { THREE, world, voice: () => voice, goTo, room, media, skies, adds, setView: (y: number, p: number) => { yaw = y; pitch = p; }, TABLE_TOP, presence, seating, sitAt, zone: () => zone };
+  if (!SIM) setTimeout(social.welcome, 1400);
+  (window as any).__xrgh = { THREE, world, voice: () => voice, goTo, room, media, skies, adds, setView: (y: number, p: number) => { yaw = y; pitch = p; }, TABLE_TOP, presence, seating, sitAt, xrMenu, zone: () => zone };
 }
 
 main().catch(err => {
   console.error(err);
   const msg = document.getElementById('loadMsg');
-  if (msg) msg.textContent = 'The hall could not open in this browser. WebGL 2 is required. ' + (err?.message ?? '');
+  if (msg) { msg.classList.remove('sr'); msg.textContent = 'The hall could not open in this browser. WebGL 2 is required. ' + (err?.message ?? ''); }
 });

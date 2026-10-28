@@ -13,3 +13,5 @@ guild-hall-library-viverse.zip
 # VIVERSE upload zips are build output: npm run viverse-zip, or the CI artifact
 guild-hall-v3-viverse.zip
 release/
+# Arrival pull cache: uncompressed originals and the plugin list (scripts/arrival/make-manifest.mjs)
+.arrival-cache/

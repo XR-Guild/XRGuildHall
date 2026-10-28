@@ -181,7 +181,7 @@ export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, open
     const sw = waterMaterial(env, { deep: 0x123c3a, tint: 0xcfeee6, amp: 0.02, center: SPRING, flow: true }); waters.push(sw);
     const stream = new THREE.Mesh(sg, sw); stream.userData.exportMat = exportWater(0x123c3a); stream.userData.keep = true; pond.add(stream);
     // pond collider (low walls so you walk round it, not across it)
-    for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; const c = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3, 0.4), new THREE.MeshBasicMaterial()); c.position.set(P.center.x + Math.cos(a) * P.rx * 1.02, 1.5, P.center.z + Math.sin(a) * P.rz * 1.02); c.rotation.y = -a + Math.PI / 2; colliders.add(c); }
+    for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; const c = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3, 0.4), new THREE.MeshBasicMaterial()); c.position.set(P.center.x + Math.cos(a) * P.rx * 1.02, 1.5, P.center.z + Math.sin(a) * P.rz * 1.02); c.rotation.y = -a + Math.PI / 2; c.name = 'PondCollider'; colliders.add(c); }
   }
 
   // ================= colonnade vines =================
@@ -237,7 +237,7 @@ export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, open
     const holder = new THREE.Group(); holder.userData.keep = true; holder.position.set(0, 1.55, 0.0); g.add(holder);
     pnl.mesh.position.z = 0.0; holder.add(pnl.mesh);
     panels.push({ panel: pnl, label: i === 0 ? 'XR Guild principles' : 'Code of conduct · I’m in' });
-    const c = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3, 0.5), new THREE.MeshBasicMaterial()); c.position.set(b.pos.x, 1.5, b.pos.z); c.rotation.y = b.ry; colliders.add(c);
+    const c = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3, 0.5), new THREE.MeshBasicMaterial()); c.position.set(b.pos.x, 1.5, b.pos.z); c.rotation.y = b.ry; c.name = 'BoardCollider'; colliders.add(c);
   });
 
   // ================= garden sound =================
@@ -341,6 +341,9 @@ function buildVines() {
  * water is filtered noise placed at the fountain, the spring and the stream. Starts after the visitor's first click
  * (browsers require a gesture), and Comfort → Garden sounds turns it off.
  */
+// Kept well under voice level (about 16 dB below the original 0.5) so conversations carry over the garden.
+const GARDEN_VOLUME = 0.08;
+
 export class GardenSound {
   ctx: AudioContext | null = null;
   enabled = true;
@@ -352,7 +355,7 @@ export class GardenSound {
   start() {
     if (this.ctx || !this.enabled) { this.ctx?.resume(); return; }
     const ctx = this.ctx = new AudioContext();
-    this.master = new GainNode(ctx, { gain: 0.5 }); this.master.connect(ctx.destination);
+    this.master = new GainNode(ctx, { gain: GARDEN_VOLUME }); this.master.connect(ctx.destination);
     // one shared noise buffer, looped
     const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -367,7 +370,7 @@ export class GardenSound {
       src.connect(bp).connect(lp).connect(g).connect(pan).connect(this.master!); src.start();
     });
   }
-  setEnabled(on: boolean) { this.enabled = on; if (this.master) this.master.gain.setTargetAtTime(on ? 0.5 : 0, this.ctx!.currentTime, 0.3); if (on) this.start(); }
+  setEnabled(on: boolean) { this.enabled = on; if (this.master) this.master.gain.setTargetAtTime(on ? GARDEN_VOLUME : 0, this.ctx!.currentTime, 0.3); if (on) this.start(); }
   private song(at: THREE.Vector3) {
     const ctx = this.ctx!, t0 = ctx.currentTime + 0.05;
     const pan = new PannerNode(ctx, { panningModel: 'HRTF', distanceModel: 'inverse', refDistance: 4, rolloffFactor: 1.2, maxDistance: 60, positionX: at.x, positionY: at.y, positionZ: at.z });

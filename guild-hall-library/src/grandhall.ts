@@ -26,6 +26,8 @@ export interface GrandHall {
   group: THREE.Group; colliders: THREE.Group; floor: THREE.Mesh;
   lights: THREE.Light[]; glows: THREE.Sprite[];
   bannerMounts: Map<number, THREE.Object3D>;
+  /** clerestory rose panes (placeholder art) and the inner dome, dressed by src/stainedglass.ts */
+  roses: THREE.Mesh[]; dome: THREE.Mesh;
   radius: number;
 }
 
@@ -39,6 +41,7 @@ export function buildGrandHall(m: Mats, center: THREE.Vector3, bays: ('window' |
   const colliders = new THREE.Group(); colliders.position.copy(center);
   const lights: THREE.Light[] = []; const glows: THREE.Sprite[] = [];
   const bannerMounts = new Map<number, THREE.Object3D>();
+  const roses: THREE.Mesh[] = [];
   const { A, sides } = GH; const HALF = A * Math.tan(Math.PI / sides), CR = A / Math.cos(Math.PI / sides);
   const H = GH.wallTop, D = 0.5;
   const box = (w: number, h: number, d: number, x: number, y: number, z: number, ry = 0) => { const c = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial()); c.position.set(x, y, z); c.rotation.y = ry; colliders.add(c); };
@@ -116,7 +119,7 @@ export function buildGrandHall(m: Mats, center: THREE.Vector3, bays: ('window' |
     // clerestory stained-glass rose (placeholder art, one XR glyph per window)
     const rg = new THREE.Mesh(new THREE.CircleGeometry(GH.clere.r, 48), new THREE.MeshStandardMaterial({ map: stainedRose(k), emissiveMap: null, emissive: 0xffffff, roughness: 0.45, side: THREE.DoubleSide }));
     const rmat = rg.material as THREE.MeshStandardMaterial; rmat.emissiveMap = rmat.map; rmat.emissiveIntensity = 0.7;
-    rg.position.set(0, GH.clere.y, -D / 2); rg.userData.keep = true; bay.add(rg);
+    rg.position.set(0, GH.clere.y, -D / 2); rg.userData.keep = true; rg.name = 'ClereRose'; bay.add(rg); roses.push(rg);
     const rr = new THREE.Mesh(new THREE.TorusGeometry(GH.clere.r + 0.05, 0.09, 8, 64), m.gilt); rr.position.set(0, GH.clere.y, 0.04); bay.add(rr);
     const rr2 = new THREE.Mesh(new THREE.TorusGeometry(GH.clere.r + 0.25, 0.035, 6, 64), m.giltSatin); rr2.position.set(0, GH.clere.y, 0.05); bay.add(rr2);
   }
@@ -204,7 +207,7 @@ export function buildGrandHall(m: Mats, center: THREE.Vector3, bays: ('window' |
   const daylight = new THREE.HemisphereLight(0xcfe3ff, 0x3a2a1c, 0.35); daylight.position.y = 14; group.add(daylight); lights.push(daylight);
 
   group.updateMatrixWorld(true);
-  return { group, colliders, floor, lights, glows, bannerMounts, radius: A };
+  return { group, colliders, floor, lights, glows, bannerMounts, roses, dome, radius: A };
 }
 
 /** DeeDee-style gothic tracery in gilt: a central mullion, two lancet heads, and an oculus of four foils. */
