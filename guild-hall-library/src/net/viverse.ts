@@ -1,5 +1,6 @@
 import type { Transport, TransportEvents, PeerState, ChatMsg, Control } from './types';
 import { loadScript } from './loadScript';
+import { startTicker, workerTimers } from './keepalive';
 
 /**
  * VIVERSE Play SDK transport (docs.viverse.com → Matchmaking & Networking SDK, JS SDK 1.3.3).
@@ -14,6 +15,9 @@ import { loadScript } from './loadScript';
  * A failed join is retried with backoff for up to a minute before we open a room of our own, because a
  * hiccup that sends each visitor to a fresh room splits the Hall. If that still happens, anyone alone in
  * a room moves to the busiest guild-hall room with space.
+ *
+ * Neither SDK connection comes back by itself once it is gone (matchmaking never reconnects; multiplayer gives
+ * up after ten tries), so a drop of either one rejoins from scratch until it works or the visitor leaves.
  */
 const SDK = 'https://www.viverse.com/static-assets/viverse-sdk/1.3.3/index.umd.cjs';
 /** The VIVERSE room, and the Photon voice room every VIVERSE visitor joins. */
@@ -83,11 +87,12 @@ export class ViverseTransport implements Transport {
   private play: any = null; private mm: any = null; private mp: any = null; private masterId = ''; private selfId = ''; private selfName = '';
   private ev!: TransportEvents;
   private mmConnected = false; private roomId = ''; private actors = 0;
-  private closed = false; private moving = false; private mergeTimer = 0; private wake: (() => void) | null = null;
+  private closed = false; private moving = false; private recovering = false; private mergeTimer = 0; private wake: (() => void) | null = null;
+  private stopPing: (() => void) | null = null;
   /** The VIVERSE room we landed in ("guild-hall", or an overflow room "guild-hall-2" …). */
   roomName = VIVERSE_ROOM;
-  /** Called after we move rooms to join others, so voice can follow to the new room's voiceRoom. */
-  onRoomChange: ((from: string) => void) | null = null;
+  /** Called after we move rooms (to join others, or because a rejoin landed elsewhere), so voice can follow to the new room's voiceRoom. */
+  onRoomChange: ((from: string, rejoined: boolean) => void) | null = null;
   /** Photon voice room for this VIVERSE room. Worlds share a Photon app and room names, so the App ID keeps their voice apart. */
   get voiceRoom() { return `${this.appId}:${this.roomName}`; }
   /**
@@ -108,9 +113,14 @@ export class ViverseTransport implements Transport {
   }
 
   private async openMatchmaking() {
-    try { this.mm?.disconnect(); } catch { /* already gone */ }
+    const old = this.mm; this.mm = null; // cleared first, so the old client's onDisconnect isn't taken for a drop
+    this.stopPing?.(); this.stopPing = null;
+    try { old?.disconnect(); } catch { /* already gone */ }
     const mm = await timed('newMatchmakingClient', () => this.play.newMatchmakingClient(this.appId));
     this.mm = mm; this.mmConnected = false;
+    mm.on('onDisconnect', () => { if (this.mm === mm) void this.recover('Lost the VIVERSE room.'); });
+    // the SDK's own 30 s keepalive (one zero byte) runs on a page timer that a hidden tab throttles to once a minute
+    this.stopPing = startTicker(20000, () => { const ws = mm.socket; if (this.mm === mm && ws?.readyState === WebSocket.OPEN) ws.send(new Uint8Array([0])); });
     const t0 = performance.now();
     // onConnect doesn't always arrive, so we go on after a wait; an empty room list before it counts as a failure (findOrCreateRoom)
     await new Promise<void>(res => {
@@ -199,12 +209,44 @@ export class ViverseTransport implements Transport {
       else if (msg.k === 'x' && msg.from && (msg.from === this.masterId || msg.v?.type === 'hello')) ev.onControl(msg.v as Control, msg.from);
     });
     await timed('multiplayer init', () => mp.init({ modules: { networkSync: { enabled: false } } }), room.name);
+    // fires once the SDK has given up its own reconnect attempts
+    try { mp.onDisconnected?.(() => { if (this.mp === mp) void this.recover('Lost the VIVERSE connection.'); }); } catch { /* older SDK */ }
     ev.onStatus(`${room.name} on VIVERSE`);
+  }
+
+  /** Rejoin from scratch after a dropped connection, retrying until it works or the visitor leaves. */
+  private async recover(why: string) {
+    if (this.closed || this.recovering) return;
+    this.recovering = true;
+    const t0 = performance.now(), from = seq, fromRoom = this.roomName;
+    console.warn(`[VIVERSE] ${why} Rejoining.`);
+    this.ev.onStatus(`${why} Reconnecting…`);
+    const old = this.mp; this.mp = null;
+    try { old?.disconnect(); } catch { /* already gone */ }
+    try {
+      for (let delay = RETRY_FIRST_MS, attempt = 1; ; delay = Math.min(delay * 2, RETRY_MAX_MS), attempt++) {
+        try {
+          await this.openMatchmaking();
+          const room = await this.findOrCreateRoom();
+          this.checkOpen();
+          await this.attach(room);
+          break;
+        } catch (e: any) {
+          this.checkOpen();
+          console.warn(`[VIVERSE] rejoin attempt ${attempt} failed (${e?.message ?? e})`);
+          this.ev.onStatus(`${why} Reconnecting…`);
+          await this.sleep(delay * (0.75 + Math.random() * 0.5));
+        }
+      }
+      summarize(`rejoined ${this.roomName}`, t0, from);
+      if (this.roomName !== fromRoom) this.onRoomChange?.(fromRoom, true);
+    } catch { /* left while rejoining */ }
+    finally { this.recovering = false; }
   }
 
   /** Alone in our room: move to the busiest guild-hall room with space. Two lone visitors meet in the room with the lower id. */
   private async mergeIfAlone() {
-    if (this.closed || this.moving || this.actors > 1 || !this.mp) return;
+    if (this.closed || this.moving || this.recovering || this.actors > 1 || !this.mp) return;
     this.moving = true;
     try {
       const rooms = await this.listRooms();
@@ -216,7 +258,11 @@ export class ViverseTransport implements Transport {
         .sort((a, b) => headcount(b) - headcount(a) || (String(a.id) < String(b.id) ? -1 : 1))[0];
       if (target && !this.closed && this.actors <= 1) await this.moveTo(target);
     } catch (e: any) { if (!this.closed) console.warn('[VIVERSE] merge check failed', e?.message ?? e); }
-    finally { this.moving = false; }
+    finally {
+      this.moving = false;
+      // a move that failed halfway has left its room without joining another
+      if (!this.closed && !this.mp) void this.recover('Lost the VIVERSE room while moving.');
+    }
   }
 
   private async moveTo(target: any) {
@@ -234,15 +280,15 @@ export class ViverseTransport implements Transport {
     this.checkOpen();
     await this.attach(room);
     summarize(`moved ${fromRoom} → ${this.roomName}`, t0, from);
-    this.onRoomChange?.(fromRoom);
+    this.onRoomChange?.(fromRoom, false);
   }
 
   private checkOpen() { if (this.closed) throw new Error('Left before joining'); }
   /** A wait that Leave cuts short. */
   private sleep(ms: number) {
     return new Promise<void>(res => {
-      const done = () => { clearTimeout(t); this.wake = null; res(); };
-      const t = setTimeout(done, ms);
+      const done = () => { workerTimers.clearTimeout(t); this.wake = null; res(); };
+      const t = workerTimers.setTimeout(done, ms);
       this.wake = done;
     });
   }
@@ -253,7 +299,7 @@ export class ViverseTransport implements Transport {
   sendControl(c: Control) { if (c.type === 'hello' || this.isHost()) this.send({ k: 'x', v: c, from: this.selfId }); }
   isHost() { return !!this.selfId && this.selfId === this.masterId; }
   disconnect() {
-    this.closed = true; clearInterval(this.mergeTimer); this.onRoomChange = null; this.wake?.();
+    this.closed = true; clearInterval(this.mergeTimer); this.stopPing?.(); this.stopPing = null; this.onRoomChange = null; this.wake?.();
     try { this.mp?.disconnect(); } catch { /* */ }
     try { this.mm?.leaveRoom(); this.mm?.disconnect(); } catch { /* */ }
   }

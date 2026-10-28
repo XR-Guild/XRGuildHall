@@ -27,6 +27,7 @@ import { bakeStatic } from './bake';
 import { loadArrival, removeV3 } from './arrival';
 import { HALL, LIB, STAGE, DESK, SPAWN, POOL, BENCHES, PATH_CURVE, V, zoneOf, type Zone } from './site';
 import { Presence } from './net/presence';
+import { startTicker, holdWakeLock } from './net/keepalive';
 import { SimTransport } from './net/sim';
 import { Avatars } from './avatars';
 import type { PhotonSession } from './net/photon';
@@ -441,12 +442,12 @@ async function main() {
           // Leave pressed while voice was still joining: the listener below already dropped it, so close this one too
           if (voice !== v) v.disconnect();
         };
-        // we were alone and moved to a room with people in it: voice and room settings follow
-        vt.onRoomChange = async () => {
+        // we moved rooms (alone, so we joined the others; or a rejoin landed elsewhere): voice and room settings follow
+        vt.onRoomChange = async (_from, rejoined) => {
           if (presence.transport !== vt) return;
           const micWasOn = !!voice?.micOn;
           voice?.disconnect(); voice = null;
-          social.sys(`You were alone, so we moved you to ${vt.roomName} to join the others.${micWasOn ? ' Your mic is off; press Mic to talk.' : ''}`);
+          social.sys(`${rejoined ? `Reconnected in ${vt.roomName}.` : `You were alone, so we moved you to ${vt.roomName} to join the others.`}${micWasOn ? ' Your mic is off; press Mic to talk.' : ''}`);
           await joinVoice();
           social.drawDock();
           room.hello();
@@ -502,11 +503,31 @@ async function main() {
   if (SIM > 0) setTimeout(() => { social.drawDock(); document.getElementById('socJoin')?.click(); (document.getElementById('cocName') as HTMLInputElement).value = 'You'; }, 800);
 
   // ---- per-frame system ----
-  let lastRescue = -10, lastSubs = 0;
+  let lastRescue = -10, lastSubs = 0, lastFrame = performance.now();
+  const syncVoice = (subs: boolean) => {
+    if (!voice) return;
+    voice.updatePanners(camera, presence.peers);
+    if (subs) voice.updateSubscriptions({ x: presence.self.x, z: presence.self.z, zone: presence.self.zone }, presence.peers, presence.blocked);
+  };
+  // frames stop when the tab is hidden or the window is covered; keep presence and voice routing alive without them
+  startTicker(1000, () => {
+    const now = performance.now();
+    if (now - lastFrame < 1500 || !presence.connected) return;
+    presence.heartbeat(now);
+    presence.smooth(1);
+    syncVoice(true);
+  });
+  // phones and headsets may suspend the page right after hiding it: tell others now, so they keep us for minutes, not seconds
+  const goneAway = () => { if (presence.connected) presence.heartbeat(performance.now()); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) goneAway(); });
+  addEventListener('pagehide', goneAway);
+  const syncWakeLock = holdWakeLock(() => presence.connected);
+  presence.listeners.add(syncWakeLock);
   const tmpQ = new THREE.Quaternion(), fwd = new THREE.Vector3();
   let speaking = new Set<string>();
   class HallSystem extends createSystem({}) {
     update(delta: number, time: number) {
+      lastFrame = performance.now();
       const xr = !!world.session;
       const pp = world.player.position;
       if ((pp.y < -4 || pp.y > 2.5) && time - lastRescue > 1.5) { console.warn('[hall] rescue from y=' + pp.y.toFixed(2)); lastRescue = time; world.setAuthoredPlayerPosition(SPAWN.pos); }
@@ -531,10 +552,9 @@ async function main() {
         presence.smooth(delta);
         speaking = voice ? voice.speaking : sim ? new Set(sim.speakingIds(time)) : speaking;
         avatars.update(presence.peers, pp, camera, delta, time, speaking);
-        if (voice) {
-          voice.updatePanners(camera, presence.peers);
-          if (time - lastSubs > 0.5) { lastSubs = time; voice.updateSubscriptions({ x: pp.x, z: pp.z, zone: presence.self.zone }, presence.peers, presence.blocked); }
-        }
+        const subs = time - lastSubs > 0.5;
+        if (subs) lastSubs = time;
+        syncVoice(subs);
       } else if (avatars.group.children.length) avatars.update(new Map(), pp, camera, delta, time, speaking);
       media.update(camera, zone === 'hall');
       adds.update(time, delta, reduced, camera);

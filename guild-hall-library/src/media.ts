@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Mats } from './mats';
 import type { RoomState, ScreenSource } from './net/types';
 import { TAGLINE } from './hallfeatures';
+import { workerTimers } from './net/keepalive';
 
 /**
  * Media screens in the Guild Hall (V3).
@@ -58,6 +59,7 @@ export class MediaScreens {
   private positional = false;
   private logo: HTMLImageElement | null = null;
   private lk: any = null; private room: any = null; private connecting: Promise<void> | null = null;
+  private liveRetry: any = 0; private liveTries = 0;
   private tracks = { screen: null as any, screenAudio: null as any, ingress: null as any, ingressAudio: null as any };
   private status = '';
   onStatus: ((s: string) => void) | null = null;
@@ -118,9 +120,7 @@ export class MediaScreens {
       else if (src.kind === 'idle') this.showIdle(s);
     }
     for (const s of this.screens.values()) if (s.audio) this.routeAudio(s);
-    const wantLive = [...this.screens.values()].some(s => s.src.kind === 'live');
-    if (wantLive) this.joinLive().then(() => this.assignLive()).catch(e => { this.setStatus('Live screens unavailable: ' + (e?.message ?? e)); for (const s of this.screens.values()) if (s.src.kind === 'live') this.showIdle(s, 'Live stream unavailable'); });
-    else this.leaveLive();
+    this.syncLive();
     this.assignLive();
   }
 
@@ -204,12 +204,25 @@ export class MediaScreens {
 
   // ---- LiveKit media room (viewer) ----
   private setStatus(s: string) { this.status = s; this.onStatus?.(s); }
+  /** Join the media room while any screen shows a live source, leave it otherwise; a failed or dropped join is retried. */
+  private syncLive() {
+    workerTimers.clearTimeout(this.liveRetry); this.liveRetry = 0;
+    if (![...this.screens.values()].some(s => s.src.kind === 'live')) { this.liveTries = 0; this.leaveLive(); return; }
+    this.joinLive().then(() => { this.liveTries = 0; this.assignLive(); }).catch(e => {
+      this.setStatus('Live screens unavailable: ' + (e?.message ?? e));
+      for (const s of this.screens.values()) if (s.src.kind === 'live') this.showIdle(s, 'Live stream unavailable');
+      this.retryLive();
+    });
+  }
+  private retryLive() { if (this.o.tokenUrl && !this.liveRetry) this.liveRetry = workerTimers.setTimeout(() => this.syncLive(), Math.min(30000, 2000 * 2 ** this.liveTries++)); }
   private async joinLive() {
     if (!this.o.tokenUrl) throw new Error('no media room configured');
     if (this.room) return;
     if (this.connecting) return this.connecting;
     this.connecting = (async () => {
       this.lk = await import('livekit-client');
+      // LiveKit's signal pings and reconnect timers; on throttled page timers a hidden tab misses pings and gets dropped
+      Object.assign(this.lk.CriticalTimers, workerTimers);
       const res = await fetch(this.o.tokenUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identity: this.o.identity(), name: this.o.name(), room: this.o.room, role: 'viewer' }) });
       if (!res.ok) throw new Error('media token refused (' + res.status + ')');
       const { token, url } = await res.json();
@@ -219,7 +232,8 @@ export class MediaScreens {
       room.on(RoomEvent.TrackSubscribed, refresh);
       room.on(RoomEvent.TrackUnsubscribed, refresh);
       room.on(RoomEvent.ParticipantDisconnected, refresh);
-      room.on(RoomEvent.Disconnected, () => { this.room = null; this.collect(null); this.assignLive(); });
+      // LiveKit has already tried to resume by itself; leaveLive clears this.room first, so only real drops retry
+      room.on(RoomEvent.Disconnected, () => { if (this.room !== room) return; this.room = null; this.collect(null); this.assignLive(); this.retryLive(); });
       await room.connect(url, token, { autoSubscribe: true });
       this.room = room; refresh();
       this.setStatus('Live screens connected');

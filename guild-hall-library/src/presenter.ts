@@ -3,6 +3,7 @@
  * Runs outside VIVERSE on purpose: screen capture needs a top-level page, and VIVERSE runs worlds inside a frame.
  */
 import { CONFIG, loadConfig } from './config';
+import { workerTimers } from './net/keepalive';
 
 const $ = <T extends HTMLElement>(s: string) => document.querySelector(s) as T;
 const status = (t: string) => { $('#status').textContent = t; };
@@ -11,7 +12,9 @@ let room: any = null;
 async function start() {
   await loadConfig();
   if (!CONFIG.media.tokenUrl) { status('This build has no media room configured (VITE_MEDIA_TOKEN_URL).'); return; }
-  const { Room, RoomEvent, Track } = await import('livekit-client');
+  const { Room, RoomEvent, Track, CriticalTimers } = await import('livekit-client');
+  // the presenter is usually in another window while sharing, so this tab is hidden and its page timers throttled
+  Object.assign(CriticalTimers, workerTimers);
   const res = await fetch(CONFIG.media.tokenUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'presenter', identity: crypto.randomUUID().slice(0, 12), name: $<HTMLInputElement>('#name').value.trim() || 'Presenter', presenterKey: $<HTMLInputElement>('#key').value }) });
   if (res.status === 401) { status('That passphrase was not recognised.'); return; }
   if (!res.ok) { status('The media room refused the request (' + res.status + ').'); return; }

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Transport, TransportEvents, PeerState, ChatMsg, Control, AudioMode } from './types';
 import type { Peer } from './presence';
 import { loadScript } from './loadScript';
+import { workerTimers } from './keepalive';
 
 /**
  * Photon Cloud session: spatial voice for everyone, and (off Viverse) presence + chat over room events.
@@ -55,7 +56,30 @@ async function loadPhoton() {
     const timer = setTimeout(() => rej(new Error('The Photon Voice SDK did not start')), JOIN_TIMEOUT_MS);
     G.Photon.setOnLoad(() => { clearTimeout(timer); res(); });
   });
+  serviceInBackground(G.Photon);
   return G.Photon;
+}
+
+/**
+ * The SDK pumps each connection (sends, acks, keepalive) from a 20 ms page timer. A hidden tab runs that at most
+ * once a second, and after five minutes about once a minute, so voice goes out in bursts and the server
+ * eventually drops us. While hidden, a worker timer pumps it as well.
+ */
+function serviceInBackground(P: any) {
+  const Peer = P.PhotonPeer, lib = P.EmPhotonPeerLib, proto = Peer?.prototype;
+  if (!proto?.startService || !proto.Destroy || !lib?.Service) { console.warn('[Photon] SDK internals changed; voice may stall in a background tab'); return; }
+  if (proto.xrghBackground) return;
+  proto.xrghBackground = true;
+  const start = proto.startService, destroy = proto.Destroy;
+  proto.startService = function (this: any) {
+    start.call(this);
+    workerTimers.clearInterval(this.xrghTimer);
+    this.xrghTimer = workerTimers.setInterval(() => { if (document.hidden && !this.closed) lib.Service(this.peer); }, Peer.serviceIntervalMs);
+  };
+  proto.Destroy = function (this: any) {
+    workerTimers.clearInterval(this.xrghTimer); this.xrghTimer = 0;
+    destroy.call(this);
+  };
 }
 
 const WORKLETS = `
@@ -150,8 +174,14 @@ export class PhotonSession {
   private self = '';
   private name = '';
   private retries = 0;
-  private retryTimer = 0;
-  private onVisible = () => { if (document.visibilityState === 'visible' && this.retryTimer) { clearTimeout(this.retryTimer); this.retryTimer = 0; this.reopen(); } };
+  private retryTimer: any = 0;
+  private onVisible = () => {
+    if (document.visibilityState !== 'visible') return;
+    // Safari suspends ("interrupts") audio while the page is in the background
+    if (this.ctx && this.ctx.state !== 'running' && this.ctx.state !== 'closed') this.ctx.resume().catch(() => {});
+    this.retryNow();
+  };
+  private retryNow = () => { if (this.retryTimer) { workerTimers.clearTimeout(this.retryTimer); this.retryTimer = 0; this.reopen(); } };
 
   constructor(private appId: string, public roomName: string, private region: string, private opts: PhotonOptions = { maxPlayers: 20, verified: false }) {}
 
@@ -172,6 +202,7 @@ export class PhotonSession {
     // the presence id rides on the actor so voices (keyed by actor number) line up with avatars
     this.self = identity; this.name = name;
     document.addEventListener('visibilitychange', this.onVisible);
+    addEventListener('online', this.retryNow);
     try { await this.open(); } catch (e) { this.disconnect(); throw e; }
   }
 
@@ -241,7 +272,7 @@ export class PhotonSession {
     if (this.closing) return;
     if (!this.linkDown) { this.linkDown = true; this.onLink?.(false); }
     this.onStatus?.('Voice reconnecting…');
-    this.retryTimer = window.setTimeout(() => { this.retryTimer = 0; this.reopen(); }, Math.min(30000, 2000 * 2 ** this.retries++));
+    this.retryTimer = workerTimers.setTimeout(() => { this.retryTimer = 0; this.reopen(); }, Math.min(30000, 2000 * 2 ** this.retries++));
   }
   private reopen() { this.open().catch(() => { this.retire(); this.reconnectLater(); }); }
   private retire() {
@@ -414,8 +445,9 @@ export class PhotonSession {
   /** Safe to call more than once. A retired client is disposed once its socket has actually closed. */
   disconnect() {
     this.closing = true;
-    clearTimeout(this.retryTimer); this.retryTimer = 0;
+    workerTimers.clearTimeout(this.retryTimer); this.retryTimer = 0;
     document.removeEventListener('visibilitychange', this.onVisible);
+    removeEventListener('online', this.retryNow);
     if (this.mic) this.setMic(false);
     this.onStatus = null; this.onEvent = null; this.onLeave = null; this.onLink = null;
     for (const k of [...this.voices.keys()]) this.removeVoice(k);

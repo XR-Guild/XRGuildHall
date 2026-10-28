@@ -12,6 +12,7 @@ export interface PeerState {
   color: number;           // mannequin tint
   onStage: boolean;
   megaphone: boolean;      // heard at full volume by everyone; only honoured while onStage
+  away?: boolean;          // tab hidden: heartbeats may arrive slowly, so peers wait longer before dropping us
   t: number;               // sender clock, ms
 }
 
