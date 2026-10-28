@@ -136,6 +136,11 @@ class MicIn extends AudioWorkletProcessor {
 registerProcessor('xrgh-mic-in', MicIn);
 `;
 
+async function addWorklets(ctx: AudioContext) {
+  const url = URL.createObjectURL(new Blob([WORKLETS], { type: 'text/javascript' }));
+  try { await ctx.audioWorklet.addModule(url); } finally { URL.revokeObjectURL(url); }
+}
+
 interface RemoteVoice {
   actorNr: number; node: AudioWorkletNode; pan: PannerNode; gain: GainNode;
   falloff: Falloff; audible: boolean; loudAt: number; level: number;
@@ -169,7 +174,7 @@ export class PhotonSession {
   /** Presence ids an admin has spotlit: heard by everyone at full volume, wherever they stand. */
   spotlight = new Set<string>();
   private voices = new Map<string, RemoteVoice>();
-  private mic: { stream: MediaStream; src: MediaStreamAudioSourceNode; node: AudioWorkletNode; voice: any | null } | null = null;
+  private mic: { stream: MediaStream; ctx: AudioContext; src: MediaStreamAudioSourceNode; node: AudioWorkletNode; voice: any | null } | null = null;
   private closing = false;
   private self = '';
   private name = '';
@@ -194,9 +199,7 @@ export class PhotonSession {
       const V = this.P.Voice, log = V._log;
       V.setLogFunc((level: number, msg: string) => { if (!/decoder is null|options are not set for the remote voice|of not initialized player/.test(msg)) log(level, msg); });
     } else {
-      const ctx = this.ensureAudio();
-      const url = URL.createObjectURL(new Blob([WORKLETS], { type: 'text/javascript' }));
-      try { await ctx.audioWorklet.addModule(url); } finally { URL.revokeObjectURL(url); }
+      await addWorklets(this.ensureAudio());
       left();
     }
     // the presence id rides on the actor so voices (keyed by actor number) line up with avatars
@@ -313,14 +316,23 @@ export class PhotonSession {
     if (on && !this.mic) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       if (!this.client) { stream.getTracks().forEach(t => t.stop()); return; }
-      const src = ctx.createMediaStreamSource(stream);
-      const node = new AudioWorkletNode(ctx, 'xrgh-mic-in', { numberOfOutputs: 0, processorOptions: { frame: ctx.sampleRate * FRAME_US / 1e6 } });
+      let capture = ctx, src: MediaStreamAudioSourceNode;
+      try { src = ctx.createMediaStreamSource(stream); } catch (e) {
+        // Firefox can't feed a mic into a context whose rate differs from the device's, so capture at the device rate; the SDK resamples
+        if ((e as DOMException).name !== 'NotSupportedError') { stream.getTracks().forEach(t => t.stop()); throw e; }
+        capture = new AudioContext();
+        await addWorklets(capture);
+        if (!this.client) { stream.getTracks().forEach(t => t.stop()); capture.close(); return; }
+        src = capture.createMediaStreamSource(stream);
+      }
+      const node = new AudioWorkletNode(capture, 'xrgh-mic-in', { numberOfOutputs: 0, processorOptions: { frame: capture.sampleRate * FRAME_US / 1e6 } });
       src.connect(node);
-      this.mic = { stream, src, node, voice: null };
+      this.mic = { stream, ctx: capture, src, node, voice: null };
       this.attachMic();
     } else if (!on && this.mic) {
       const m = this.mic; this.mic = null;
       m.node.port.onmessage = null; m.src.disconnect(); m.node.disconnect(); m.stream.getTracks().forEach(t => t.stop());
+      if (m.ctx !== this.ctx) m.ctx.close();
       if (m.voice) V.dispose(m.voice);
     }
     this.micOn = on;
@@ -330,7 +342,7 @@ export class PhotonSession {
   /** (Re)creates the outgoing voice on the current client; the capture graph survives reconnects. */
   private attachMic() {
     const m = this.mic; if (!m || m.voice || !this.client?.isJoinedToRoom()) return;
-    const voice = m.voice = this.createLocalVoice(this.ctx!.sampleRate);
+    const voice = m.voice = this.createLocalVoice(m.ctx.sampleRate);
     m.node.port.onmessage = e => voice.pushData(e.data);
   }
   /** An outgoing voice on the current client; feed it mono frames of FRAME_US at `rate` (VOICE_FRAME samples at RATE) with pushData. */
