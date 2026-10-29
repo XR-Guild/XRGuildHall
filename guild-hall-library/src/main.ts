@@ -16,7 +16,7 @@ import { buildTable, TABLE_TOP } from './table';
 import { buildGarden } from './garden';
 import { buildLibraryInterior } from './library3d';
 import { buildStage, buildWelcomeDesk, buildEventsBoard, bannerTexture, LINKS } from './hallfeatures';
-import { buildSeating } from './seating';
+import { buildSeating, seatPads, placePads, SEAT_TOP, type Seat } from './seating';
 import { newsPanel, libraryPanel, timelinePanel } from './xrpanels';
 import { Interactor } from './interact';
 import { initUI, lineageCard } from './ui';
@@ -24,7 +24,7 @@ import { initSocial } from './social';
 import { XRMenu } from './xrmenu';
 import { store } from './store';
 import { bakeStatic } from './bake';
-import { loadArrival, removeV3 } from './arrival';
+import { loadArrival, removeV3, arrivalSeats } from './arrival';
 import { HALL, LIB, STAGE, DESK, SPAWN, POOL, BENCHES, PATH_CURVE, V, zoneOf, type Zone } from './site';
 import { Presence } from './net/presence';
 import { startTicker, holdWakeLock } from './net/keepalive';
@@ -306,8 +306,10 @@ async function main() {
   let seat: { key: string; pos: THREE.Vector3 } | null = null;
   const stand = () => { seat = null; presence.self.seat = null; camera.position.y = 1.7; };
   const sitAt = (zoneKey: 'hall' | 'library', index: number) => {
-    const s = seating.seats(zoneKey)[index]; if (!s) return;
-    const key = `${zoneKey}:${seating.preset[zoneKey]}:${index}`;
+    const s = seating.seats(zoneKey)[index];
+    if (s) sitOn(s, `${zoneKey}:${seating.preset[zoneKey]}:${index}`);
+  };
+  const sitOn = (s: Seat, key: string) => {
     if (presence.seatTaken(key)) { social.sys('That seat is taken.'); return; }
     fade.classList.add('on');
     setTimeout(() => {
@@ -319,6 +321,13 @@ async function main() {
     }, 180);
   };
   for (const hm of seating.hitMeshes) inter.add(hm, { label: 'Sit here', onClick: hit => { const r = seating.seatFromHit(hit); if (r) sitAt(r.zone, r.index); } });
+  // Evo's sofas, garden benches, picnic tables and stage chairs; fixed, so no presets
+  const fixedSeats = arrival ? arrivalSeats(arrival.root) : [];
+  if (fixedSeats.length) {
+    const pads = seatPads(fixedSeats.length, 'arrivalSeats'); placePads(pads, fixedSeats); scene.add(pads);
+    inter.add(pads, { label: 'Sit here', onClick: hit => { if (hit.instanceId != null) sitOn(fixedSeats[hit.instanceId], `arrival:${hit.instanceId}`); } });
+  }
+  avatars.seatTop = key => (key.startsWith('arrival:') ? fixedSeats[+key.slice(8)]?.top : undefined) ?? SEAT_TOP;
 
   // ---- V4: Evo's Arrival art replaces V3's own geometry; V3 keeps its seating presets, screen, stained glass and click targets ----
   if (arrival) {
@@ -413,7 +422,10 @@ async function main() {
       if (SIM > 0 || !(VIVERSE_APP_ID || PHOTON_APP_ID)) {
         // no server configured (e.g. the artifact preview): an offline simulated crowd shows how the room behaves
         sim = new SimTransport(SIM || 60);
-        sim.seatProvider = () => (['hall', 'library'] as const).flatMap(z => seating.seats(z).map((s, i) => ({ key: `${z}:${seating.preset[z]}:${i}`, pos: s.pos, rotY: s.rotY })));
+        sim.seatProvider = () => [
+          ...(['hall', 'library'] as const).flatMap(z => seating.seats(z).map((s, i) => ({ key: `${z}:${seating.preset[z]}:${i}`, pos: s.pos, rotY: s.rotY }))),
+          ...fixedSeats.map((s, i) => ({ key: `arrival:${i}`, pos: s.pos, rotY: s.rotY })),
+        ];
         await presence.connect(sim);
         return;
       }

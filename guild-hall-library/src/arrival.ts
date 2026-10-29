@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import type { Seat } from './seating';
 
 /**
  * Arrival.space art layer: the world as Evo built it in Arrival, placed from public/arrival/manifest.json (written by
@@ -28,6 +29,38 @@ export function removeV3(groups: THREE.Object3D[], keep: Iterable<THREE.Object3D
   // sprites share one geometry across the whole scene, so only mesh geometry is freed
   for (const o of drop) { o.removeFromParent(); if (!(o as THREE.Sprite).isSprite) (o as THREE.Mesh).geometry?.dispose(); }
   return drop.length;
+}
+
+/**
+ * Seat points on Evo's furniture, after her sit-anywhere and stage-seating plugins: matched by node name, in that
+ * node's own units, as [x, z, turn in degrees]. The sitter faces the node's +Z turned by `turn`.
+ */
+const SEAT_POINTS: { re: RegExp; pts: [number, number, number][] }[] = [
+  { re: /^garden-bench$/, pts: [[-0.6, 0, 0], [0, 0, 0], [0.6, 0, 0]] },
+  { re: /^tripo_node_2deaa81a-/, pts: [[0.05, -0.27, 90], [0.05, 0, 90], [0.05, 0.27, 90]] }, // green velvet sofa, front at +X
+  { re: /^tripo_node_(0afe2972|9c011463)-/, pts: [[-0.14, 0.08, 0], [0.14, 0.08, 0]] }, // velvet loveseats
+  { re: /^tripo_node_de228606-/, pts: [[-0.5, -0.82, 0], [0.5, -0.82, 0], [-0.5, 0.82, 180], [0.5, 0.82, 180]] }, // picnic tables
+  { re: /^stage-chair(_\d+)?$/, pts: [[0, 0.04, 0]] }, // panel chairs on the stage
+];
+
+/** Every seat on the Arrival furniture. The cushion height is found by a ray down onto the model. */
+export function arrivalSeats(root: THREE.Object3D): Seat[] {
+  root.updateMatrixWorld(true);
+  const seats: Seat[] = [], rc = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0), fwd = new THREE.Vector3();
+  const visit = (n: THREE.Object3D, floor: number) => {
+    const t = SEAT_POINTS.find(t => t.re.test(n.name));
+    if (!t) { for (const c of n.children) visit(c, floor); return; }
+    fwd.set(0, 0, 1).transformDirection(n.matrixWorld);
+    const yaw = Math.atan2(fwd.x, fwd.z);
+    for (const [x, z, turn] of t.pts) {
+      const p = new THREE.Vector3(x, 0, z).applyMatrix4(n.matrixWorld);
+      rc.set(p.clone().setY(p.y + 2), down);
+      const hit = rc.intersectObject(n, true)[0];
+      if (hit) seats.push({ pos: p.setY(floor), rotY: yaw + THREE.MathUtils.degToRad(turn), top: hit.point.y - floor });
+    }
+  };
+  for (const item of root.children) visit(item, item.position.y);
+  return seats;
 }
 
 export async function loadArrival(onProgress?: (f: number) => void) {

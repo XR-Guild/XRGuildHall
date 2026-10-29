@@ -7,7 +7,7 @@ export interface PeerState {
   x: number; y: number; z: number;
   ry: number;              // body yaw
   zone: Zone;
-  seat: string | null;     // "hall:12" or "library:3"
+  seat: string | null;     // "hall:benches:12", "library:table:3" or "arrival:7"
   avatar: string | null;   // VRM url (from the Viverse Avatar SDK), or null for the mannequin
   color: number;           // mannequin tint
   onStage: boolean;
