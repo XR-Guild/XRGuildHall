@@ -2,6 +2,48 @@
  "source": "Arrival V2 export 2026-10-27",
  "items": [
   {
+   "name": "Green Velvet Sofa — West",
+   "group": "Furniture and Props",
+   "pos": [
+    -4.5697,
+    0,
+    9.3214
+   ],
+   "quat": [
+    0,
+    -0.9537,
+    0,
+    -0.3007
+   ],
+   "scale": [
+    1.85,
+    1.85,
+    1.85
+   ],
+   "file": "models/greenvelvetsofa3dmodel.glb"
+  },
+  {
+   "name": "Green Velvet Sofa — East",
+   "group": "Furniture and Props",
+   "pos": [
+    3.805,
+    0,
+    11.2767
+   ],
+   "quat": [
+    0,
+    0.4195,
+    0,
+    0.9078
+   ],
+   "scale": [
+    1.85,
+    1.85,
+    1.85
+   ],
+   "file": "models/greenvelvetsofa3dmodel.glb"
+  },
+  {
    "name": "Reflecting Pool Water — Waves and Splash",
    "group": "Garden and Landscape",
    "pos": [
@@ -112,6 +154,27 @@
     1
    ],
    "file": "models/trees-merged.glb"
+  },
+  {
+   "name": "Brass Orrery — Library Shelf",
+   "group": "Furniture and Props",
+   "pos": [
+    31.9801,
+    3.5433,
+    -8.8945
+   ],
+   "quat": [
+    0,
+    0.479,
+    0,
+    0.8778
+   ],
+   "scale": [
+    0.68,
+    0.68,
+    0.68
+   ],
+   "file": "models/armillarysphere3dmodel.glb"
   },
   {
    "name": "Labradorite Flower Planter",
@@ -498,6 +561,90 @@
    ],
    "file": "baked/plugin-mvnjsub4-dzif.glb",
    "collide": true
+  },
+  {
+   "name": "velvetsofa3dmodel",
+   "group": "Furniture and Props",
+   "pos": [
+    5.8366,
+    0,
+    8.9318
+   ],
+   "quat": [
+    0,
+    -0.5178,
+    0,
+    0.8555
+   ],
+   "scale": [
+    1.65,
+    1.65,
+    1.65
+   ],
+   "file": "models/velvetsofa3dmodel.glb"
+  },
+  {
+   "name": "velvetsofa3dmodel_1",
+   "group": "Furniture and Props",
+   "pos": [
+    5.7606,
+    0,
+    11.1911
+   ],
+   "quat": [
+    0,
+    0.9537,
+    0,
+    -0.3007
+   ],
+   "scale": [
+    1.65,
+    1.65,
+    1.65
+   ],
+   "file": "models/velvetsofa3dmodel_1.glb"
+  },
+  {
+   "name": "velvetsofa3dmodel_1",
+   "group": "Furniture and Props",
+   "pos": [
+    -7.2128,
+    0,
+    7.7494
+   ],
+   "quat": [
+    0,
+    0.4617,
+    0,
+    0.887
+   ],
+   "scale": [
+    1.65,
+    1.65,
+    1.65
+   ],
+   "file": "models/velvetsofa3dmodel_1.glb"
+  },
+  {
+   "name": "velvetsofa3dmodel",
+   "group": "Furniture and Props",
+   "pos": [
+    -6.6535,
+    0,
+    9.5022
+   ],
+   "quat": [
+    0,
+    0.9537,
+    0,
+    0.3007
+   ],
+   "scale": [
+    1.65,
+    1.65,
+    1.65
+   ],
+   "file": "models/velvetsofa3dmodel.glb"
   },
   {
    "name": "buildingtrim",
@@ -909,6 +1056,28 @@
    "file": "models/garden-lantern.glb"
   },
   {
+   "name": "park_picnic.opt",
+   "group": "Furniture and Props",
+   "pos": [
+    -12.0846,
+    -0.1175,
+    -47.1029
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "scale": [
+    1.7,
+    1.7,
+    1.7
+   ],
+   "file": "models/park_picnic.opt.glb",
+   "collide": true
+  },
+  {
    "name": "garden-lantern",
    "group": "Furniture and Props",
    "pos": [
@@ -1123,6 +1292,23 @@
     1
    ],
    "file": "models/garden-lantern.glb"
+  },
+  {
+   "name": "round-succulent-planter-3d-model.opt",
+   "group": "Garden and Landscape",
+   "pos": [
+    18.2434,
+    -0.0191,
+    -2.9284
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "file": "models/round-succulent-planter-3d-model.opt.glb",
+   "collide": true
   },
   {
    "name": "redwood-2",
@@ -1432,6 +1618,28 @@
    "file": "models/redwood-1.glb",
    "collide": true,
    "collision": "collision/redwood-1-collision.glb"
+  },
+  {
+   "name": "park_picnic",
+   "group": "Furniture and Props",
+   "pos": [
+    -19.9569,
+    -0.0905,
+    -47.6006
+   ],
+   "quat": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "scale": [
+    1.7,
+    1.7,
+    1.7
+   ],
+   "file": "models/park_picnic.glb",
+   "collide": true
   },
   {
    "name": "events-board-immersive-x-v2",

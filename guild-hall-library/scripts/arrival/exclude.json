@@ -1,15 +1,6 @@
 {
   "_comment": "Arrival entities kept out of this build. Files by name (models/, baked/), plugins by script path. Remove an entry once it is cleared.",
   "files": {
-    "velvetsofa3dmodel.glb": "licence not cleared for the public repo (CREDITS-AND-LICENSING.md in Evo's export)",
-    "velvetsofa3dmodel_1.glb": "licence not cleared",
-    "greenvelvetsofa3dmodel.glb": "licence not cleared",
-    "velvet-tufted-swivel-chair-3d-model-1-.glb": "licence not cleared",
-    "armillarysphere3dmodel.glb": "licence not cleared",
-    "round-succulent-planter-3d-model.glb": "licence not cleared",
-    "round-succulent-planter-3d-model.opt.glb": "licence not cleared",
-    "park_picnic.glb": "licence not cleared",
-    "park_picnic.opt.glb": "licence not cleared",
     "benches-merged.glb": "V3's seating presets draw the hall benches (admins can switch layouts)",
     "library-chair.glb": "V3's seating presets draw the library chairs",
     "connect-table.glb": "V3's own table export with the devices baked in; V3's table keeps them grabbable"
