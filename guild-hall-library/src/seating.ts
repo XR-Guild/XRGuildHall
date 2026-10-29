@@ -21,7 +21,8 @@ export const HALL_MAX = 200, CHAIR_MAX = 120, LIB_MAX = 15;
 /** Top of every seat cushion (benches and chairs); seated avatars are fitted to it. */
 export const SEAT_TOP = 0.52;
 
-export interface Seat { pos: THREE.Vector3; rotY: number; }
+/** `pos` is the floor under the sitter; `top` is the cushion height above it (SEAT_TOP when not given). */
+export interface Seat { pos: THREE.Vector3; rotY: number; top?: number; }
 /** A curved bench: seat-centre radius around the stage centre, angular extent (0 = due south of the stage). */
 export interface Bench { r: number; a0: number; a1: number; seats: number; }
 interface Layout { seats: Seat[]; tables: THREE.Vector3[]; benches: Bench[]; }
@@ -150,6 +151,18 @@ export function benchMeshes(m: Mats, benches: Bench[]) {
   return out;
 }
 
+/** Invisible seat pads: one click target per seat, whatever the furniture. */
+export function seatPads(max: number, name: string) {
+  const pads = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.5, 0.5).translate(0, 0.35, 0), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }), max);
+  pads.name = name; pads.count = 0; pads.frustumCulled = false;
+  return pads;
+}
+const padMtx = new THREE.Matrix4(), padQ = new THREE.Quaternion(), padUp = new THREE.Vector3(0, 1, 0), padTop = new THREE.Vector3(), padOne = new THREE.Vector3(1, 1, 1);
+export function placePads(pads: THREE.InstancedMesh, seats: Seat[]) {
+  seats.forEach((s, i) => { padTop.copy(s.pos).setY(s.pos.y + (s.top ?? SEAT_TOP) - SEAT_TOP); pads.setMatrixAt(i, padMtx.compose(padTop, padQ.setFromAxisAngle(padUp, s.rotY), padOne)); });
+  pads.count = seats.length; pads.instanceMatrix.needsUpdate = true; pads.computeBoundingSphere();
+}
+
 export interface Seating {
   group: THREE.Group;
   hitMeshes: THREE.InstancedMesh[];
@@ -172,9 +185,7 @@ export function buildSeating(m: Mats): Seating {
     return { wood, vel, gold };
   };
   const chairs = make(CHAIR_MAX, 'hallChairs'), lib = make(LIB_MAX, 'libSeats');
-  // invisible seat pads: one click target per hall seat, whatever the furniture
-  const pads = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.5, 0.5).translate(0, 0.35, 0), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }), HALL_MAX);
-  pads.name = 'hallSeats'; pads.count = 0; pads.frustumCulled = false; group.add(pads);
+  const pads = seatPads(HALL_MAX, 'hallSeats'); group.add(pads);
   const tTop = new THREE.InstancedMesh(tableTop, m.labradorite, 40), tBase = new THREE.InstancedMesh(tableBase, m.walnut, 40), tRim = new THREE.InstancedMesh(tableRim, m.gilt, 40);
   for (const im of [tTop, tBase, tRim]) { im.count = 0; im.frustumCulled = false; group.add(im); }
   let benchGroup: THREE.Group | null = null;
@@ -188,8 +199,7 @@ export function buildSeating(m: Mats): Seating {
   };
   const applyHall = (L: Layout) => {
     apply(chairs, preset.hall === 'tables' ? L.seats : []);
-    L.seats.forEach((s, i) => { mtx.compose(s.pos, q.setFromAxisAngle(up, s.rotY), one); pads.setMatrixAt(i, mtx); });
-    pads.count = L.seats.length; pads.instanceMatrix.needsUpdate = true; pads.computeBoundingSphere();
+    placePads(pads, L.seats);
     L.tables.forEach((t, i) => { mtx.compose(t, q.identity(), one); tTop.setMatrixAt(i, mtx); tBase.setMatrixAt(i, mtx); tRim.setMatrixAt(i, mtx); });
     for (const im of [tTop, tBase, tRim]) { im.count = L.tables.length; im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); }
     if (benchGroup) { benchGroup.removeFromParent(); benchGroup.traverse(o => (o as THREE.Mesh).geometry?.dispose()); }

@@ -27,6 +27,8 @@ export class Avatars {
   private vrmLib: Promise<any> | null = null;
   fetchAvatar: ((url: string) => Promise<ArrayBuffer>) | null = null; // VIVERSE: avatarClient.getAvatarFileWithSDK
   vrmEnabled = true;
+  /** Cushion height of the seat a peer is on, from its seat key. */
+  seatTop: (key: string) => number = () => SEAT_TOP;
   maxVrm = NEAR_VRM;
 
   constructor(private fonts: { display: string; body: string }) {
@@ -98,14 +100,14 @@ export class Avatars {
       if (slot) {
         slot.lastUsed = now; slot.root.visible = !hidden;
         slot.root.position.copy(p.rp); slot.root.rotation.y = p.rry;
-        pose(slot.vrm, p, t);
+        pose(slot.vrm, p, t, p.seat ? this.seatTop(p.seat) : SEAT_TOP);
         slot.vrm.update(dt);
         continue;
       }
       const seated = !!p.seat;
       const s = hidden ? 0.0001 : 1;
       q.setFromAxisAngle(up, p.rry);
-      m.compose(p.rp.clone().setY(p.rp.y + (seated ? -0.28 : 0)), q, new THREE.Vector3(s, s * (seated ? 0.86 : 1), s));
+      m.compose(p.rp.clone().setY(p.rp.y + (seated ? this.seatTop(p.seat!) - SEAT_TOP - 0.28 : 0)), q, new THREE.Vector3(s, s * (seated ? 0.86 : 1), s));
       this.body.setMatrixAt(n, m); this.head.setMatrixAt(n, m);
       this.body.setColorAt(n, col.setHex(p.color)); n++;
     }
@@ -138,7 +140,7 @@ export class Avatars {
 }
 
 /** Procedural pose on the normalized humanoid rig: idle breathing, walk cycle from speed, and sitting. */
-function pose(vrm: any, p: Peer, t: number) {
+function pose(vrm: any, p: Peer, t: number, top: number) {
   const h = vrm.humanoid; if (!h) return;
   const b = (n: string) => h.getNormalizedBoneNode(n);
   const hips = b('hips'), lUL = b('leftUpperLeg'), rUL = b('rightUpperLeg'), lLL = b('leftLowerLeg'), rLL = b('rightLowerLeg');
@@ -148,7 +150,7 @@ function pose(vrm: any, p: Peer, t: number) {
   const seated = !!p.seat;
   const walk = Math.min(1, p.speed / 1.2) * (seated ? 0 : 1);
   const ph = t * 7;
-  const sit = seated && hips && lUL && lLL ? seatFit(hips, lUL, lLL, b('leftFoot')) : null;
+  const sit = seated && hips && lUL && lLL ? seatFit(hips, lUL, lLL, b('leftFoot'), top) : null;
   if (hips) {
     // Normalized hips position is the rest hip height above the root, so offsets are applied on top of it.
     const rest: THREE.Vector3 = (hips.userData.rest ??= hips.position.clone());
@@ -168,18 +170,20 @@ function pose(vrm: any, p: Peer, t: number) {
 }
 
 /**
- * Sit on the cushion whatever the avatar's proportions: hip joints just above SEAT_TOP, shins vertical,
+ * Sit on the cushion whatever the avatar's proportions: hip joints just above the seat top, shins vertical,
  * and the thighs tilted down just enough that the feet reach the floor (long legs) or dangle (short legs).
  */
-function seatFit(hips: THREE.Object3D, ul: THREE.Object3D, ll: THREE.Object3D, foot: THREE.Object3D | null) {
-  return (hips.userData.seatFit ??= (() => {
+function seatFit(hips: THREE.Object3D, ul: THREE.Object3D, ll: THREE.Object3D, foot: THREE.Object3D | null, top: number) {
+  const fits: Map<number, { hipsY: number; drop: number }> = (hips.userData.seatFit ??= new Map());
+  if (!fits.has(top)) fits.set(top, (() => {
     const restHipsY = (hips.userData.rest ??= hips.position.clone()).y;
     const thighLen = ll.position.length(), shinLen = foot ? foot.position.length() : thighLen;
     const ankleY = foot ? restHipsY + ul.position.y + ll.position.y + foot.position.y : 0.08;
-    const hipJointY = SEAT_TOP + 0.09;
+    const hipJointY = top + 0.09;
     const drop = Math.asin(THREE.MathUtils.clamp((hipJointY - shinLen - ankleY) / thighLen, 0, 0.6));
     return { hipsY: hipJointY - ul.position.y, drop };
-  })()) as { hipsY: number; drop: number };
+  })());
+  return fits.get(top)!;
 }
 
 function ringTex() {
