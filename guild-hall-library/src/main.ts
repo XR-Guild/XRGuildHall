@@ -131,8 +131,9 @@ async function main() {
   // The world's art is Evo's Arrival.space build (src/arrival.ts). The procedural builders add only what that art
   // doesn't carry: colliders, lights, media and panel mounts, click targets, the birds and the garden sound.
   await step(0.4, 'Raising the Guild Hall…');
-  // bay 0 (behind the stage) and the two bays either side of it are media walls (src/media.ts)
-  const hall = buildGrandHall(m, HALL.center, ['screen', 'screen', 'window', 'door', 'window', 'window', 'window', 'window', 'window', 'window', 'window', 'screen'], FONTS.display, false);
+  // bay 0 (behind the stage) and the two bays either side of it are media walls (src/media.ts); Evo's hall opens
+  // onto the colonnade (bay 3) and the reflecting pool (bay 4)
+  const hall = buildGrandHall(m, HALL.center, ['screen', 'screen', 'window', 'door', 'door', 'window', 'window', 'window', 'window', 'window', 'window', 'screen'], FONTS.display, false);
   const libBays: BayKind[] = ['window', 'shelf', 'panelShelf', 'panelShelf', 'panelShelf', 'shelf', 'window', 'window', 'shelf', 'door', 'shelf', 'shelf'];
   const lib = buildChamber(m, { name: 'Library', center: LIB.center, apothem: LIB.apothem, wallH: LIB.wallH, bays: libBays, chandelier: 0.75, fillLights: 2, art: false });
   // media screens on the hall's media walls (the stage screen's idle slide carries the mission line that the v3 banner held)
