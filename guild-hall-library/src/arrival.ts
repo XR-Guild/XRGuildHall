@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import type { Seat } from './seating';
+import { GH } from './grandhall';
+import { HALL } from './site';
 
 /**
  * Arrival.space art layer: the world as Evo built it in Arrival, placed from public/arrival/manifest.json (written by
@@ -121,5 +123,33 @@ export async function loadArrival(onProgress?: (f: number) => void, maxTexture =
   };
   await Promise.all([worker(), worker(), worker(), worker()]);
   console.info(`[arrival] placed ${placed}/${manifest.items.length} pieces`);
+  for (const c of CLEARINGS) clearDoorway(root, c);
   return { root, colliders };
+}
+
+/**
+ * Planting in Evo's art that grows across a hall doorway. It is trimmed here rather than in the GLB, so the opening
+ * stays clear when the art is pulled from Arrival again.
+ */
+const CLEARINGS = [
+  { item: 'Garden Ground Cover — Reflecting Pool Border', mesh: 'groundcover-plants', bay: HALL.gardenDoorBay, halfWidth: GH.door.b, depth: 5 },
+];
+
+/** Drop the triangles of one mesh that sit in front of a hall door, out to `depth` metres past the wall. */
+function clearDoorway(root: THREE.Object3D, c: (typeof CLEARINGS)[number]) {
+  const mesh = root.getObjectByName(c.item)?.getObjectByName(c.mesh) as THREE.Mesh | undefined;
+  const g = mesh?.geometry, index = g?.index;
+  if (!mesh || !g || !index) { console.warn('[arrival] nothing to clear for', c.item, c.mesh); return; }
+  root.updateMatrixWorld(true);
+  const th = (c.bay / 12) * Math.PI * 2, out = new THREE.Vector3(Math.sin(th), 0, -Math.cos(th)), across = new THREE.Vector3(-out.z, 0, out.x);
+  const pos = g.attributes.position, v = new THREE.Vector3(), mid = new THREE.Vector3(), keep: number[] = [];
+  for (let t = 0; t < index.count; t += 3) {
+    mid.set(0, 0, 0);
+    for (let k = 0; k < 3; k++) mid.add(v.fromBufferAttribute(pos, index.getX(t + k)).applyMatrix4(mesh.matrixWorld));
+    mid.divideScalar(3).sub(HALL.center);
+    const r = mid.dot(out), w = mid.dot(across);
+    if (r > HALL.apothem - 0.5 && r < HALL.apothem + c.depth && Math.abs(w) < c.halfWidth) continue;
+    keep.push(index.getX(t), index.getX(t + 1), index.getX(t + 2));
+  }
+  g.setIndex(keep);
 }
