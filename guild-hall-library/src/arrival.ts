@@ -63,7 +63,27 @@ export function arrivalSeats(root: THREE.Object3D): Seat[] {
   return seats;
 }
 
-export async function loadArrival(onProgress?: (f: number) => void) {
+/** Scale a texture down to at most `max` px on its long side. */
+async function capTexture(t: THREE.Texture, max: number) {
+  const img = t.image as ImageBitmap | HTMLImageElement | undefined;
+  if (!img?.width || Math.max(img.width, img.height) <= max) return;
+  const k = max / Math.max(img.width, img.height);
+  t.image = await createImageBitmap(img, { resizeWidth: Math.round(img.width * k), resizeHeight: Math.round(img.height * k), resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+  if ('close' in img) img.close();
+  t.needsUpdate = true;
+}
+
+function texturesOf(root: THREE.Object3D) {
+  const seen = new Set<THREE.Texture>();
+  root.traverse(o => {
+    for (const m of ([] as THREE.Material[]).concat((o as THREE.Mesh).material ?? []))
+      for (const v of Object.values(m)) if ((v as THREE.Texture)?.isTexture) seen.add(v as THREE.Texture);
+  });
+  return seen;
+}
+
+/** `maxTexture` caps texture size, for devices that run out of GPU memory with the full set (about 580 MB at 2048 px). */
+export async function loadArrival(onProgress?: (f: number) => void, maxTexture = Infinity) {
   const manifest: ArrivalManifest | null = await fetch(BASE + 'manifest.json').then(r => r.ok ? r.json() : null).catch(() => null);
   if (!manifest?.items.length) return null;
 
@@ -74,7 +94,7 @@ export async function loadArrival(onProgress?: (f: number) => void) {
   const cache = new Map<string, Promise<THREE.Group>>();
   const used = new Set<string>();
   const load = (file: string) => {
-    if (!cache.has(file)) cache.set(file, loader.loadAsync(BASE + file).then(g => g.scene));
+    if (!cache.has(file)) cache.set(file, loader.loadAsync(BASE + file).then(async g => { await Promise.all([...texturesOf(g.scene)].map(t => capTexture(t, maxTexture))); return g.scene; }));
     return cache.get(file)!;
   };
   const instance = async (file: string) => { const src = await load(file); const o = used.has(file) ? src.clone(true) : src; used.add(file); return o; };
@@ -82,7 +102,8 @@ export async function loadArrival(onProgress?: (f: number) => void) {
     o.position.fromArray(it.pos); o.quaternion.fromArray(it.quat); if (it.scale) o.scale.fromArray(it.scale);
   };
   const image = async (it: ArrivalItem) => {
-    const tex = await texLoader.loadAsync(BASE + it.image); tex.colorSpace = THREE.SRGBColorSpace;
+    const tex = await texLoader.loadAsync(BASE + it.image);
+    await capTexture(tex, maxTexture); tex.colorSpace = THREE.SRGBColorSpace;
     const [w, h] = it.size ?? [1, 1];
     const g = new THREE.Group();
     g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })));

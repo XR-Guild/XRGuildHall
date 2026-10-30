@@ -20,6 +20,7 @@ import { buildSeating, seatPads, placePads, SEAT_TOP, type Seat } from './seatin
 import { newsPanel, libraryPanel, timelinePanel } from './xrpanels';
 import { Interactor } from './interact';
 import { initUI, lineageCard } from './ui';
+import { addJoystick } from './joystick';
 import { initSocial } from './social';
 import { XRMenu } from './xrmenu';
 import { store } from './store';
@@ -59,6 +60,26 @@ const step = async (p: number, msg: string) => {
   await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 };
 
+/**
+ * IWSDK owns the render loop and three.js keeps it out of reach, so the cap is on the page's animation frames.
+ * XR sessions run on the session's own frame loop and are not affected.
+ */
+function capFrameRate(fps: number) {
+  const raf = window.requestAnimationFrame.bind(window), caf = window.cancelAnimationFrame.bind(window), gap = 1000 / fps - 4;
+  const live = new Map<number, number>();
+  let last = -Infinity, nextId = 0;
+  window.requestAnimationFrame = cb => {
+    const id = ++nextId;
+    const tick = (t: number) => {
+      if (t !== last && t - last < gap) { live.set(id, raf(tick)); return; }
+      last = t; live.delete(id); cb(t);
+    };
+    live.set(id, raf(tick));
+    return id;
+  };
+  window.cancelAnimationFrame = id => { const r = live.get(id); if (r !== undefined) { caf(r); live.delete(id); } };
+}
+
 async function fontsReady() {
   try {
     await Promise.race([
@@ -80,6 +101,9 @@ async function main() {
   const container = document.getElementById('scene')!;
   const xrSupported = !!navigator.xr && await navigator.xr.isSessionSupported('immersive-vr').catch(() => false);
 
+  // Phones overheat drawing Evo's materials at the display's full refresh rate (often 90-120 Hz), so they get 30 fps outside XR.
+  const isMobile = matchMedia('(hover: none)').matches;
+  if (isMobile) capFrameRate(30);
   const world = await World.create(container, {
     xr: { sessionMode: SessionMode.ImmersiveVR, offer: 'none', features: { handTracking: true } },
     render: { fov: 62, near: 0.05, far: 700 },
@@ -99,8 +123,7 @@ async function main() {
   }
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
-  const isMobile = matchMedia('(hover: none)').matches;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 2));
   scene.fog = new THREE.FogExp2(new THREE.Color().setRGB(0.03, 0.065, 0.1), 0.0048);
 
   await step(0.12, 'Laying the labradorite…');
@@ -181,7 +204,7 @@ async function main() {
   }
   // ---- Evo's Arrival.space art (V4): the world as built in Arrival, with its own collision meshes ----
   await step(0.62, 'Planting the garden…');
-  const arrival = await loadArrival(f => { loadBar.style.width = `${Math.round((0.62 + f * 0.26) * 100)}%`; }).catch(e => { console.error('[arrival]', e); return null; });
+  const arrival = await loadArrival(f => { loadBar.style.width = `${Math.round((0.62 + f * 0.26) * 100)}%`; }, isMobile ? 1024 : Infinity).catch(e => { console.error('[arrival]', e); return null; });
   if (arrival) {
     scene.add(arrival.root);
     world.createTransformEntity(arrival.colliders, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
@@ -281,6 +304,8 @@ async function main() {
     label: 'Browse this category',
     onClick: () => { libp.state.cat = l.catId; libp.state.page = 0; libp.state.sel = null; libp.panel.draw(); store.openTab?.('library', { cat: l.catId, query: '' }); },
   }));
+
+  if (isMobile) addJoystick(world);
 
   // ---- desktop look controls ----
   camera.rotation.order = 'YXZ';

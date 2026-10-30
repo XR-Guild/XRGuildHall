@@ -178,6 +178,9 @@ select option { background: var(--panel-solid); }
 .actions .ghost { background: var(--panel); }
 .settings { position: absolute; right: 0; bottom: 48px; width: 280px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; font-size: 14px; }
 .settings input { accent-color: var(--gold); margin-right: 6px; }
+#joystick { display: none; position: fixed; right: calc(var(--gutter) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 164px); width: 112px; height: 112px; border-radius: 50%; background: rgba(7,17,15,.35); border: 1px solid var(--line); touch-action: none; user-select: none; -webkit-user-select: none; }
+#joystick div { position: absolute; inset: 30%; border-radius: 50%; background: var(--panel); border: 1px solid var(--gold); pointer-events: none; }
+@media (hover: none) { #joystick { display: block; } }
 #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none !important; transition: opacity .22s ease; }
 #fade.on { opacity: 1; }
 
