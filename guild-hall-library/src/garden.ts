@@ -9,7 +9,7 @@ import { zellige, zelligeBorder } from './tex2';
 export interface GardenBuilt {
   group: THREE.Group;
   colliders: THREE.Group;
-  water: THREE.Mesh;
+  water: THREE.Mesh | null;
   waterReflector: Reflector | null;
   glows: THREE.Sprite[];
   lights: THREE.Light[];
@@ -22,70 +22,25 @@ const mtx = new THREE.Matrix4();
 const Q = new THREE.Quaternion();
 const E = new THREE.Euler();
 
-export function buildGarden(m: Mats, skyCube: THREE.Texture, desktopReflections: boolean): GardenBuilt {
+/** `art: false` builds only the colliders and the lights, for use under the Arrival art. */
+export function buildGarden(m: Mats, skyCube: THREE.Texture, desktopReflections: boolean, art = true): GardenBuilt {
   const group = new THREE.Group(); group.name = 'Garden';
   const colliders = new THREE.Group();
   const glows: THREE.Sprite[] = [];
   const lights: THREE.Light[] = [];
   const box = (w: number, h: number, d: number, x: number, y: number, z: number, ry = 0) => { const c = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial()); c.position.set(x, y, z); c.rotation.y = ry; colliders.add(c); return c; };
 
-  // ground
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), m.grass); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; group.add(ground);
-  box(220, 0.2, 220, 12, -0.12, 2);
-  // gravel aprons around both chambers
-  for (const [c, a] of [[HALL.center, HALL.apothem], [LIB.center, LIB.apothem]] as const) {
-    const ring = new THREE.Mesh(new THREE.RingGeometry(a + 0.3, a + 2.6, 96), m.gravel); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, -0.006, c.z); group.add(ring);
-  }
-
-  // ---------- reflecting pool with Moorish zellige (Alhambra-style stars, tiny gold cubes for XR) ----------
   const pw = POOL.width, pl = POOL.length, cop = POOL_COPING;
-  const { group: pool, water, waterReflector, wn } = buildPool(m, skyCube, desktopReflections);
-  pool.position.copy(POOL.center); pool.rotation.y = POOL.rotY; group.add(pool);
+  box(220, 0.2, 220, 12, -0.12, 2);
   box(pw + cop * 2, 2.2, pl + cop * 2, POOL.center.x, 1.0, POOL.center.z, POOL.rotY);
-  
-  // lanterns along the pool
-  const glowTex = T.glow('255,210,150');
-  for (const sd of [-1, 1]) for (let i = 0; i < 4; i++) {
-    const l = poolLantern(m, glowTex); l.group.position.copy(poolWorld(sd * (pw / 2 + cop + 0.9), -pl / 2 + 2 + i * ((pl - 4) / 3)));
-    glows.push(l.glow); group.add(l.group);
-  }
-
-  // marble benches: one off each end of the pool (as sketched) and two along the long sides
   const benches: { pos: THREE.Vector3; rotY: number }[] = [];
-  const bench = (p: THREE.Vector3, ry: number) => {
-    const b = gardenBench(m); b.position.copy(p); b.rotation.y = ry;
-    group.add(b); box(1.9, 1, 0.6, p.x, 0.5, p.z, ry);
+  for (const p of BENCHES) {
+    const ry = Math.atan2(POOL.center.x - p.x, POOL.center.z - p.z); // both face the pool
+    box(1.9, 1, 0.6, p.x, 0.5, p.z, ry);
     benches.push({ pos: p.clone(), rotY: ry });
-  };
-  for (const p of BENCHES) bench(p, Math.atan2(POOL.center.x - p.x, POOL.center.z - p.z)); // both face the pool
-
-  // ---------- cypress accents on the outer edges ----------
-  const { geo: cyGeo, mat: cyMat } = cypressParts();
-  const cyPts = CYPRESS_SPOTS;
-  const cy = new THREE.InstancedMesh(cyGeo, cyMat, cyPts.length);
-  cyPts.forEach(([x, z, s], i) => { mtx.compose(V(x, 0, z), Q.setFromEuler(E.set(0, T.rand() * 6, 0)), V(s, s * (0.9 + T.rand() * 0.3), s)); cy.setMatrixAt(i, mtx); box(1.2, 3, 1.2, x, 1.5, z); });
-  group.add(cy);
-
-  // ---------- branched maples ----------
-  const maples = buildMaples(m, MAPLE_SPOTS);
-  group.add(maples.group); maples.trunks.forEach(([x, z]) => box(0.7, 3, 0.7, x, 1.5, z));
-
-  // ---------- flower beds in many colours ----------
-  const beds = FLOWER_BEDS;
-  group.add(buildFlowers(beds));
-
-  // ---------- reserved portal sites (future links to other worlds): a gravel pad and a dormant labradorite ring ----------
-  for (const p of PORTAL_SITES) { const pad = portalPad(m); pad.position.set(p.x, 0, p.z); group.add(pad); }
-
-  // ---------- distant hills + far forest ----------
-  group.add(new THREE.Mesh(hillRing(), new THREE.MeshStandardMaterial({ color: 0x0a1411, roughness: 1, side: THREE.DoubleSide })));
-  const far = new THREE.InstancedMesh(new THREE.ConeGeometry(2.2, 9, 7), new THREE.MeshStandardMaterial({ color: 0x0c1a14, roughness: 1 }), 220);
-  for (let i = 0; i < 220; i++) {
-    const a = T.rand() * Math.PI * 2, r = 62 + T.rand() * 55, s = 0.7 + T.rand() * 1.1;
-    mtx.compose(V(11 + Math.cos(a) * r, 4 * s, Math.sin(a) * r), Q.identity(), V(s, s, s)); far.setMatrixAt(i, mtx);
   }
-  group.add(far);
-
+  for (const [x, z] of CYPRESS_SPOTS) box(1.2, 3, 1.2, x, 1.5, z);
+  for (const [x, z] of MAPLE_SPOTS) box(0.7, 3, 0.7, x, 1.5, z);
   // boundary (invisible)
   box(1, 3, 110, -42, 1.5, 3); box(1, 3, 110, 68, 1.5, 3); box(112, 3, 1, 13, 1.5, -46); box(112, 3, 1, 13, 1.5, 52);
 
@@ -105,6 +60,55 @@ export function buildGarden(m: Mats, skyCube: THREE.Texture, desktopReflections:
     group.add(scene);
     box(9.5, 3, 1, 0, 1.5, 37.3);
   };
+  if (!art) return { group, colliders, water: null, waterReflector: null, glows, lights, benches, placeColonnade, update: () => {} };
+
+  // ground
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), m.grass); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; group.add(ground);
+  // gravel aprons around both chambers
+  for (const [c, a] of [[HALL.center, HALL.apothem], [LIB.center, LIB.apothem]] as const) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(a + 0.3, a + 2.6, 96), m.gravel); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, -0.006, c.z); group.add(ring);
+  }
+
+  // ---------- reflecting pool with Moorish zellige (Alhambra-style stars, tiny gold cubes for XR) ----------
+  const { group: pool, water, waterReflector, wn } = buildPool(m, skyCube, desktopReflections);
+  pool.position.copy(POOL.center); pool.rotation.y = POOL.rotY; group.add(pool);
+  
+  // lanterns along the pool
+  const glowTex = T.glow('255,210,150');
+  for (const sd of [-1, 1]) for (let i = 0; i < 4; i++) {
+    const l = poolLantern(m, glowTex); l.group.position.copy(poolWorld(sd * (pw / 2 + cop + 0.9), -pl / 2 + 2 + i * ((pl - 4) / 3)));
+    glows.push(l.glow); group.add(l.group);
+  }
+
+  // marble benches: one off each end of the pool (as sketched) and two along the long sides
+  for (const { pos, rotY } of benches) { const b = gardenBench(m); b.position.copy(pos); b.rotation.y = rotY; group.add(b); }
+
+  // ---------- cypress accents on the outer edges ----------
+  const { geo: cyGeo, mat: cyMat } = cypressParts();
+  const cyPts = CYPRESS_SPOTS;
+  const cy = new THREE.InstancedMesh(cyGeo, cyMat, cyPts.length);
+  cyPts.forEach(([x, z, s], i) => { mtx.compose(V(x, 0, z), Q.setFromEuler(E.set(0, T.rand() * 6, 0)), V(s, s * (0.9 + T.rand() * 0.3), s)); cy.setMatrixAt(i, mtx); });
+  group.add(cy);
+
+  // ---------- branched maples ----------
+  const maples = buildMaples(m, MAPLE_SPOTS);
+  group.add(maples.group);
+
+  // ---------- flower beds in many colours ----------
+  const beds = FLOWER_BEDS;
+  group.add(buildFlowers(beds));
+
+  // ---------- reserved portal sites (future links to other worlds): a gravel pad and a dormant labradorite ring ----------
+  for (const p of PORTAL_SITES) { const pad = portalPad(m); pad.position.set(p.x, 0, p.z); group.add(pad); }
+
+  // ---------- distant hills + far forest ----------
+  group.add(new THREE.Mesh(hillRing(), new THREE.MeshStandardMaterial({ color: 0x0a1411, roughness: 1, side: THREE.DoubleSide })));
+  const far = new THREE.InstancedMesh(new THREE.ConeGeometry(2.2, 9, 7), new THREE.MeshStandardMaterial({ color: 0x0c1a14, roughness: 1 }), 220);
+  for (let i = 0; i < 220; i++) {
+    const a = T.rand() * Math.PI * 2, r = 62 + T.rand() * 55, s = 0.7 + T.rand() * 1.1;
+    mtx.compose(V(11 + Math.cos(a) * r, 4 * s, Math.sin(a) * r), Q.identity(), V(s, s, s)); far.setMatrixAt(i, mtx);
+  }
+  group.add(far);
 
   const update = (t: number, reduced: boolean) => {
     if (!reduced) { wn.offset.set(t * 0.004, t * 0.01); maples.sway(t); }

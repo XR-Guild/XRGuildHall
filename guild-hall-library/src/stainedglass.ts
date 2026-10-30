@@ -99,7 +99,7 @@ export function dressStainedGlass(hall: GrandHall) {
     rotunda.add(new THREE.Mesh(geo(pos, uv, idx), new THREE.MeshBasicMaterial({ map: atlas, color: new THREE.Color().setScalar(DOME.glow) })));
     rotunda.add(new THREE.Mesh(geo(cpos, cuv, cidx), new THREE.MeshBasicMaterial({ map: oculus, color: new THREE.Color().setScalar(DOME.oculusGlow) })));
     hall.group.add(rotunda);
-    hall.dome.visible = false; // fully covered by the gores
+    if (hall.dome) hall.dome.visible = false; // fully covered by the gores
   }).catch(e => console.warn('[stained glass] rotunda', e));
 
   return {

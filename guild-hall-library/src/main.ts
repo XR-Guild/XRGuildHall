@@ -3,11 +3,7 @@ import {
   World, SessionMode, LocomotionEnvironment, EnvironmentType, TurningMethod,
   Interactable, DistanceGrabbable, MovementMode, createSystem,
 } from '@iwsdk/core';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Reflector } from 'three/addons/objects/Reflector.js';
 import { makeMats } from './mats';
-import * as T from './tex';
-import * as T3 from './tex3';
 import { AuroraSky } from './sky';
 import { buildChamber, type BayKind } from './chamber';
 import { buildGrandHall } from './grandhall';
@@ -15,7 +11,7 @@ import { buildColonnade } from './walk';
 import { buildTable, TABLE_TOP } from './table';
 import { buildGarden } from './garden';
 import { buildLibraryInterior } from './library3d';
-import { buildStage, buildWelcomeDesk, buildEventsBoard, bannerTexture, LINKS } from './hallfeatures';
+import { buildStage, buildWelcomeDesk, buildEventsBoard, LINKS } from './hallfeatures';
 import { buildSeating, seatPads, placePads, SEAT_TOP, type Seat } from './seating';
 import { newsPanel, libraryPanel, timelinePanel } from './xrpanels';
 import { Interactor } from './interact';
@@ -25,7 +21,7 @@ import { initSocial } from './social';
 import { XRMenu } from './xrmenu';
 import { store } from './store';
 import { bakeStatic } from './bake';
-import { loadArrival, removeV3, arrivalSeats } from './arrival';
+import { loadArrival, arrivalSeats } from './arrival';
 import { HALL, LIB, STAGE, DESK, SPAWN, POOL, BENCHES, PATH_CURVE, V, zoneOf, type Zone } from './site';
 import { Presence } from './net/presence';
 import { startTicker, holdWakeLock } from './net/keepalive';
@@ -46,8 +42,6 @@ const FONTS = {
   body: "'Alegreya Sans', 'Gill Sans', system-ui, sans-serif",
   mono: "'IBM Plex Mono', ui-monospace, monospace",
 };
-const MODEL_BASE = (window as any).__XRGH_MODELS__ ?? 'models/';
-const MODEL_EXT = (window as any).__XRGH_MODEL_EXT__ ?? '.glb';
 const PARAMS = new URLSearchParams(location.search);
 const SIM = Math.min(300, Math.max(0, parseInt(PARAMS.get('sim') ?? '0', 10) || 0));
 // App IDs and event settings come from src/config.ts (env at build time, guildhall.config.json at run time); see main()
@@ -134,15 +128,13 @@ async function main() {
   sky.renderAll(8);
   scene.background = sky.rt.texture;
 
+  // The world's art is Evo's Arrival.space build (src/arrival.ts). The procedural builders add only what that art
+  // doesn't carry: colliders, lights, media and panel mounts, click targets, the birds and the garden sound.
   await step(0.4, 'Raising the Guild Hall…');
-  const mural = T.domeMural();
-  // V3: bay 0 (behind the stage) and the two bays either side of it are media walls (src/media.ts)
-  const hall = buildGrandHall(m, HALL.center, ['screen', 'screen', 'window', 'door', 'window', 'window', 'window', 'window', 'window', 'window', 'window', 'screen'], FONTS.display);
+  // bay 0 (behind the stage) and the two bays either side of it are media walls (src/media.ts)
+  const hall = buildGrandHall(m, HALL.center, ['screen', 'screen', 'window', 'door', 'window', 'window', 'window', 'window', 'window', 'window', 'window', 'screen'], FONTS.display, false);
   const libBays: BayKind[] = ['window', 'shelf', 'panelShelf', 'panelShelf', 'panelShelf', 'shelf', 'window', 'window', 'shelf', 'door', 'shelf', 'shelf'];
-  // V3 Library floor (from the Arrival build): red marble with flashes of labradorite
-  const libTex = T3.libraryFloorV3(1024); libTex.repeat.set(3, 3);
-  const libFloor = new THREE.MeshPhysicalMaterial({ map: libTex, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.07, envMapIntensity: 1 });
-  const lib = buildChamber(m, { name: 'Library', center: LIB.center, apothem: LIB.apothem, wallH: LIB.wallH, bays: libBays, domeMural: mural, chandelier: 0.75, fillLights: 2, floorMat: libFloor, sparseBooks: 0.42 });
+  const lib = buildChamber(m, { name: 'Library', center: LIB.center, apothem: LIB.apothem, wallH: LIB.wallH, bays: libBays, chandelier: 0.75, fillLights: 2, art: false });
   // media screens on the hall's media walls (the stage screen's idle slide carries the mission line that the v3 banner held)
   let presenceRef: Presence | null = null;
   const media = new MediaScreens(m, {
@@ -150,24 +142,20 @@ async function main() {
     identity: () => presenceRef?.self.id ?? Math.random().toString(36).slice(2, 10), name: () => presenceRef?.self.name ?? 'Guest',
   });
   media.build(hall.bannerMounts);
-  void bannerTexture;
-  // labradorite-and-gold compass around the Connect table
-  {
-    const dm = new THREE.MeshPhysicalMaterial({ map: T3.compassDecal(1024, 0.36), alphaTest: 0.5, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05 });
-    const decal = new THREE.Mesh(new THREE.CircleGeometry(3.9, 72).rotateX(-Math.PI / 2), dm); decal.position.copy(LIB.center).setY(0.007); decal.renderOrder = 2; lib.group.attach(decal);
-  }
-  const colonnade = buildColonnade(m);
-  const stage = buildStage(m);
+  // Evo's screen frame surrounds the live surface
+  for (const s of media.screens.values()) for (const c of s.group.children) if (c !== s.mesh) c.visible = false;
+  const colonnade = buildColonnade(m, false);
+  const stage = buildStage(m, false);
   const table = buildTable(m, FONTS);
   table.group.position.copy(LIB.center); table.colliders.position.copy(LIB.center);
-  const garden = buildGarden(m, sky.rt.texture, !isMobile);
-  const libIn = buildLibraryInterior(m, FONTS);
-  const adds = buildArrivalAdds(m, sky.rt.texture, FONTS, (url: string) => window.open(url, '_blank', 'noopener'), () => !!world.session);
+  const garden = buildGarden(m, sky.rt.texture, false, false);
+  const libIn = buildLibraryInterior(m, FONTS, false);
+  const adds = buildArrivalAdds(m, sky.rt.texture, FONTS, (url: string) => window.open(url, '_blank', 'noopener'), () => !!world.session, false);
   const seating = buildSeating(m);
 
   const inXR = () => !!world.session;
   const openLink = (url: string) => { window.open(url, '_blank', 'noopener'); };
-  const desk = buildWelcomeDesk(m, FONTS, openLink, inXR);
+  const desk = buildWelcomeDesk(m, FONTS, openLink, inXR, false);
   // Library shelves: News (NE), Library search (E, facing the door), Timeline (SE)
   const news = newsPanel(FONTS); news.mesh.position.set(0, 0, 0.01); lib.panelMounts.get(2)!.add(news.mesh); news.draw();
   const libp = libraryPanel(FONTS); libp.panel.mesh.position.set(0, 0, 0.01); lib.panelMounts.get(3)!.add(libp.panel.mesh); libp.panel.draw();
@@ -187,7 +175,7 @@ async function main() {
     { id: 'garden', name: 'Garden', hint: 'Reflecting pool, maples and flowers', pos: BENCHES[0].clone().add(V(-0.8, 0, 0.9)), look: POOL.center.clone().setY(0.8) },
   ];
 
-  const board = buildEventsBoard(m, FONTS, openLink, () => goTo('library'), inXR);
+  const board = buildEventsBoard(m, FONTS, openLink, () => goTo('library'), inXR, false);
 
   await step(0.55, 'Gilding the details…');
   for (const g of [hall.group, lib.group, colonnade.group, stage.group, table.group, garden.group, libIn.group, adds.group]) bakeStatic(g);
@@ -202,22 +190,14 @@ async function main() {
     e.addComponent(Interactable);
     e.addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveTowardsTarget, returnToOrigin: true, scale: false } as any);
   }
-  // ---- Evo's Arrival.space art (V4): the world as built in Arrival, with its own collision meshes ----
+  // ---- Evo's Arrival.space art: the world as built in Arrival, with its own collision meshes ----
   await step(0.62, 'Planting the garden…');
-  const arrival = await loadArrival(f => { loadBar.style.width = `${Math.round((0.62 + f * 0.26) * 100)}%`; }, isMobile ? 1024 : Infinity).catch(e => { console.error('[arrival]', e); return null; });
-  if (arrival) {
-    scene.add(arrival.root);
-    world.createTransformEntity(arrival.colliders, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
-  } else {
-    // V3 without the Arrival art: the white colonnade GLB becomes a garden folly (the fantasy-library GLB is not loaded: see README)
-    const hallScene = await new Promise<THREE.Group | null>(res => new GLTFLoader().load(MODEL_BASE + 'hall' + MODEL_EXT, g => res(g.scene), undefined, e => { console.warn('folly model failed', e); res(null); }));
-    if (hallScene) garden.placeColonnade(hallScene);
-  }
+  const arrival = await loadArrival(f => { loadBar.style.width = `${Math.round((0.62 + f * 0.26) * 100)}%`; }, isMobile ? 1024 : Infinity);
+  if (!arrival) throw new Error('The world art (arrival/manifest.json) did not load.');
+  scene.add(arrival.root);
+  world.createTransformEntity(arrival.colliders, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
   const colliders = new THREE.Group(); colliders.name = 'Walkable';
   colliders.add(hall.colliders, lib.colliders, colonnade.colliders, stage.colliders, table.colliders, garden.colliders, adds.colliders);
-  // Evo moved the desk, the principles boards and the pond: their V3 colliders would block empty floor
-  if (arrival) adds.colliders.children.filter(c => c.name === 'PondCollider' || c.name === 'BoardCollider').forEach(c => c.removeFromParent());
-  else colliders.add(desk.colliders);
   colliders.visible = false;
   world.createTransformEntity(colliders, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
 
@@ -249,31 +229,7 @@ async function main() {
   if (savedSky() !== 'aurora') await skies.set(savedSky());
   drawSkySeg(); glass.setNight(skies.isNight());
 
-  // desktop mirror floors: only the one in your zone renders (not under Evo's opaque Arrival floors)
-  const floorRefls: { zone: Zone; refl: Reflector; mat: THREE.MeshPhysicalMaterial }[] = [];
-  if (!isMobile && !arrival) {
-    for (const [ch, zone, ap] of [[hall, 'hall', HALL.apothem], [lib, 'library', LIB.apothem]] as const) {
-      const fg = new THREE.CircleGeometry(ap / Math.cos(Math.PI / 12), 12, Math.PI / 2 - Math.PI / 12); fg.rotateX(-Math.PI / 2);
-      const refl = new Reflector(fg, { textureWidth: Math.round(innerWidth * 0.6), textureHeight: Math.round(innerHeight * 0.6), color: 0xa0a0a0, clipBias: 0.002 });
-      refl.position.copy(ch === hall ? HALL.center : LIB.center).setY(-0.004); scene.add(refl);
-      floorRefls.push({ zone, refl, mat: ch.floor.material as THREE.MeshPhysicalMaterial });
-    }
-  }
-  let reflectionsWanted = true;
   let zone: Zone = 'hall';
-  const setReflections = (on: boolean) => {
-    const use = on && !world.session;
-    for (const f of floorRefls) {
-      const vis = use && f.zone === zone;
-      f.refl.visible = vis; f.mat.transparent = vis; f.mat.opacity = vis ? 0.8 : 1; f.mat.needsUpdate = true;
-    }
-    if (garden.waterReflector) {
-      const vis = use && (zone === 'garden' || zone === 'colonnade');
-      garden.waterReflector.visible = vis;
-      const wm = garden.water.material as THREE.MeshPhysicalMaterial; wm.transparent = vis; wm.opacity = vis ? 0.45 : 1; wm.depthWrite = !vis; wm.needsUpdate = true;
-    }
-  };
-  setReflections(true);
 
   // ---- people ----
   const presence = new Presence('Guest'); presenceRef = presence;
@@ -290,13 +246,10 @@ async function main() {
   inter.addPanel(libp.panel, 'Guild library');
   inter.addPanel(tlp.panel, 'Timeline of XR');
   inter.addPanel(desk.panel, 'Join the XR Guild');
-  // V4: Evo's notice board (with the featured Immersive X event) replaces V3's panel; clicking it opens the calendar
-  const evoBoard = arrival?.root.getObjectByName('events-board-immersive-x-v2');
+  // Evo's notice board (with the featured Immersive X event) opens the calendar; the panel is the fallback if it's missing
+  const evoBoard = arrival.root.getObjectByName('events-board-immersive-x-v2');
   if (evoBoard) { board.panel.mesh.removeFromParent(); inter.add(evoBoard, { label: 'Guild notice board · full calendar', onClick: () => { if (!inXR()) openLink(LINKS.calendar); } }); }
   else inter.addPanel(board.panel, 'Guild notice board');
-  // V4: Evo's principles boards (baked from Arrival, by the colonnade) replace V3's pair
-  if (arrival) adds.panels.forEach(p => p.panel.mesh.removeFromParent());
-  else for (const p of adds.panels) inter.addPanel(p.panel, p.label);
   inter.add(desk.plaque, { label: 'Visit xrguild.org', onClick: () => { if (!inXR()) openLink(LINKS.home); } });
   table.devices.forEach(d => inter.add(d.object, { label: 'Lineage · click for details', onClick: () => store.showCard?.(lineageCard(d.index)) }));
   inter.add(table.featured, { label: 'Meta VR Glasses · open the news', onClick: () => store.openTab?.('news') });
@@ -347,26 +300,19 @@ async function main() {
   };
   for (const hm of seating.hitMeshes) inter.add(hm, { label: 'Sit here', onClick: hit => { const r = seating.seatFromHit(hit); if (r) sitAt(r.zone, r.index); } });
   // Evo's sofas, garden benches, picnic tables and stage chairs; fixed, so no presets
-  const fixedSeats = arrival ? arrivalSeats(arrival.root) : [];
+  const fixedSeats = arrivalSeats(arrival.root);
   if (fixedSeats.length) {
     const pads = seatPads(fixedSeats.length, 'arrivalSeats'); placePads(pads, fixedSeats); scene.add(pads);
     inter.add(pads, { label: 'Sit here', onClick: hit => { if (hit.instanceId != null) sitOn(fixedSeats[hit.instanceId], `arrival:${hit.instanceId}`); } });
   }
   avatars.seatTop = key => (key.startsWith('arrival:') ? fixedSeats[+key.slice(8)]?.top : undefined) ?? SEAT_TOP;
 
-  // ---- V4: Evo's Arrival art replaces V3's own geometry; V3 keeps its seating presets, screen, stained glass and click targets ----
-  if (arrival) {
-    const keep = [...inter.objects, ...[...media.screens.values()].map(s => s.group), ...hall.roses, hall.group.getObjectByName('StainedGlassRotunda'), adds.group.getObjectByName('Birds')].filter((o): o is THREE.Object3D => !!o);
-    const n = removeV3([hall, lib, colonnade, stage, garden, libIn, desk, board, adds].map(x => x.group), keep);
-    console.info(`[arrival] removed ${n} V3 meshes`);
-    // Evo's screen frame around V3's live screen surface
-    arrival.root.getObjectByName('xrguildhall-screen-clean')?.getObjectByName('Screen')?.removeFromParent();
-    for (const s of media.screens.values()) for (const c of s.group.children) if (c !== s.mesh) c.visible = false;
-    for (const r of hall.roses) r.position.z += 0.02; // in front of the placeholder roses inside Evo's hall model
-    // Evo moved the welcome desk to the back of the hall; V3's live panel and plaque go with it
-    const evoDesk = arrival.root.getObjectByName('welcome-desk-v2');
-    if (evoDesk) { desk.group.position.copy(evoDesk.position); desk.group.quaternion.copy(evoDesk.quaternion); }
-  }
+  // the live screen surface sits in Evo's screen frame
+  arrival.root.getObjectByName('xrguildhall-screen-clean')?.getObjectByName('Screen')?.removeFromParent();
+  for (const r of hall.roses) r.position.z += 0.02; // in front of the placeholder roses inside Evo's hall model
+  // Evo moved the welcome desk to the back of the hall; the live panel and plaque go with it
+  const evoDesk = arrival.root.getObjectByName('welcome-desk-v2');
+  if (evoDesk) { desk.group.position.copy(evoDesk.position); desk.group.quaternion.copy(evoDesk.quaternion); }
 
   const goTo = (id: string) => {
     const t = TOURS.find(x => x.id === id); if (!t) return;
@@ -397,10 +343,9 @@ async function main() {
     s.addEventListener('select', (e: XRInputSourceEvent) => { if (!xrMenu.endDrag(hand(e))) inter.selectXR(hand(e)); });
     s.addEventListener('selectend', (e: XRInputSourceEvent) => xrMenu.endDrag(hand(e)));
     xrMenu.sessionStart();
-    setReflections(false);
     try { renderer.xr.setFoveation(0.6); } catch { /* optional */ }
   });
-  renderer.xr.addEventListener('sessionend', () => { xrMenu.sessionEnd(); setReflections(reflectionsWanted); camera.position.y = seat ? 1.2 : 1.7; });
+  renderer.xr.addEventListener('sessionend', () => { xrMenu.sessionEnd(); camera.position.y = seat ? 1.2 : 1.7; });
 
   // ---- UI ----
   const ui = initUI({
@@ -409,7 +354,6 @@ async function main() {
     enterVR: xrSupported ? () => world.launchXR() : null,
     setReduceMotion: v => { reduced = v; },
     setAurora: v => { sky.animate = v; },
-    setReflections: v => { reflectionsWanted = v; setReflections(v); },
     askProxy: import.meta.env.VITE_ASK_PROXY || undefined,
   });
 
@@ -571,7 +515,7 @@ async function main() {
       if (!xr) camera.rotation.set(pitch, yaw, 0);
       if (seat && Math.hypot(pp.x - seat.pos.x, pp.z - seat.pos.z) > 0.4) stand();
       const z = zoneOf(pp);
-      if (z !== zone) { zone = z; ui.setZone(z); setReflections(reflectionsWanted); }
+      if (z !== zone) { zone = z; ui.setZone(z); }
       sky.update(time, xr ? 2 : 1);
       table.update(time, delta, reduced);
       garden.update(time, reduced);
