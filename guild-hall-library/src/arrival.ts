@@ -18,20 +18,6 @@ export interface ArrivalManifest { items: ArrivalItem[] }
 const BASE = 'arrival/';
 
 /**
- * Remove V3's own geometry where the Arrival art replaces it. Lights stay, and so does everything under `keep`
- * (click targets, the live screen, the stained glass, the animated birds).
- */
-export function removeV3(groups: THREE.Object3D[], keep: Iterable<THREE.Object3D>) {
-  const kept = new Set(keep);
-  const isKept = (o: THREE.Object3D, root: THREE.Object3D) => { for (let p: THREE.Object3D | null = o; p && p !== root.parent; p = p.parent) if (kept.has(p)) return true; return false; };
-  const drop: THREE.Object3D[] = [];
-  for (const g of groups) g.traverse(o => { if (((o as THREE.Mesh).isMesh || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine) && !isKept(o, g)) drop.push(o); });
-  // sprites share one geometry across the whole scene, so only mesh geometry is freed
-  for (const o of drop) { o.removeFromParent(); if (!(o as THREE.Sprite).isSprite) (o as THREE.Mesh).geometry?.dispose(); }
-  return drop.length;
-}
-
-/**
  * Seat points on Evo's furniture, after her sit-anywhere and stage-seating plugins: matched by node name, in that
  * node's own units, as [x, z, turn in degrees]. The sitter faces the node's +Z turned by `turn`.
  */
@@ -68,7 +54,16 @@ async function capTexture(t: THREE.Texture, max: number) {
   const img = t.image as ImageBitmap | HTMLImageElement | undefined;
   if (!img?.width || Math.max(img.width, img.height) <= max) return;
   const k = max / Math.max(img.width, img.height);
-  t.image = await createImageBitmap(img, { resizeWidth: Math.round(img.width * k), resizeHeight: Math.round(img.height * k), resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+  const w = Math.round(img.width * k), h = Math.round(img.height * k);
+  let out: ImageBitmap | HTMLCanvasElement = await createImageBitmap(img, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+  // some WebKit builds ignore the resize options and hand back a full-size bitmap
+  if (out.width !== w) {
+    out.close();
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d')!.drawImage(img, 0, 0, w, h);
+    out = c;
+  }
+  t.image = out;
   if ('close' in img) img.close();
   t.needsUpdate = true;
 }

@@ -16,10 +16,16 @@ export const LINKS = {
 export const TAGLINE = 'Professionals working in Spatial Computing dedicated to ethical outcomes in XR, AI, and the Metaverse.';
 
 /** Round walnut stage with gilt Nouveau detailing; a gentle stepped edge all round (one continuous walkable slope for locomotion). */
-export function buildStage(m: Mats) {
+/** `art: false` builds only the walkable collider and the spotlight, for use under the Arrival art. */
+export function buildStage(m: Mats, art = true) {
   const group = new THREE.Group(); group.name = 'Stage'; group.position.copy(STAGE.center);
   const colliders = new THREE.Group(); colliders.position.copy(STAGE.center);
   const R = STAGE.r, H = STAGE.h;
+  // walkable collider: a shallow cone frustum so feet glide up the steps
+  const cone = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 0.75, H, 48), new THREE.MeshBasicMaterial()); cone.position.y = H / 2; colliders.add(cone);
+  // stage lighting
+  const spot = new THREE.SpotLight(0xfff0d8, 200, 26, 0.42, 0.55, 1.6); spot.position.set(0, 11.5, 7.5); spot.target.position.set(0, 0.4, 0); group.add(spot, spot.target);
+  if (!art) return { group, colliders, light: spot };
   const deckMat = m.walnut.clone(); deckMat.map = m.walnut.map!.clone(); deckMat.map.repeat.set(3, 3); deckMat.map.needsUpdate = true;
   const deck = new THREE.Mesh(new THREE.CylinderGeometry(R, R, H, 72), [m.walnutDark, deckMat, m.walnutDark]); deck.position.y = H / 2; group.add(deck);
   // two step rings
@@ -43,30 +49,28 @@ export function buildStage(m: Mats) {
     for (let k = 0; k <= 10; k++) { const u = k / 10; const aa = a + u * 0.32; pts.push(new THREE.Vector3(Math.cos(aa) * (R + 0.012), H * (0.2 + 0.6 * Math.sin(u * Math.PI)), Math.sin(aa) * (R + 0.012))); }
     group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.012, 5), m.gilt));
   }
-  // walkable collider: a shallow cone frustum so feet glide up the steps
-  const cone = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 0.75, H, 48), new THREE.MeshBasicMaterial()); cone.position.y = H / 2; colliders.add(cone);
-  // stage lighting
-  const spot = new THREE.SpotLight(0xfff0d8, 200, 26, 0.42, 0.55, 1.6); spot.position.set(0, 11.5, 7.5); spot.target.position.set(0, 0.4, 0); group.add(spot, spot.target);
   const glowTex = T.glow('255,236,200');
   const pool = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xfff2d6, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.12 }));
   pool.scale.set(R * 2.6, R * 2.6, 1); pool.position.y = H + 0.6; group.add(pool);
   return { group, colliders, light: spot };
 }
 
-/** A curved welcome desk with the Join panel, a QR code, and an xrguild.org plaque. */
-export function buildWelcomeDesk(m: Mats, fonts: Fonts, onLink: (url: string) => void, isXR: () => boolean) {
+/** A curved welcome desk with the Join panel, a QR code, and an xrguild.org plaque. `art: false` keeps only the panel, plaque and light. */
+export function buildWelcomeDesk(m: Mats, fonts: Fonts, onLink: (url: string) => void, isXR: () => boolean, art = true) {
   const group = new THREE.Group(); group.name = 'WelcomeDesk'; group.userData.keep = true;
   group.position.copy(DESK.pos); group.lookAt(DESK.faceTo.x, 0, DESK.faceTo.z);
   const colliders = new THREE.Group();
   // desk body: an arc of walnut with a labradorite top
   const arc = (r0: number, r1: number, a0: number, a1: number) => { const s = new THREE.Shape(); s.absarc(0, 0, r1, a0, a1, false); s.absarc(0, 0, r0, a1, a0, true); return s; };
   const a0 = Math.PI * 1.25, a1 = Math.PI * 1.75; // front of the arc bulges toward visitors (+z)
+  if (art) {
   const body = new THREE.Mesh(new THREE.ExtrudeGeometry(arc(1.35, 1.75, a0, a1), { depth: 1.0, bevelEnabled: false, curveSegments: 32 }), m.walnut);
   body.rotation.x = -Math.PI / 2; body.position.set(0, 0, -1.55); group.add(body);
   const top = new THREE.Mesh(new THREE.ExtrudeGeometry(arc(1.3, 1.82, a0 - 0.04, a1 + 0.04), { depth: 0.05, bevelEnabled: true, bevelSize: 0.015, bevelThickness: 0.015, bevelSegments: 2, curveSegments: 32 }), m.labradorite);
   top.rotation.x = -Math.PI / 2; top.position.set(0, 1.0, -1.55); group.add(top);
   for (const [r, y] of [[1.82, 1.03], [1.76, 0.12], [1.76, 0.62]] as const) {
     const t = new THREE.Mesh(new THREE.TorusGeometry(r, 0.018, 6, 64, a1 - a0 + 0.08), m.gilt); t.rotation.x = Math.PI / 2; t.rotation.z = Math.PI * 0.25 - 0.04; t.position.set(0, y, -1.55); group.add(t);
+  }
   }
   // plaque on the desk front: xrguild.org
   const plaqueTex = T.labelTexture([{ text: 'Visit xrguild.org', font: `64px ${fonts.display}`, color: '#f1d58f' }, { text: 'Join · Events · Mentorship · Principles', font: `30px ${fonts.body}`, color: '#cfe9e2' }], 900, 220, 'rgba(8,24,22,0.95)', '#d8ae5a');
@@ -106,11 +110,13 @@ export function buildWelcomeDesk(m: Mats, fonts: Fonts, onLink: (url: string) =>
   });
   panel.fonts = fonts;
   const frame = new THREE.Group(); frame.position.set(0, 0, -0.55); group.add(frame);
+  if (art) {
   const fr = new THREE.Mesh(new THREE.BoxGeometry(1.64, 1.34, 0.06), m.walnut); fr.position.set(0, 1.78, -0.04); frame.add(fr);
   const crest: THREE.Vector3[] = []; for (let i = 0; i <= 24; i++) { const x = -0.82 + (i / 24) * 1.64; crest.push(new THREE.Vector3(x, 2.47 + Math.sin((i / 24) * Math.PI) * 0.24, 0)); }
   frame.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(crest), 48, 0.03, 8), m.gilt));
   const orb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 20, 14), m.emissiveCyan); orb.position.set(0, 2.78, 0); frame.add(orb);
   for (const s of [-1, 1]) { const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 2.45, 12), m.walnut); leg.position.set(s * 0.74, 1.22, -0.08); frame.add(leg); }
+  }
   panel.mesh.position.set(0, 1.78, 0.0); frame.add(panel.mesh);
   panel.draw();
   const light = new THREE.PointLight(0xffd7a0, 8, 5, 2); light.position.set(0, 2.4, 0.8); group.add(light);
@@ -119,8 +125,8 @@ export function buildWelcomeDesk(m: Mats, fonts: Fonts, onLink: (url: string) =>
 
 type Ev = { id: string; title: string; start: string; end: string; allDay: boolean; location: string | null; description: string | null; eventUrl: string | null };
 
-/** Events + news board beside the desk: upcoming Guild events (snapshot) and a Connect 2026 poster. */
-export function buildEventsBoard(m: Mats, fonts: Fonts, onLink: (url: string) => void, onNews: () => void, isXR: () => boolean) {
+/** Events + news board beside the desk: upcoming Guild events (snapshot) and a Connect 2026 poster. `art: false` keeps only the panel. */
+export function buildEventsBoard(m: Mats, fonts: Fonts, onLink: (url: string) => void, onNews: () => void, isXR: () => boolean, art = true) {
   const group = new THREE.Group(); group.name = 'EventsBoard'; group.userData.keep = true;
   group.position.copy(BOARD.pos); group.lookAt(BOARD.faceTo.x, 0, BOARD.faceTo.z);
   const now = Date.now();
@@ -161,10 +167,12 @@ export function buildEventsBoard(m: Mats, fonts: Fonts, onLink: (url: string) =>
     if (note) p.wrap(note, 64, H - 80, W - 128, 26, { font: `italic 22px ${fonts.body}`, color: INK.amber, maxLines: 1 });
   });
   panel.fonts = fonts;
-  const fr = new THREE.Mesh(new THREE.BoxGeometry(1.44, 1.9, 0.06), m.walnut); fr.position.set(0, 1.55, -0.04); group.add(fr);
-  const crest: THREE.Vector3[] = []; for (let i = 0; i <= 20; i++) { const cx = -0.72 + (i / 20) * 1.44; crest.push(new THREE.Vector3(cx, 2.52 + Math.sin((i / 20) * Math.PI) * 0.2, 0)); }
-  group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(crest), 48, 0.025, 8), m.gilt));
-  for (const s of [-1, 1]) { const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.04, 2.5, 12), m.walnut); leg.position.set(s * 0.56, 1.25, -0.1); group.add(leg); }
+  if (art) {
+    const fr = new THREE.Mesh(new THREE.BoxGeometry(1.44, 1.9, 0.06), m.walnut); fr.position.set(0, 1.55, -0.04); group.add(fr);
+    const crest: THREE.Vector3[] = []; for (let i = 0; i <= 20; i++) { const cx = -0.72 + (i / 20) * 1.44; crest.push(new THREE.Vector3(cx, 2.52 + Math.sin((i / 20) * Math.PI) * 0.2, 0)); }
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(crest), 48, 0.025, 8), m.gilt));
+    for (const s of [-1, 1]) { const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.04, 2.5, 12), m.walnut); leg.position.set(s * 0.56, 1.25, -0.1); group.add(leg); }
+  }
   panel.mesh.position.set(0, 1.55, 0); group.add(panel.mesh); panel.draw();
   return { group, panel };
 }

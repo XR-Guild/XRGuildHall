@@ -16,7 +16,6 @@ export interface UIHooks {
   enterVR: (() => void) | null;
   setReduceMotion: (v: boolean) => void;
   setAurora: (v: boolean) => void;
-  setReflections: (v: boolean) => void;
   askProxy?: string; // optional self-hosted proxy URL for GitBook's ask endpoint
 }
 
@@ -243,13 +242,12 @@ ${tlCtx || '(none matched)'}`;
   });
 
   // ---------- settings ----------
-  const rm = $<HTMLInputElement>('#setReduce'), au = $<HTMLInputElement>('#setAurora'), rf = $<HTMLInputElement>('#setRefl');
+  const rm = $<HTMLInputElement>('#setReduce'), au = $<HTMLInputElement>('#setAurora');
   const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   rm.checked = prefersReduced; au.checked = !prefersReduced;
   h.setReduceMotion(rm.checked); h.setAurora(au.checked);
   rm.addEventListener('change', () => h.setReduceMotion(rm.checked));
   au.addEventListener('change', () => h.setAurora(au.checked));
-  rf.addEventListener('change', () => h.setReflections(rf.checked));
   $('#settingsBtn').addEventListener('click', () => { const p = $('#settings'); p.hidden = !p.hidden; $('#settingsBtn').setAttribute('aria-expanded', String(!p.hidden)); });
 
   // VR
