@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import type { Seat } from './seating';
 import { GH } from './grandhall';
-import { HALL } from './site';
+import { HALL, POOL } from './site';
 
 /**
  * Arrival.space art layer: the world as Evo built it in Arrival, placed from public/arrival/manifest.json (written by
@@ -125,7 +125,65 @@ export async function loadArrival(onProgress?: (f: number) => void, maxTexture =
   console.info(`[arrival] placed ${placed}/${manifest.items.length} pieces`);
   for (const c of CLEARINGS) clearDoorway(root, c);
   for (const b of BAKED_PANELS) dropBakedPanel(root, b);
+  correctArt(root, colliders);
   return { root, colliders };
+}
+
+/**
+ * Fixes to Evo's art that are made here rather than in the GLBs, so they survive the next pull from Arrival.
+ * - Ground-cover soil is an opaque texture flagged transparent, so it drew last and over the colonnade walk where
+ *   its corner reaches in. Drawn straight after the lawn without writing depth, anything set into it shows on top.
+ *   The pool-border soil's straight hall-side edge stops short of where the walk meets the hall's path, leaving a
+ *   dark wedge of lawn; that edge is pushed out to run under them.
+ * - The library's hologram solids were baked at their library-relative spot without the piece's offset, so they
+ *   floated in the Guild Hall instead of over their projectors.
+ * - The seal hunt's glow rings are its hover highlights; baked, they stay lit as solid donuts on the shelves.
+ * - The pool's collision box runs out to the coping; people should be able to walk the coping up to the water.
+ */
+function correctArt(root: THREE.Object3D, colliders: THREE.Object3D) {
+  const meshesIn = (item: string, re: RegExp) => {
+    const found: THREE.Mesh[] = [];
+    root.getObjectByName(item)?.traverse(o => { if ((o as THREE.Mesh).isMesh && re.test(o.name)) found.push(o as THREE.Mesh); });
+    return found;
+  };
+  for (const m of meshesIn('lawn', /./)) m.renderOrder = -2;
+  for (const item of ['Garden Ground Cover — Reflecting Pool Border', 'Garden Ground Cover — Pond & Spring'])
+    for (const m of meshesIn(item, /^groundcover-soil$/)) {
+      m.renderOrder = -1;
+      for (const mat of ([] as THREE.Material[]).concat(m.material)) { mat.transparent = false; mat.depthWrite = false; }
+    }
+  for (const m of meshesIn('Garden Ground Cover — Reflecting Pool Border', /^groundcover-soil$/)) pushEdgeToward(m, HALL.center, 1.6);
+  const lib = root.getObjectByName('libraryartifacts');
+  if (lib) for (const m of meshesIn('libraryartifacts', /^hologram-/)) m.position.add(lib.position);
+  for (const m of meshesIn('xrguildsealhunt', /^torus(_\d+)?$/)) m.removeFromParent();
+  fitFootprint(colliders.getObjectByName('reflecting-pool collision'), POOL.width / 2, POOL.length / 2);
+}
+
+/** Move the edge of a flat quad that faces `toward` outwards by `by` metres, keeping its UVs. */
+function pushEdgeToward(mesh: THREE.Mesh, toward: THREE.Vector3, by: number) {
+  mesh.updateMatrixWorld(true);
+  const pos = mesh.geometry.attributes.position, inv = mesh.matrixWorld.clone().invert();
+  const world = Array.from({ length: pos.count }, (_, i) => new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld));
+  const corners = world.filter((v, i) => world.findIndex(w => w.distanceTo(v) < 1e-3) === i);
+  if (corners.length !== 4) { console.warn('[arrival] expected a quad for', mesh.name); return; }
+  const [a, b] = [...corners].sort((p, q) => p.distanceTo(toward) - q.distanceTo(toward));
+  const mid = corners.reduce((s, v) => s.add(v), new THREE.Vector3()).divideScalar(4);
+  const n = new THREE.Vector3(b.z - a.z, 0, a.x - b.x).normalize();
+  if (n.dot(a.clone().sub(mid)) < 0) n.negate();
+  world.forEach((v, i) => {
+    if (v.distanceTo(a) < 1e-3 || v.distanceTo(b) < 1e-3) pos.setXYZ(i, ...v.clone().addScaledVector(n, by).applyMatrix4(inv).toArray());
+  });
+  pos.needsUpdate = true; mesh.geometry.computeBoundingBox(); mesh.geometry.computeBoundingSphere();
+}
+
+/** Scale a collider across its own x and z so its footprint is ±halfX by ±halfZ. */
+function fitFootprint(o: THREE.Object3D | undefined, halfX: number, halfZ: number) {
+  if (!o) { console.warn('[arrival] no collider to fit'); return; }
+  o.updateMatrixWorld(true);
+  const box = new THREE.Box3(), inv = o.matrixWorld.clone().invert(), rel = new THREE.Matrix4();
+  o.traverse(m => { const g = (m as THREE.Mesh).geometry; if (g) { g.computeBoundingBox(); box.union(g.boundingBox!.clone().applyMatrix4(rel.multiplyMatrices(inv, m.matrixWorld))); } });
+  o.scale.x *= (2 * halfX) / (box.max.x - box.min.x);
+  o.scale.z *= (2 * halfZ) / (box.max.z - box.min.z);
 }
 
 /**

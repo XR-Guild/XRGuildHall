@@ -22,7 +22,7 @@ import { XRMenu } from './xrmenu';
 import { store } from './store';
 import { bakeStatic } from './bake';
 import { loadArrival, arrivalSeats } from './arrival';
-import { HALL, LIB, STAGE, DESK, SPAWN, POOL, BENCHES, PATH_CURVE, V, zoneOf, type Zone } from './site';
+import { HALL, LIB, STAGE, DESK, SPAWN, POOL, BENCHES, PATH_CURVE, V, zoneOf, outOfPool, type Zone } from './site';
 import { Presence } from './net/presence';
 import { startTicker, holdWakeLock } from './net/keepalive';
 import { SimTransport } from './net/sim';
@@ -241,7 +241,8 @@ async function main() {
   // ---- interaction ----
   const inter = new Interactor(world, renderer.domElement);
   inter.tooltip = document.getElementById('tooltip');
-  inter.blockers = [hall.colliders, lib.colliders];
+  // the pool collider stops double-click moves from landing in the water
+  inter.blockers = [hall.colliders, lib.colliders, garden.colliders.getObjectByName('PoolCollider')!];
   inter.walkables = [hall.colliders.children[0], lib.colliders.children[0], garden.colliders.children[0], stage.colliders];
   inter.addPanel(news, 'Connect news');
   inter.addPanel(libp.panel, 'Guild library');
@@ -513,6 +514,8 @@ async function main() {
       const xr = !!world.session;
       const pp = world.player.position;
       if ((pp.y < -4 || pp.y > 2.5) && time - lastRescue > 1.5) { console.warn('[hall] rescue from y=' + pp.y.toFixed(2)); lastRescue = time; world.setAuthoredPlayerPosition(SPAWN.pos); }
+      const ashore = outOfPool(pp);
+      if (ashore && time - lastRescue > 1.5) { lastRescue = time; stand(); world.setAuthoredPlayerPosition(ashore); }
       if (!xr) camera.rotation.set(pitch, yaw, 0);
       if (seat && Math.hypot(pp.x - seat.pos.x, pp.z - seat.pos.z) > 0.4) stand();
       const z = zoneOf(pp);
