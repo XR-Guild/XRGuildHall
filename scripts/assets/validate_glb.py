@@ -256,8 +256,11 @@ def check_compression(gltf, spec, stage, where, report):
     used = set(gltf.get("extensionsUsed", []))
     if not used & set(spec["mesh_compression_extensions"]):
         report.add(requires(spec, stage, "meshopt"), where, "geometry is uncompressed - run optimize_glb.sh before delivery")
-    elif "meshopt" not in spec["confirmed_decoders"]:
-        report.warn(where, "geometry is compressed - confirm every loader registers MeshoptDecoder")
+    else:
+        if "KHR_draco_mesh_compression" in used:
+            report.warn(where, "geometry is Draco-compressed - confirm every loader registers DRACOLoader")
+        if "EXT_meshopt_compression" in used and "meshopt" not in spec["confirmed_decoders"]:
+            report.warn(where, "geometry is meshopt-compressed - confirm every loader registers MeshoptDecoder")
 
 
 def check_file_size(path, spec, where, report):

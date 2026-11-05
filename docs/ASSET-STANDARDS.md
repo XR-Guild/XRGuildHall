@@ -16,6 +16,9 @@ Part A applies to Blender source files. Part B applies to every delivered GLB, w
 | Procedural world (Guild Hall, Library, colonnade, garden, furniture) | `guild-hall-library/src/` | The TypeScript builders. The live build creates geometry at runtime |
 | Arrival.space export of that world | `guild-hall-library/src/export.ts`, run by `guild-hall-library/tools/arrival-export.mjs` | The builders plus `export.ts`. The GLBs are output, not source |
 | Imported models | `guild-hall-library/public/models/` (loaded), `guild-hall-library/models-source/` (kept, not loaded) | The GLB, or the `.blend` it was cleaned up in |
+| Evo's Arrival art | `guild-hall-library/public/arrival/` (loaded by `src/arrival.ts`) | Evo's engine export of the Arrival space. `scripts/arrival/make-manifest.mjs` turns it into these files, compressing each with `scripts/arrival/compress.sh` (WebP textures, Draco geometry). Fix the art in Arrival and re-run, not in these GLBs |
+| V3 world in Blender | `guild-hall-library/blender/` | The GLB pieces in `blender/pieces/`. `build_scene.py` generates `xr-guild-hall-v3.blend` from them, so edit the pieces and re-run it rather than editing the `.blend` |
+| Reference models and images | `assets/reference/` (not loaded) | The files themselves. Their README records what each is and which shipped model it became |
 | New hand-modelled assets | Blender | The `.blend` (Part A) |
 
 For the procedural world, geometry and material fixes go into `guild-hall-library/src/`. Editing an exported GLB by hand is lost on the next export.
@@ -151,12 +154,14 @@ Texture conversion needs [KTX-Software](https://github.com/KhronosGroup/KTX-Soft
 
 ### Check the loader before compressing
 
-A meshopt or KTX2 file only loads if the loader has the matching decoder. The app's `GLTFLoader` in `guild-hall-library/src/main.ts` currently registers neither, and support in Viverse and Arrival.space is unconfirmed. Until a decoder is confirmed for every place a file loads:
+A meshopt or KTX2 file only loads if the loader has the matching decoder. Neither the app's `GLTFLoader` in `guild-hall-library/src/main.ts` nor the one in `src/arrival.ts` registers a meshopt or KTX2 decoder, and support in Viverse and Arrival.space is unconfirmed. Until a decoder is confirmed for every place a file loads:
 
 - don't ship compressed files to that place;
 - the validator treats missing compression as a warning, not an error, even at the delivery stage.
 
 Once confirmed, add `meshopt` or `ktx2` to `confirmed_decoders` in the spec and the validator will require it.
+
+Draco is different: `src/arrival.ts` registers a Draco decoder, and Evo's Arrival art in `public/arrival/` is delivered Draco-compressed. The validator reports Draco files separately from meshopt ones. Whether Draco should be a standard delivery format is part of the pending decoder decision below.
 
 ---
 
@@ -171,5 +176,5 @@ These are decided by the team at the Monday sync and tracked as `needs-decision`
 | Decision | Interim rule |
 |---|---|
 | Minimum target device | Use the provisional budgets in the spec as they stand. Don't edit them |
-| Whether the app, Viverse and Arrival.space loaders decode meshopt and KTX2 | Deliver uncompressed files. Don't add decoders to the app or entries to `confirmed_decoders` as part of asset work |
+| Whether the app, Viverse and Arrival.space loaders decode meshopt and KTX2, and whether Draco is a standard delivery format | Deliver uncompressed files for new assets. Leave the existing Draco pipeline for the Arrival art as it is. Don't add decoders to the app or entries to `confirmed_decoders` as part of asset work |
 | Where shared textures live | Keep each asset's textures beside its source. Don't create a shared texture folder or move textures between assets |

@@ -22,5 +22,3 @@ Budgets live in `scripts/assets/asset-spec.json`. Do not change them to make an 
 Do not ship meshopt- or KTX2-compressed files to a loader that hasn't been confirmed to decode them.
 
 "Pending team decisions" in the standards are not yours to settle. Follow the interim rule for each one; if a task can't be done within it, say so and stop rather than deciding.
-
-`AstraBlender/` is a prototype. Do not treat its files or structure as a reference.
