@@ -14,7 +14,7 @@ We made two commitments that shape everything else:
 
 **Browser-native and open so anyone can walk in.** The Hall runs on **WebXR** with no app store, no install, no gatekeeper. Open a link on a headset, a laptop, or a phone and you're inside. Volunteers can build and test with nothing but a browser.
 
-**Portable; it isn't trapped anywhere.** The Hall is built on open standards so it can live in more than one place: our own site today, and platforms like **[Viverse](https://www.viverse.com/)** and **RP1's open-metaverse browser** as they open up. We don't want a Hall that only exists on one company's servers. We want the Guild Hall to proliferate and help build community everywhere.
+**Portable; it isn't trapped anywhere.** The Hall is built on open standards so it can live in more than one place: our own site today, and platforms like **[Viverse](https://www.viverse.com/)** and the **[Metaverse Standards Forum's Open Metaverse Browser](https://metaverse-standards.org/open-metaverse-browser-initiative/)** as they open up. We don't want a Hall that only exists on one company's servers. We want the Guild Hall to proliferate and help build community everywhere.
 
 ---
 
@@ -36,7 +36,7 @@ Two of these are deliberately **still open decisions** — the engine and the mu
 ## Interoperability
 
 - **Standards first.** WebXR for presentation, glTF/GLB for 3D assets, plain data for configuration. Nothing proprietary at the core.
-- **One world, many front doors.** Because the Hall is standards-based data plus a browser runtime, the same world can be hosted by us and carried into Viverse or RP1 without a rebuild — the target platform requirements are tracked as an open decision so our asset and scene conventions stay compatible.
+- **One world, many front doors.** Because the Hall is standards-based data plus a browser runtime, the same world can be hosted by us and carried into Viverse or Open Metaverse — the target platform requirements are tracked as an open decision so our asset and scene conventions stay compatible.
 - **Own-your-content.** Live video uses RTMP so streams can originate from and broadcast to the tools creators already use.
 
 ---

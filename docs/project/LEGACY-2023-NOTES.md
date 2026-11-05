@@ -21,7 +21,7 @@ Microverse.
 ## The decision it informed
 
 **New direction: WebXR-native.** Interaction design and RTMP baked into the browser, with
-the world portable to [Viverse](https://www.viverse.com/) and RP1's open-metaverse browser
+the world portable to [Viverse](https://www.viverse.com/) and the [Metaverse Standards Forum's Open Metaverse Browser](https://metaverse-standards.org/open-metaverse-browser-initiative/)
 down the line.
 
 Why this over continuing on Microverse:
