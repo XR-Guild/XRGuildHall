@@ -32,7 +32,8 @@ export function buildGarden(m: Mats, skyCube: THREE.Texture, desktopReflections:
 
   const pw = POOL.width, pl = POOL.length, cop = POOL_COPING;
   box(220, 0.2, 220, 12, -0.12, 2);
-  box(pw + cop * 2, 2.2, pl + cop * 2, POOL.center.x, 1.0, POOL.center.z, POOL.rotY);
+  // at the water's edge: the coping is walkable
+  box(pw, 2.2, pl, POOL.center.x, 1.0, POOL.center.z, POOL.rotY).name = 'PoolCollider';
   const benches: { pos: THREE.Vector3; rotY: number }[] = [];
   for (const p of BENCHES) {
     const ry = Math.atan2(POOL.center.x - p.x, POOL.center.z - p.z); // both face the pool

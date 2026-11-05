@@ -29,6 +29,17 @@ export const SPAWN = { pos: dir(deg(126)).multiplyScalar(10), look: V(0, 2.2, -8
 export const POOL = { center: V(25, 0, 17), length: 18, width: 9, rotY: Math.atan2(0.84, 0.55) };
 /** Pool-local (x across, z along) to world. */
 export const poolWorld = (x: number, z: number) => new THREE.Vector3(x, 0, z).applyAxisAngle(new THREE.Vector3(0, 1, 0), POOL.rotY).add(POOL.center);
+/**
+ * Where to put someone who has ended up in the water (the pool collider traps them from inside): the nearest point
+ * on the coping, `margin` past the edge. Null when `p` is not over the water.
+ */
+export function outOfPool(p: THREE.Vector3, margin = 0.6) {
+  const l = p.clone().sub(POOL.center).applyAxisAngle(new THREE.Vector3(0, 1, 0), -POOL.rotY);
+  const hx = POOL.width / 2, hz = POOL.length / 2;
+  if (Math.abs(l.x) >= hx || Math.abs(l.z) >= hz) return null;
+  if (hx - Math.abs(l.x) < hz - Math.abs(l.z)) return poolWorld(Math.sign(l.x || 1) * (hx + margin), l.z);
+  return poolWorld(l.x, Math.sign(l.z || 1) * (hz + margin));
+}
 /** The big tree east of the pool, below the Library. */
 export const BIG_TREE = V(44, 0, 14);
 /** Benches: one lower-left of the pool, one upper-right. */

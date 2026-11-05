@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Mats } from './mats';
 import { CanvasPanel, INK, type Fonts } from './panel';
-import { PATH_CURVE, V } from './site';
+import { HALL, LIB, PATH_CURVE, V } from './site';
 import { leafTexture, jasmineTexture, lilyTexture } from './tex3';
 
 /**
@@ -81,6 +81,13 @@ function waterMaterial(env: THREE.Texture, o: { deep: number; tint?: number; amp
   });
 }
 
+/** How far each building's roof, eaves and buttresses reach from its centre in Evo's art, plus a little air. */
+const BIRD_KEEP_OUT = [{ c: HALL.center, r: 25 }, { c: LIB.center, r: 13 }];
+/** The largest radius up to `want` whose circle round `c` stays clear of the buildings. */
+function clearOrbit(c: THREE.Vector3, want: number) {
+  return Math.max(2, Math.min(want, ...BIRD_KEEP_OUT.map(k => Math.hypot(c.x - k.c.x, c.z - k.c.z) - k.r)));
+}
+
 const lathe = (pts: [number, number][], mat: THREE.Material, seg = 48) => new THREE.Mesh(new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), seg), mat);
 
 /** `art: false` builds only the fountain collider, the birds and the garden sound, for use under the Arrival art. */
@@ -101,12 +108,15 @@ export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, open
   const birdMat = new THREE.MeshStandardMaterial({ color: 0x2a2622, roughness: 0.9, side: THREE.DoubleSide });
   const wingGeo = new THREE.BufferGeometry(); wingGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0.08, 0, 0, -0.1, 0.36, 0, -0.02], 3)); wingGeo.computeVertexNormals();
   const flock: { g: THREE.Group; wl: THREE.Mesh; wr: THREE.Mesh; c: THREE.Vector3; r: number; h: number; sp: number; ph: number }[] = [];
-  for (let i = 0; i < 5; i++) {
+  // each bird circles over open garden: the back garden, south-east of the pool, and the lawn south of the hall
+  const ORBITS: [number, number, number][] = [[14, -36, 12], [6, -40, 9], [28, 24, 9], [22, 32, 7], [-2, 42, 10]];
+  for (let i = 0; i < ORBITS.length; i++) {
+    const [x, z, want] = ORBITS[i], c = V(x, 0, z);
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), birdMat); body.scale.set(0.8, 0.7, 1.9); g.add(body);
     const wl = new THREE.Mesh(wingGeo, birdMat), wr = new THREE.Mesh(wingGeo, birdMat); wr.scale.x = -1; g.add(wl, wr);
     g.scale.setScalar(1.6); birds.add(g);
-    flock.push({ g, wl, wr, c: V(14 + (i % 2) * 8, 0, -6 + i * 3), r: 14 + i * 4, h: 10 + i * 1.3, sp: (0.05 + i * 0.012) * (i % 2 ? 1 : -1), ph: i * 1.7 });
+    flock.push({ g, wl, wr, c, r: clearOrbit(c, want), h: 13 + i * 1.3, sp: (0.05 + i * 0.012) * (i % 2 ? 1 : -1), ph: i * 1.7 });
   }
 
   // ================= garden sound =================
