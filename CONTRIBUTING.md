@@ -4,7 +4,7 @@ Welcome — this is a volunteer build and every pillar, bench, and stained-glass
 
 ## Find something to do
 
-- Browse the [Project board](https://github.com/LightLodges/XRGuildHall/projects) or [PRODUCTION.md](PRODUCTION.md).
+- Browse the [Project board](https://github.com/LightLodges/XRGuildHall/projects) or [PRODUCTION.md](docs/project/PRODUCTION.md).
 - New here? Filter for the **`good-first-task`** label.
 - Want a specific kind of work? Filter by category: `architectural`, `production-spaces`, `interactive`, `content`, `gardens`.
 

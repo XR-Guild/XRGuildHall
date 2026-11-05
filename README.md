@@ -29,7 +29,7 @@ The guiding principle is **describe the world as data, not as hand-coded scenes.
 | **Interaction** | Modular, reusable behaviors — a pillar panel, a billboard plaque, a video screen, a portal | Interaction & UI developers |
 | **Live & networked** | Live video via **RTMP** (broadcast out; ingest-and-transcode for video in) and a multiplayer sync layer *(networking approach is an open decision)* | Streaming & networking contributors |
 
-Two of these are deliberately **still open decisions** — the engine and the multiplayer/networking layer. We're documenting them as `needs-decision` issues rather than pretending they're settled, because in a volunteer project the people who show up to do the work should have a say in the tools. See [`docs/LEGACY-2023-NOTES.md`](docs/LEGACY-2023-NOTES.md) for the history behind these choices.
+Two of these are deliberately **still open decisions** — the engine and the multiplayer/networking layer. We're documenting them as `needs-decision` issues rather than pretending they're settled, because in a volunteer project the people who show up to do the work should have a say in the tools. See [`docs/project/LEGACY-2023-NOTES.md`](docs/project/LEGACY-2023-NOTES.md) for the history behind these choices.
 
 ---
 
@@ -57,7 +57,7 @@ Because these layers are separable, a designer, a writer, and a developer can al
 
 ## What we're building
 
-The production punch list lives in [`PRODUCTION.md`](PRODUCTION.md), organized into five areas: **Architectural** (the shell), **Production Spaces** (library, tools, stage), **Interactive Elements** (join, mentorship, events, search, live video), **Content & Reference** (timeline, glossary, tracks, library outline), and **Gardens** (the restorative space outside).
+The production punch list lives in [`PRODUCTION.md`](docs/project/PRODUCTION.md), organized into five areas: **Architectural** (the shell), **Production Spaces** (library, tools, stage), **Interactive Elements** (join, mentorship, events, search, live video), **Content & Reference** (timeline, glossary, tracks, library outline), and **Gardens** (the restorative space outside).
 
 ---
 
@@ -65,7 +65,7 @@ The production punch list lives in [`PRODUCTION.md`](PRODUCTION.md), organized i
 
 You don't need to be an XR expert — you need to want to help.
 
-1. **Find a task** on the [project board](https://github.com/LightLodges/XRGuildHall/projects) or in [`PRODUCTION.md`](PRODUCTION.md). New here? Filter for **`good-first-task`**.
+1. **Find a task** on the [project board](https://github.com/LightLodges/XRGuildHall/projects) or in [`PRODUCTION.md`](docs/project/PRODUCTION.md). New here? Filter for **`good-first-task`**.
 2. **Claim it** by assigning yourself and saying hello — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 3. **Join the weekly sync** — Mondays, **1:00 PM PST**, in Discord. Agenda and format in [`docs/MEETINGS.md`](docs/MEETINGS.md).
 
@@ -85,17 +85,18 @@ Every category needs hands: modelers, writers, streamers, accessibility testers,
 
 ```
 XRGuildHall/
-├── README.md                 ← you are here
-├── PRODUCTION.md             ← the master punch list
-├── PROGRAMS.md               ← the 12-pillar program plan
-├── CONTRIBUTING.md           ← how to claim and submit work
-├── .github/ISSUE_TEMPLATE/   ← file new production tasks
+├── .github/workflows/        ← VIVERSE zip build, weekly data refresh
+├── assets/
+│   └── reference/            ← source models, images and a prototype script; not used by the build
 ├── docs/
-│   ├── PROJECT-MANAGEMENT.md ← board structure & workflow
-│   ├── MEETINGS.md           ← Monday sync cadence & templates
-│   └── LEGACY-2023-NOTES.md  ← lessons from the first prototype
-└── scripts/
-    └── setup-project.sh      ← one-run board bootstrapper
+│   ├── design-system/        ← design-system slides, style onboarding, principles posters, PDFs
+│   ├── plans/                ← implementation plans
+│   └── project/              ← punch list, 2023 lessons, early multiplayer plan, original project setup
+├── guild-hall-library/       ← the app: source, assets, Blender files, scripts, app docs
+├── CONTRIBUTING.md           ← how to claim and submit work
+├── LICENSE                   ← MIT
+├── NOTICE.md                 ← licensing and attribution
+└── README.md                 ← you are here
 ```
 
 ---
