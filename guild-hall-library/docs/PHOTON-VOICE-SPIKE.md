@@ -135,7 +135,7 @@ Before changing the Hall, serve `demo-voice-basics` unmodified over HTTPS, with 
 
 ### 3. `PhotonTransport`: presence, chat, controls
 
-Mirror `LiveKitTransport` in [`src/net/livekit.ts`](../src/net/livekit.ts):
+Mirror `LiveKitTransport` in [`src/net/livekit.ts`](https://github.com/XR-Guild/XRGuildHall/blob/6d062794df1cfd1e3b304fd45b77f199d1e36265/guild-hall-library/src/net/livekit.ts) (removed when Photon replaced LiveKit):
 
 - **Connect:** `lbc.connectToRegionMaster('<nearest region>')`, then `joinRoom('guild-hall', { createIfNotExists: true }, { maxPlayers: 20 })`. The room name honors `?room=`.
 - **Identity:** on join, set the actor custom property `pid = presence.self.id`. Keep `actorNr → pid` maps, because voices arrive keyed by `playerId` (actor number) and the rest of the code keys by presence id.

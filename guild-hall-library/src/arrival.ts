@@ -124,6 +124,7 @@ export async function loadArrival(onProgress?: (f: number) => void, maxTexture =
   await Promise.all([worker(), worker(), worker(), worker()]);
   console.info(`[arrival] placed ${placed}/${manifest.items.length} pieces`);
   for (const c of CLEARINGS) clearDoorway(root, c);
+  for (const b of BAKED_PANELS) dropBakedPanel(root, b);
   correctArt(root, colliders);
   return { root, colliders };
 }
@@ -183,6 +184,23 @@ function fitFootprint(o: THREE.Object3D | undefined, halfX: number, halfZ: numbe
   o.traverse(m => { const g = (m as THREE.Mesh).geometry; if (g) { g.computeBoundingBox(); box.union(g.boundingBox!.clone().applyMatrix4(rel.multiplyMatrices(inv, m.matrixWorld))); } });
   o.scale.x *= (2 * halfX) / (box.max.x - box.min.x);
   o.scale.z *= (2 * halfZ) / (box.max.z - box.min.z);
+}
+
+/**
+ * Evo's export captured V3's live canvas panels as still images in the same plane, so they hide the working panels
+ * and swallow every click. Dropped here rather than in the GLB, so they stay gone when the art is pulled again.
+ */
+const BAKED_PANELS = [
+  { item: 'library-fresco5', mesh: 'library_MeshBasicMaterial', panel: 'Guild library' },
+  { item: 'library-fresco5', mesh: 'library_MeshBasicMaterial_1', panel: 'Timeline of XR' },
+];
+
+function dropBakedPanel(root: THREE.Object3D, b: (typeof BAKED_PANELS)[number]) {
+  const mesh = root.getObjectByName(b.item)?.getObjectByName(b.mesh) as THREE.Mesh | undefined;
+  if (!mesh) { console.warn('[arrival] no baked panel to drop for', b.panel, `(${b.item} / ${b.mesh})`); return; }
+  mesh.removeFromParent();
+  mesh.geometry.dispose();
+  for (const m of ([] as THREE.Material[]).concat(mesh.material)) { (m as THREE.MeshBasicMaterial).map?.dispose(); m.dispose(); }
 }
 
 /**

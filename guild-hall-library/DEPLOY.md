@@ -54,7 +54,7 @@ Both are optional; without them the Hall runs solo with an offline crowd preview
 ## Netlify / Cloudflare Pages / Vercel
 
 - Base directory `guild-hall-library`, build `npm run build`, output `dist`.
-- Or drag and drop the prebuilt `dist/` folder.
+- Or run `npm run build` and drag and drop the `dist/` folder.
 
 ## Viverse / RP1 / Pico / Meta portals
 
