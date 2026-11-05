@@ -1,0 +1,43 @@
+{
+  "provisional": true,
+  "target_device": "undecided - budgets assume a standalone headset browser as the floor",
+  "default_class": "prop",
+  "collision_suffix": "-collision",
+  "file_classes": {
+    "guild-hall": "architecture",
+    "library": "architecture",
+    "colonnade": "architecture",
+    "backdrop-hills": "architecture",
+    "connect-table": "prop-hero",
+    "hall": "prop-hero",
+    "cypress": "prop-small"
+  },
+  "max_file_bytes": 26214400,
+  "confirmed_decoders": [],
+  "classes": {
+    "prop-small": { "max_tris": 500, "max_materials": 1, "max_texture_px": 512 },
+    "prop": { "max_tris": 2000, "max_materials": 3, "max_texture_px": 1024 },
+    "prop-hero": { "max_tris": 10000, "max_materials": 4, "max_texture_px": 1024 },
+    "architecture": { "max_tris": 50000, "max_materials": 8, "max_texture_px": 2048 },
+    "collision": { "max_tris": 750, "max_materials": 1, "max_texture_px": 0 }
+  },
+  "max_tris_per_curve_object": 5000,
+  "max_verts_per_tri": 2.0,
+  "min_tris_for_weld_check": 200,
+  "file_name_pattern": "^[a-z0-9]+([-_][a-z0-9]+)*$",
+  "duplicate_suffix_pattern": "\\.[0-9]{3}$",
+  "default_name_pattern": "^(cube|sphere|uvsphere|icosphere|cylinder|cone|plane|torus|circle|grid|suzanne|empty|mesh|object|node|geometry|material|standardmaterial|physicalmaterial|basicmaterial)([._-]?[0-9]+)?$",
+  "justify_extensions": [
+    "KHR_materials_clearcoat",
+    "KHR_materials_iridescence",
+    "KHR_materials_sheen",
+    "KHR_materials_transmission",
+    "KHR_materials_volume"
+  ],
+  "mesh_compression_extensions": [
+    "EXT_meshopt_compression",
+    "KHR_draco_mesh_compression"
+  ],
+  "lossy_image_types": ["image/jpeg"],
+  "delivery_image_types": ["image/ktx2"]
+}
