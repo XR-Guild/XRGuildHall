@@ -45,7 +45,7 @@ Two of these are deliberately **still open decisions** — the engine and the mu
 
 The whole point of the data-driven design is that **you don't have to understand the engine to contribute.** Work happens at three levels, and most contributions live at the top two:
 
-**1. Edit the world data.** Want to assign a program to a pillar, change what a plaque says, or point a doorway somewhere new? That's a change to a config/data file — no rendering code required. This is where writers, designers, and first-time contributors have the most impact. (See the pillars-as-data plan in [`PROGRAMS.md`](PROGRAMS.md).)
+**1. Edit the world data.** Want to assign a program to a pillar, change what a plaque says, or point a doorway somewhere new? That's a change to a config/data file — no rendering code required. This is where writers, designers, and first-time contributors have the most impact.
 
 **2. Add assets.** Model a bench, a bookshelf, a stained-glass panel, or a tree in your tool of choice, export to glTF/GLB, and drop it in. House style is gold tracery on dark with Marcellus SC caps — match it and it belongs.
 
@@ -65,9 +65,9 @@ The production punch list lives in [`PRODUCTION.md`](docs/project/PRODUCTION.md)
 
 You don't need to be an XR expert — you need to want to help.
 
-1. **Find a task** on the [project board](https://github.com/LightLodges/XRGuildHall/projects) or in [`PRODUCTION.md`](docs/project/PRODUCTION.md). New here? Filter for **`good-first-task`**.
+1. **Find a task** in [`PRODUCTION.md`](docs/project/PRODUCTION.md).
 2. **Claim it** by assigning yourself and saying hello — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
-3. **Join the weekly sync** — Mondays, **1:00 PM PST**, in Discord. Agenda and format in [`docs/MEETINGS.md`](docs/MEETINGS.md).
+3. **Join the weekly sync** — Mondays, **1:00 PM PST**, in Discord.
 
 Every category needs hands: modelers, writers, streamers, accessibility testers, and people who just want to organize.
 
