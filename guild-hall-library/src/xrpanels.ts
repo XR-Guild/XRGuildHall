@@ -65,7 +65,6 @@ export function newsPanel(fonts: Fonts) {
 // ---------------- Library panel ----------------
 export function libraryPanel(fonts: Fonts) {
   const st = { cat: '' as string, topic: '' as string, page: 0, sel: null as Item | null };
-  const PER = 6;
   const p = new CanvasPanel(2.2, 1.35, 760, (p) => {
     const g = p.ctx, W = p.W, H = p.H;
     p.bg();
@@ -109,11 +108,13 @@ export function libraryPanel(fonts: Fonts) {
       return;
     }
     const results = search({ text: st.topic, cat: st.cat || undefined });
-    const pages = Math.max(1, Math.ceil(results.length / PER));
-    st.page = Math.min(st.page, pages - 1);
     p.text(`${results.length} result${results.length === 1 ? '' : 's'}${st.topic ? ` for “${st.topic}”` : ''}${st.cat ? ` in ${catName(st.cat)}` : ''}`, rx, y, { font: `24px ${fonts.body}`, color: INK.dim });
     y += 44;
-    const rowH = 104;
+    const rowH = 104, by = H - 112;
+    // the topic chips wrap onto more lines as the list grows, so the page holds only the rows that clear the buttons
+    const PER = Math.max(1, Math.floor((by - 16 - y + 8) / (rowH + 8)));
+    const pages = Math.max(1, Math.ceil(results.length / PER));
+    st.page = Math.min(st.page, pages - 1);
     results.slice(st.page * PER, st.page * PER + PER).forEach((it, i) => {
       const id = 'item-' + i; const yy = y + i * (rowH + 8);
       const hov = p.hover === id;
@@ -124,7 +125,6 @@ export function libraryPanel(fonts: Fonts) {
       if (store.reading.has(it.u)) p.text('✓', rx + rw - 44, yy + 14, { font: `28px ${fonts.body}`, color: INK.gold });
       p.regions.push({ x: rx, y: yy, w: rw, h: rowH, id, onClick: () => { st.sel = it; } });
     });
-    const by = H - 112;
     p.button('prev', rx, by, 160, 54, '← Prev', () => { st.page = Math.max(0, st.page - 1); });
     p.text(`Page ${st.page + 1} of ${pages}`, rx + rw / 2, by + 27, { font: `24px ${fonts.body}`, color: INK.dim, align: 'center', baseline: 'middle' });
     p.button('next', rx + rw - 160, by, 160, 54, 'Next →', () => { st.page = Math.min(pages - 1, st.page + 1); });
