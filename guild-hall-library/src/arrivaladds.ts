@@ -83,7 +83,8 @@ function waterMaterial(env: THREE.Texture, o: { deep: number; tint?: number; amp
 
 const lathe = (pts: [number, number][], mat: THREE.Material, seg = 48) => new THREE.Mesh(new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), seg), mat);
 
-export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, openLink: (url: string) => void, inXR: () => boolean) {
+/** `art: false` builds only the fountain collider, the birds and the garden sound, for use under the Arrival art. */
+export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, openLink: (url: string) => void, inXR: () => boolean, art = true) {
   const group = new THREE.Group(); group.name = 'ArrivalAdds';
   const colliders = new THREE.Group();
   const waters: THREE.ShaderMaterial[] = [];
@@ -91,6 +92,38 @@ export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, open
   const animated = new THREE.Group(); animated.userData.keep = true; group.add(animated);
   /** Named parts, for the GLB export (src/export.ts) and the Blender scene. */
   const parts: Record<string, THREE.Object3D> = {};
+
+  // collider: you walk around the fountain basin, not through it
+  { const c = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 3, 24), new THREE.MeshBasicMaterial()); c.position.set(FOUNTAIN.x, 1.5, FOUNTAIN.z); colliders.add(c); }
+
+  // ================= birds =================
+  const birds = new THREE.Group(); birds.name = 'Birds'; animated.add(birds);
+  const birdMat = new THREE.MeshStandardMaterial({ color: 0x2a2622, roughness: 0.9, side: THREE.DoubleSide });
+  const wingGeo = new THREE.BufferGeometry(); wingGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0.08, 0, 0, -0.1, 0.36, 0, -0.02], 3)); wingGeo.computeVertexNormals();
+  const flock: { g: THREE.Group; wl: THREE.Mesh; wr: THREE.Mesh; c: THREE.Vector3; r: number; h: number; sp: number; ph: number }[] = [];
+  for (let i = 0; i < 5; i++) {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), birdMat); body.scale.set(0.8, 0.7, 1.9); g.add(body);
+    const wl = new THREE.Mesh(wingGeo, birdMat), wr = new THREE.Mesh(wingGeo, birdMat); wr.scale.x = -1; g.add(wl, wr);
+    g.scale.setScalar(1.6); birds.add(g);
+    flock.push({ g, wl, wr, c: V(14 + (i % 2) * 8, 0, -6 + i * 3), r: 14 + i * 4, h: 10 + i * 1.3, sp: (0.05 + i * 0.012) * (i % 2 ? 1 : -1), ph: i * 1.7 });
+  }
+
+  // ================= garden sound =================
+  const sound = new GardenSound([FOUNTAIN.clone().setY(1), SPRING.clone().setY(0.4), V(-9, 0.2, -32.5)]);
+
+  const updateLive = (t: number, reduced: boolean, listener: THREE.Object3D) => {
+    birds.visible = !reduced;
+    if (!reduced) for (const b of flock) {
+      const a = b.ph + t * b.sp, p = V(b.c.x + Math.cos(a) * b.r, b.h + Math.sin(t * 0.3 + b.ph) * 1.2, b.c.z + Math.sin(a) * b.r);
+      const ahead = V(b.c.x + Math.cos(a + Math.sign(b.sp) * 0.05) * b.r, p.y, b.c.z + Math.sin(a + Math.sign(b.sp) * 0.05) * b.r);
+      b.g.position.copy(p); b.g.lookAt(ahead);
+      const glide = Math.sin(t * 0.5 + b.ph) > 0.4, flap = glide ? 0.12 : Math.sin(t * 11 + b.ph) * 0.7;
+      b.wl.rotation.z = flap; b.wr.rotation.z = -flap;
+    }
+    sound.update(listener, t);
+  };
+  if (!art) return { group, colliders, panels, update: (t: number, _dt: number, reduced: boolean, listener: THREE.Object3D) => updateLive(t, reduced, listener), sound, parts };
 
   // ================= fountain =================
   {
@@ -111,8 +144,6 @@ export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, open
     const low = new THREE.Mesh(new THREE.RingGeometry(0.4, 2.14, 72).rotateX(-Math.PI / 2), lowW); low.userData.exportMat = exportWater(0x0b3a3c); low.position.y = 0.48; low.renderOrder = 0; low.userData.keep = true; f.add(low);
     const upW = waterMaterial(env, { deep: 0x0d4446, amp: 0.02, center: FOUNTAIN.clone().setY(1.44) }); waters.push(upW);
     const up = new THREE.Mesh(new THREE.CircleGeometry(0.9, 48).rotateX(-Math.PI / 2), upW); up.userData.exportMat = exportWater(0x0d4446); up.position.y = 1.44; up.userData.keep = true; f.add(up);
-    // collider: you walk around the basin, not through it
-    const c = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 3, 24), new THREE.MeshBasicMaterial()); c.position.set(FOUNTAIN.x, 1.5, FOUNTAIN.z); colliders.add(c);
   }
   // spray: one Points draw call, animated in the vertex shader
   const N = 420;
@@ -190,19 +221,6 @@ export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, open
   vines.ivy.visible = false; // the Arrival build shows the grapevine and keeps ivy-with-jasmine hidden; flip to try it
   group.add(vines.ivy); parts.ivy = vines.ivy;
 
-  // ================= birds =================
-  const birds = new THREE.Group(); birds.name = 'Birds'; animated.add(birds);
-  const birdMat = new THREE.MeshStandardMaterial({ color: 0x2a2622, roughness: 0.9, side: THREE.DoubleSide });
-  const wingGeo = new THREE.BufferGeometry(); wingGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0.08, 0, 0, -0.1, 0.36, 0, -0.02], 3)); wingGeo.computeVertexNormals();
-  const flock: { g: THREE.Group; wl: THREE.Mesh; wr: THREE.Mesh; c: THREE.Vector3; r: number; h: number; sp: number; ph: number }[] = [];
-  for (let i = 0; i < 5; i++) {
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), birdMat); body.scale.set(0.8, 0.7, 1.9); g.add(body);
-    const wl = new THREE.Mesh(wingGeo, birdMat), wr = new THREE.Mesh(wingGeo, birdMat); wr.scale.x = -1; g.add(wl, wr);
-    g.scale.setScalar(1.6); birds.add(g);
-    flock.push({ g, wl, wr, c: V(14 + (i % 2) * 8, 0, -6 + i * 3), r: 14 + i * 4, h: 10 + i * 1.3, sp: (0.05 + i * 0.012) * (i % 2 ? 1 : -1), ph: i * 1.7 });
-  }
-
   // ================= principles and code of conduct boards =================
   let signedUp = false; // session only: nothing is stored or sent
   const boardPanel = (title: string, draw: (p: CanvasPanel) => void) => {
@@ -240,9 +258,6 @@ export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, open
     const c = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3, 0.5), new THREE.MeshBasicMaterial()); c.position.set(b.pos.x, 1.5, b.pos.z); c.rotation.y = b.ry; c.name = 'BoardCollider'; colliders.add(c);
   });
 
-  // ================= garden sound =================
-  const sound = new GardenSound([FOUNTAIN.clone().setY(1), SPRING.clone().setY(0.4), V(-9, 0.2, -32.5)]);
-
   const drops = waters.slice(0, 2);
   let nextDrop = 0, dropIdx = 0;
   const update = (t: number, dt: number, reduced: boolean, listener: THREE.Object3D) => {
@@ -257,18 +272,10 @@ export function buildArrivalAdds(m: Mats, env: THREE.Texture, fonts: Fonts, open
       const arr = w.uniforms.uDrops.value as THREE.Vector4[]; arr.shift(); arr.push(new THREE.Vector4(FOUNTAIN.x + Math.cos(a) * r, FOUNTAIN.z + Math.sin(a) * r, t, 0));
     }
     const ring = animated.getObjectByName('FountainRing'); if (ring && !reduced) { ring.rotation.z = t * 0.25; ring.position.y = 2.75 + Math.sin(t * 0.8) * 0.06; }
-    birds.visible = !reduced;
-    if (!reduced) for (const b of flock) {
-      const a = b.ph + t * b.sp, p = V(b.c.x + Math.cos(a) * b.r, b.h + Math.sin(t * 0.3 + b.ph) * 1.2, b.c.z + Math.sin(a) * b.r);
-      const ahead = V(b.c.x + Math.cos(a + Math.sign(b.sp) * 0.05) * b.r, p.y, b.c.z + Math.sin(a + Math.sign(b.sp) * 0.05) * b.r);
-      b.g.position.copy(p); b.g.lookAt(ahead);
-      const glide = Math.sin(t * 0.5 + b.ph) > 0.4, flap = glide ? 0.12 : Math.sin(t * 11 + b.ph) * 0.7;
-      b.wl.rotation.z = flap; b.wr.rotation.z = -flap;
-    }
     void dt;
-    sound.update(listener, t);
+    updateLive(t, reduced, listener);
   };
-  return { group, colliders, panels, update, sound, vines, parts, setIvy: (on: boolean) => { vines.ivy.visible = on; } };
+  return { group, colliders, panels, update, sound, parts };
 }
 
 // ---------- vines along the colonnade ----------

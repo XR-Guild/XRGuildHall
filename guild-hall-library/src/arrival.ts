@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import type { Seat } from './seating';
+import { GH } from './grandhall';
+import { HALL } from './site';
 
 /**
  * Arrival.space art layer: the world as Evo built it in Arrival, placed from public/arrival/manifest.json (written by
@@ -16,20 +18,6 @@ export interface ArrivalItem {
 export interface ArrivalManifest { items: ArrivalItem[] }
 
 const BASE = 'arrival/';
-
-/**
- * Remove V3's own geometry where the Arrival art replaces it. Lights stay, and so does everything under `keep`
- * (click targets, the live screen, the stained glass, the animated birds).
- */
-export function removeV3(groups: THREE.Object3D[], keep: Iterable<THREE.Object3D>) {
-  const kept = new Set(keep);
-  const isKept = (o: THREE.Object3D, root: THREE.Object3D) => { for (let p: THREE.Object3D | null = o; p && p !== root.parent; p = p.parent) if (kept.has(p)) return true; return false; };
-  const drop: THREE.Object3D[] = [];
-  for (const g of groups) g.traverse(o => { if (((o as THREE.Mesh).isMesh || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine) && !isKept(o, g)) drop.push(o); });
-  // sprites share one geometry across the whole scene, so only mesh geometry is freed
-  for (const o of drop) { o.removeFromParent(); if (!(o as THREE.Sprite).isSprite) (o as THREE.Mesh).geometry?.dispose(); }
-  return drop.length;
-}
 
 /**
  * Seat points on Evo's furniture, after her sit-anywhere and stage-seating plugins: matched by node name, in that
@@ -63,7 +51,36 @@ export function arrivalSeats(root: THREE.Object3D): Seat[] {
   return seats;
 }
 
-export async function loadArrival(onProgress?: (f: number) => void) {
+/** Scale a texture down to at most `max` px on its long side. */
+async function capTexture(t: THREE.Texture, max: number) {
+  const img = t.image as ImageBitmap | HTMLImageElement | undefined;
+  if (!img?.width || Math.max(img.width, img.height) <= max) return;
+  const k = max / Math.max(img.width, img.height);
+  const w = Math.round(img.width * k), h = Math.round(img.height * k);
+  let out: ImageBitmap | HTMLCanvasElement = await createImageBitmap(img, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+  // some WebKit builds ignore the resize options and hand back a full-size bitmap
+  if (out.width !== w) {
+    out.close();
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d')!.drawImage(img, 0, 0, w, h);
+    out = c;
+  }
+  t.image = out;
+  if ('close' in img) img.close();
+  t.needsUpdate = true;
+}
+
+function texturesOf(root: THREE.Object3D) {
+  const seen = new Set<THREE.Texture>();
+  root.traverse(o => {
+    for (const m of ([] as THREE.Material[]).concat((o as THREE.Mesh).material ?? []))
+      for (const v of Object.values(m)) if ((v as THREE.Texture)?.isTexture) seen.add(v as THREE.Texture);
+  });
+  return seen;
+}
+
+/** `maxTexture` caps texture size, for devices that run out of GPU memory with the full set (about 580 MB at 2048 px). */
+export async function loadArrival(onProgress?: (f: number) => void, maxTexture = Infinity) {
   const manifest: ArrivalManifest | null = await fetch(BASE + 'manifest.json').then(r => r.ok ? r.json() : null).catch(() => null);
   if (!manifest?.items.length) return null;
 
@@ -74,7 +91,7 @@ export async function loadArrival(onProgress?: (f: number) => void) {
   const cache = new Map<string, Promise<THREE.Group>>();
   const used = new Set<string>();
   const load = (file: string) => {
-    if (!cache.has(file)) cache.set(file, loader.loadAsync(BASE + file).then(g => g.scene));
+    if (!cache.has(file)) cache.set(file, loader.loadAsync(BASE + file).then(async g => { await Promise.all([...texturesOf(g.scene)].map(t => capTexture(t, maxTexture))); return g.scene; }));
     return cache.get(file)!;
   };
   const instance = async (file: string) => { const src = await load(file); const o = used.has(file) ? src.clone(true) : src; used.add(file); return o; };
@@ -82,7 +99,8 @@ export async function loadArrival(onProgress?: (f: number) => void) {
     o.position.fromArray(it.pos); o.quaternion.fromArray(it.quat); if (it.scale) o.scale.fromArray(it.scale);
   };
   const image = async (it: ArrivalItem) => {
-    const tex = await texLoader.loadAsync(BASE + it.image); tex.colorSpace = THREE.SRGBColorSpace;
+    const tex = await texLoader.loadAsync(BASE + it.image);
+    await capTexture(tex, maxTexture); tex.colorSpace = THREE.SRGBColorSpace;
     const [w, h] = it.size ?? [1, 1];
     const g = new THREE.Group();
     g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })));
@@ -105,5 +123,33 @@ export async function loadArrival(onProgress?: (f: number) => void) {
   };
   await Promise.all([worker(), worker(), worker(), worker()]);
   console.info(`[arrival] placed ${placed}/${manifest.items.length} pieces`);
+  for (const c of CLEARINGS) clearDoorway(root, c);
   return { root, colliders };
+}
+
+/**
+ * Planting in Evo's art that grows across a hall doorway. It is trimmed here rather than in the GLB, so the opening
+ * stays clear when the art is pulled from Arrival again.
+ */
+const CLEARINGS = [
+  { item: 'Garden Ground Cover — Reflecting Pool Border', mesh: 'groundcover-plants', bay: HALL.gardenDoorBay, halfWidth: GH.door.b, depth: 5 },
+];
+
+/** Drop the triangles of one mesh that sit in front of a hall door, out to `depth` metres past the wall. */
+function clearDoorway(root: THREE.Object3D, c: (typeof CLEARINGS)[number]) {
+  const mesh = root.getObjectByName(c.item)?.getObjectByName(c.mesh) as THREE.Mesh | undefined;
+  const g = mesh?.geometry, index = g?.index;
+  if (!mesh || !g || !index) { console.warn('[arrival] nothing to clear for', c.item, c.mesh); return; }
+  root.updateMatrixWorld(true);
+  const th = (c.bay / 12) * Math.PI * 2, out = new THREE.Vector3(Math.sin(th), 0, -Math.cos(th)), across = new THREE.Vector3(-out.z, 0, out.x);
+  const pos = g.attributes.position, v = new THREE.Vector3(), mid = new THREE.Vector3(), keep: number[] = [];
+  for (let t = 0; t < index.count; t += 3) {
+    mid.set(0, 0, 0);
+    for (let k = 0; k < 3; k++) mid.add(v.fromBufferAttribute(pos, index.getX(t + k)).applyMatrix4(mesh.matrixWorld));
+    mid.divideScalar(3).sub(HALL.center);
+    const r = mid.dot(out), w = mid.dot(across);
+    if (r > HALL.apothem - 0.5 && r < HALL.apothem + c.depth && Math.abs(w) < c.halfWidth) continue;
+    keep.push(index.getX(t), index.getX(t + 1), index.getX(t + 2));
+  }
+  g.setIndex(keep);
 }

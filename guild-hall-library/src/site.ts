@@ -9,7 +9,7 @@ import { dir } from './chamber';
 export const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
 /** v3: the Hall matches DeeDee's Guild Draft 3 scale (about 29 m across); the Library keeps its size. */
-export const HALL = { center: V(0, 0, 0), apothem: 14, wallH: 15, doorBay: 3 };
+export const HALL = { center: V(0, 0, 0), apothem: 14, wallH: 15, doorBay: 3, gardenDoorBay: 4 };
 /** 17 m of open colonnade between the two doors keeps each room's voices to itself. */
 export const LIB = { center: V(37.5, 0, -6), apothem: 6.5, wallH: 6.4, doorBay: 9 };
 

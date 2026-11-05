@@ -20,19 +20,21 @@ export interface ChamberOpts {
   domeMural?: THREE.Texture;
   chandelier?: number; // scale, 0 = none
   fillLights?: number;
-  floorMat: THREE.Material;
+  floorMat?: THREE.Material;
   sparseBooks?: number; // 0..1 fraction of shelf length filled
+  /** false: only colliders, lights and panel mounts, for use under the Arrival art */
+  art?: boolean;
 }
 
 export interface Chamber {
   group: THREE.Group;
   colliders: THREE.Group;
-  floor: THREE.Mesh;
+  floor: THREE.Mesh | null;
   lights: THREE.PointLight[];
   glows: THREE.Sprite[];
   panelMounts: Map<number, THREE.Object3D>; // bay index → mount (panel faces +z)
   bannerMounts: Map<number, THREE.Object3D>;
-  domeMat: THREE.MeshStandardMaterial;
+  domeMat: THREE.MeshStandardMaterial | null;
   /** World-space position of a bay's inner face center. */
   bayWorld: (k: number, inset?: number) => THREE.Vector3;
   toWorld: (v: THREE.Vector3) => THREE.Vector3;
@@ -68,19 +70,21 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
   const glows: THREE.Sprite[] = [];
   const panelMounts = new Map<number, THREE.Object3D>();
   const bannerMounts = new Map<number, THREE.Object3D>();
-  const warmGlow = T.glow('255,214,150');
+  const art = o.art ?? true;
+  const warmGlow = art ? T.glow('255,214,150') : null;
   const A = o.apothem, H = o.wallH, HALF = A * Math.tan(Math.PI / SIDES), CR = A / Math.cos(Math.PI / SIDES);
   const s = H / 8.1; // vertical scale relative to the original hall
   const box = (w: number, h: number, d: number, x: number, y: number, z: number, ry = 0) => { const c = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial()); c.position.set(x, y, z); c.rotation.y = ry; colliders.add(c); };
 
   // floor
   const floorGeo = new THREE.CircleGeometry(CR + 0.02, SIDES, Math.PI / 2 - Math.PI / SIDES); floorGeo.rotateX(-Math.PI / 2);
-  const floor = new THREE.Mesh(floorGeo, o.floorMat); floor.name = o.name + 'Floor'; floor.renderOrder = 1; group.add(floor);
+  const floor = art ? new THREE.Mesh(floorGeo, o.floorMat) : null;
+  if (floor) { floor.name = o.name + 'Floor'; floor.renderOrder = 1; group.add(floor); }
   box(CR * 2, 0.2, CR * 2, 0, -0.1, 0);
 
   // bays
   const D = 0.45;
-  const extMat = m.stoneExt.clone(); extMat.side = THREE.BackSide;
+  const extMat = art ? m.stoneExt.clone() : null; if (extMat) extMat.side = THREE.BackSide;
   const winB = Math.min(1.15, HALF * 0.5), winSpring = 3.9 * s, winBase = 0.5;
   for (let k = 0; k < SIDES; k++) {
     const th = (k / SIDES) * Math.PI * 2, kind = o.bays[k];
@@ -98,9 +102,11 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
         const hole = new THREE.Path(); opening.forEach((p, i) => (i ? hole.lineTo(p.x, p.y) : hole.moveTo(p.x, p.y))); hole.closePath(); shape.holes.push(hole);
       }
     }
-    const wg = new THREE.ExtrudeGeometry(shape, { depth: D, bevelEnabled: false, curveSegments: 12 }); wg.translate(0, 0, -D);
-    bay.add(new THREE.Mesh(wg, [m.wall, m.reveal]));
-    const ext = new THREE.Mesh(new THREE.ShapeGeometry(shape, 12), extMat); ext.position.z = -D - 0.01; bay.add(ext);
+    if (art) {
+      const wg = new THREE.ExtrudeGeometry(shape, { depth: D, bevelEnabled: false, curveSegments: 12 }); wg.translate(0, 0, -D);
+      bay.add(new THREE.Mesh(wg, [m.wall, m.reveal]));
+      const ext = new THREE.Mesh(new THREE.ShapeGeometry(shape, 12), extMat!); ext.position.z = -D - 0.01; bay.add(ext);
+    }
     // colliders in chamber-local space
     const inv = new THREE.Vector3(0, 1, 0);
     if (kind !== 'door') {
@@ -113,7 +119,7 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
         c.position.copy(new THREE.Vector3(sg * (doorB + jw / 2 - 0.15), 1.5, -0.25).applyAxisAngle(inv, -th).add(bay.position)); c.rotation.y = -th; colliders.add(c);
       }
     }
-    if (opening) {
+    if (opening && art) {
       const inner = opening.slice(1, -1).map(p => new THREE.Vector3(p.x, p.y, 0.03));
       const b0 = kind === 'window' ? winBase : 0;
       inner.unshift(new THREE.Vector3(opening[0].x, b0, 0.03)); inner.push(new THREE.Vector3(opening[opening.length - 1].x, b0, 0.03));
@@ -121,17 +127,18 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
       const outer = inner.map(p => new THREE.Vector3(p.x * 1.1, p.y > b0 + 0.05 ? b0 + (p.y - b0) * 1.05 : p.y, 0.05));
       bay.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(outer, false, 'centripetal'), 96, 0.028, 6), m.giltSatin));
     }
-    if (kind === 'window') buildNouveauWindow(bay, m, winB, winSpring, winBase);
-    if (kind === 'door') {
+    if (kind === 'window' && art) buildNouveauWindow(bay, m, winB, winSpring, winBase);
+    if (kind === 'door' && art) {
       const sill = new THREE.Mesh(new THREE.BoxGeometry(doorB * 2 + 0.2, 0.04, D + 0.6), m.marble); sill.position.set(0, 0.01, -D / 2); bay.add(sill);
     }
     if (kind === 'shelf' || kind === 'panelShelf') {
-      const bc = buildBookcase(m, Math.min(3.5, HALF * 2 - 0.5), 5.6 * s, kind === 'panelShelf', o.sparseBooks ?? 0.4);
+      const bc = buildBookcase(m, Math.min(3.5, HALF * 2 - 0.5), 5.6 * s, kind === 'panelShelf', o.sparseBooks ?? 0.4, art);
       bc.group.position.z = 0.02; bay.add(bc.group);
       if (bc.mount) panelMounts.set(k, bc.mount);
     }
     if (kind === 'banner') {
       const mount = new THREE.Group(); mount.position.set(0, 3.4 * s, 0.06); bay.add(mount); bannerMounts.set(k, mount);
+      if (!art) continue;
       const fr = new THREE.Mesh(new THREE.BoxGeometry(HALF * 1.6 + 0.2, 4.1 * s, 0.05), m.walnutDark); fr.position.set(0, 3.4 * s, 0.03); bay.add(fr);
       const arc: THREE.Vector3[] = []; const bw = HALF * 0.8 + 0.1;
       for (let i = 0; i <= 24; i++) { const a = Math.PI - (i / 24) * Math.PI; arc.push(new THREE.Vector3(Math.cos(a) * bw, 5.45 * s + Math.sin(a) * 0.5, 0.08)); }
@@ -143,16 +150,17 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
   const capY = H - 1.6;
   for (let k = 0; k < SIDES; k++) {
     const th = ((k + 0.5) / SIDES) * Math.PI * 2;
-    const col = new THREE.Group(); col.position.copy(dir(th).multiplyScalar(CR - 0.5)); col.rotation.y = -th; group.add(col);
-    col.add(labradoriteColumn(m, capY, 0.3));
-    
+    const col = new THREE.Group(); col.position.copy(dir(th).multiplyScalar(CR - 0.5)); col.rotation.y = -th;
     const cc = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3, 10), new THREE.MeshBasicMaterial()); cc.position.copy(col.position).setY(1.5); colliders.add(cc);
+    if (!art) continue;
+    group.add(col);
+    col.add(labradoriteColumn(m, capY, 0.3));
     if (k % 2 === 0) {
       const inward = dir(th).multiplyScalar(-1);
       const sc = new THREE.Group(); sc.position.copy(col.position).addScaledVector(inward, 0.33).setY(2.7 * Math.max(0.85, s)); sc.lookAt(sc.position.clone().add(inward));
       const arm = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.018, 8, 24, Math.PI), m.gilt); arm.rotation.y = Math.PI / 2; arm.position.set(0, 0, 0.18); sc.add(arm);
       const tulip = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.62), m.emissiveWarm); tulip.scale.set(1, 1.4, 1); tulip.position.set(0, 0.2, 0.36); sc.add(tulip);
-      const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: warmGlow, color: 0xffd9a0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.5 }));
+      const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: warmGlow!, color: 0xffd9a0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.5 }));
       g.scale.setScalar(1.1); g.position.set(0, 0.25, 0.38); sc.add(g); glows.push(g);
       group.add(sc);
     }
@@ -160,6 +168,10 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
 
   // frieze + cornice
   const y0 = H - 0.6, y1 = H + 0.15;
+  const oculus = 0.17, domeR = CR + 0.05, domeS = 0.62, base = H + 0.25;
+  const ocR = domeR * Math.sin(oculus), ocY = base + domeR * Math.cos(oculus) * domeS;
+  let domeMat: THREE.MeshStandardMaterial | null = null;
+  if (art) {
   if (o.frieze && o.friezeFont) {
     const frz = T.frieze(o.friezeFont);
     const frGeo = new THREE.BufferGeometry(); const pos: number[] = [], uv: number[] = [], idx: number[] = [];
@@ -176,8 +188,7 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
   polyTube(A - 0.12, y0 - 0.03, 0.07, m.gilt); polyTube(A - 0.12, y1 + 0.03, 0.09, m.gilt); polyTube(A - 0.2, y1 + 0.17, 0.06, m.giltSatin);
 
   // dome (painted interior, patina exterior, oculus)
-  const oculus = 0.17, domeR = CR + 0.05, domeS = 0.62, base = H + 0.25;
-  const domeMat = new THREE.MeshStandardMaterial({ map: o.domeMural ?? null, emissiveMap: o.domeMural ?? null, emissive: 0xffffff, emissiveIntensity: o.domeMural ? 0.42 : 0, color: o.domeMural ? 0xffffff : 0x163530, roughness: 0.7, side: THREE.BackSide });
+  domeMat = new THREE.MeshStandardMaterial({ map: o.domeMural ?? null, emissiveMap: o.domeMural ?? null, emissive: 0xffffff, emissiveIntensity: o.domeMural ? 0.42 : 0, color: o.domeMural ? 0xffffff : 0x163530, roughness: 0.7, side: THREE.BackSide });
   const dome = new THREE.Mesh(new THREE.SphereGeometry(domeR, 72, 28, 0, Math.PI * 2, oculus, Math.PI / 2 - oculus), domeMat);
   dome.scale.y = domeS; dome.position.y = base; group.add(dome);
   for (let k = 0; k < SIDES; k++) {
@@ -185,7 +196,6 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
     for (let i = 0; i <= 20; i++) { const phi = oculus + (i / 20) * (Math.PI / 2 - oculus); pts.push(dir(th).multiplyScalar((domeR - 0.08) * Math.sin(phi)).setY(base + (domeR - 0.08) * Math.cos(phi) * domeS)); }
     group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.055, 6), m.gilt));
   }
-  const ocR = domeR * Math.sin(oculus), ocY = base + domeR * Math.cos(oculus) * domeS;
   const ocRing = new THREE.Mesh(new THREE.TorusGeometry(ocR, 0.11, 10, 48), m.gilt); ocRing.rotation.x = Math.PI / 2; ocRing.position.y = ocY; group.add(ocRing);
   const ocGlass = new THREE.Mesh(new THREE.CircleGeometry(ocR, 32), m.glass); ocGlass.rotation.x = Math.PI / 2; ocGlass.position.y = ocY + 0.05; group.add(ocGlass);
   const extDome = new THREE.Mesh(new THREE.SphereGeometry(domeR + 0.55, 48, 18, 0, Math.PI * 2, oculus * 0.95, Math.PI / 2 - oculus * 0.95), m.patina);
@@ -201,8 +211,14 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
   group.add(lantern);
   const drum = new THREE.Mesh(new THREE.CylinderGeometry(CR + 0.5, CR + 0.5, 0.9, SIDES, 1, true, -Math.PI / SIDES), m.stoneExt); drum.position.y = H + 0.25; group.add(drum);
 
+  }
+
   // chandelier
   if (o.chandelier) {
+    const cs = o.chandelier;
+    const chLight = new THREE.PointLight(0xffc88a, 70 * cs * cs, 0, 2); chLight.position.y = H - 1.8 - 0.6 * cs; group.add(chLight); lights.push(chLight);
+  }
+  if (o.chandelier && art) {
     const cs = o.chandelier;
     const ch = new THREE.Group(); ch.position.y = H - 1.8; ch.scale.setScalar(cs); group.add(ch);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(1.35, 0.045, 8, 72), m.gilt); ring.rotation.x = Math.PI / 2; ch.add(ring);
@@ -222,7 +238,6 @@ export function buildChamber(m: Mats, o: ChamberOpts): Chamber {
     }
     const chGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: warmGlow, color: 0xffc98a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.35 }));
     chGlow.scale.setScalar(4.2); chGlow.position.y = -0.45; ch.add(chGlow); glows.push(chGlow);
-    const chLight = new THREE.PointLight(0xffc88a, 70 * cs * cs, 0, 2); chLight.position.y = -0.6; ch.add(chLight); lights.push(chLight);
   }
   for (let i = 0; i < (o.fillLights ?? 0); i++) {
     const th = (i / (o.fillLights ?? 1)) * Math.PI * 2 + Math.PI / 3;
@@ -292,24 +307,27 @@ function buildNouveauWindow(bay: THREE.Group, m: Mats, b: number, spring: number
 }
 
 /** Walnut bookcase. With a panel it leaves an eye-level opening framed in gilt. Books fill only part of each shelf. */
-function buildBookcase(m: Mats, W: number, H: number, withPanel: boolean, fill: number) {
+function buildBookcase(m: Mats, W: number, H: number, withPanel: boolean, fill: number, art = true) {
   const group = new THREE.Group();
   const Dp = 0.46;
+  // panel opening: x in [-pw/2, pw/2], y in [py0, py1]
+  const pw = Math.min(W - 0.5, 2.3), py0 = 0.75, py1 = 2.55;
+  let mount: THREE.Object3D | undefined;
+  if (withPanel) {
+    mount = new THREE.Group(); mount.position.set(0, (py0 + py1) / 2, Dp - 0.02); mount.userData.keep = true; group.add(mount);
+    mount.userData.maxW = pw; mount.userData.maxH = py1 - py0;
+  }
+  if (!art) return { group, mount };
   const outline = new THREE.Shape();
   outline.moveTo(-W / 2, 0); outline.lineTo(W / 2, 0); outline.lineTo(W / 2, H - 0.9); outline.absellipse(0, H - 0.9, W / 2, 0.9, 0, Math.PI, false); outline.lineTo(-W / 2, 0);
   const back = new THREE.Mesh(new THREE.ShapeGeometry(outline, 16), m.walnutDark); back.position.z = 0.01; group.add(back);
   for (const sg of [-1, 1]) { const side = new THREE.Mesh(new THREE.BoxGeometry(0.08, H - 0.9, Dp), m.walnut); side.position.set(sg * (W / 2 - 0.04), (H - 0.9) / 2, Dp / 2); group.add(side); }
   const arc: THREE.Vector3[] = []; for (let i = 0; i <= 24; i++) { const a = (i / 24) * Math.PI; arc.push(new THREE.Vector3(Math.cos(a) * (W / 2), H - 0.9 + Math.sin(a) * 0.9, Dp)); }
   group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arc), 48, 0.05, 8), m.gilt));
-  // panel opening: x in [-pw/2, pw/2], y in [py0, py1]
-  const pw = Math.min(W - 0.5, 2.3), py0 = 0.75, py1 = 2.55;
-  let mount: THREE.Object3D | undefined;
   if (withPanel) {
-    mount = new THREE.Group(); mount.position.set(0, (py0 + py1) / 2, Dp - 0.02); mount.userData.keep = true; group.add(mount);
     const fr: THREE.Vector3[] = [new THREE.Vector3(-pw / 2 - 0.05, py0 - 0.05, Dp), new THREE.Vector3(pw / 2 + 0.05, py0 - 0.05, Dp), new THREE.Vector3(pw / 2 + 0.05, py1 + 0.05, Dp), new THREE.Vector3(-pw / 2 - 0.05, py1 + 0.05, Dp)];
     const path = new THREE.CurvePath<THREE.Vector3>(); for (let i = 0; i < 4; i++) path.add(new THREE.LineCurve3(fr[i], fr[(i + 1) % 4]));
     group.add(new THREE.Mesh(new THREE.TubeGeometry(path as any, 16, 0.035, 6, true), m.gilt));
-    mount.userData.maxW = pw; mount.userData.maxH = py1 - py0;
   }
   const shelves = Math.floor((H - 1.1) / 0.64) + 1;
   const books = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), m.leather, shelves * 30);
