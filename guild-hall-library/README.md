@@ -72,6 +72,14 @@ npm run preview      # serve dist/ locally
 
 Needs Node 20.19+.
 
+### Standalone build (no VIVERSE, no Photon)
+
+Build with no `VITE_VIVERSE_APP_ID` or `VITE_PHOTON_APP_ID` set: move `.env.local` aside if yours sets them. The result has no accounts and no multiplayer or voice, and offers **Preview a crowd**. Neither SDK is downloaded.
+
+Serve `dist/` from any static server, for example `npm run preview` or `python3 -m http.server` inside `dist/`. Opening `index.html` directly from disk does not work. The VIVERSE zip from the [GitHub Action](../.github/workflows/guild-hall-viverse.yml) (Actions → a run → Artifacts) is currently a standalone build too, because the repo sets no App IDs; unzip it and serve the folder the same way.
+
+VIVERSE can still be switched on after the build, by filling in `viverseAppId` in `guildhall.config.json` or by adding `?viverseApp=<id>` to the URL.
+
 ### Configuration (all optional)
 
 | Variable | What it turns on |
