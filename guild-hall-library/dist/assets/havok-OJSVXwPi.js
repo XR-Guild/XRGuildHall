@@ -1,1 +1,0 @@
-async function e(){throw Error(`Havok physics is not bundled in this build.`)}export{e as default};
