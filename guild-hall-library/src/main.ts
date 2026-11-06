@@ -166,8 +166,8 @@ async function main() {
   const fade = document.getElementById('fade')!;
   const inward = (k: number, d: number) => lib.bayWorld(k, d);
   const TOURS = [
-    { id: 'hall', name: 'Arrival', hint: 'The Guild Hall, by the welcome desk', pos: SPAWN.pos, look: SPAWN.look },
-    { id: 'desk', name: 'Join the Guild', hint: 'Welcome desk and events board', pos: DESK.pos.clone().multiplyScalar(0.62), look: DESK.pos.clone().setY(1.7) },
+    { id: 'hall', name: 'Arrival', hint: 'The Guild Hall', pos: SPAWN.pos, look: SPAWN.look },
+    { id: 'desk', name: 'Join the Guild', hint: 'The welcome desk at the back of the hall', pos: DESK.pos.clone().add(V(Math.sin(DESK.rotY), 0, Math.cos(DESK.rotY)).multiplyScalar(3)), look: DESK.pos.clone().setY(1.7) },
     { id: 'stage', name: 'Stage', hint: 'Stand on the stage (up to 5 people)', pos: STAGE.center.clone().setY(STAGE.h).add(V(0, 0, 1.0)), look: V(0, 1.5, 6) },
     { id: 'colonnade', name: 'Colonnade', hint: 'The labradorite walk to the Library', pos: PATH_CURVE.getPointAt(0.35).setY(0), look: PATH_CURVE.getPointAt(0.9).setY(1.6) },
     { id: 'library', name: 'Library', hint: 'Arrive beside the Connect table', pos: LIB.center.clone().add(V(2.6, 0, 1.9)), look: inward(2, 0).setY(1.6) },

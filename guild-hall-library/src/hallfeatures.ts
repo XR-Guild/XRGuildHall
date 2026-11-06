@@ -58,7 +58,7 @@ export function buildStage(m: Mats, art = true) {
 /** A curved welcome desk with the Join panel, a QR code, and an xrguild.org plaque. `art: false` keeps only the panel, plaque and light. */
 export function buildWelcomeDesk(m: Mats, fonts: Fonts, onLink: (url: string) => void, isXR: () => boolean, art = true) {
   const group = new THREE.Group(); group.name = 'WelcomeDesk'; group.userData.keep = true;
-  group.position.copy(DESK.pos); group.lookAt(DESK.faceTo.x, 0, DESK.faceTo.z);
+  group.position.copy(DESK.pos); group.rotation.y = DESK.rotY;
   const colliders = new THREE.Group();
   // desk body: an arc of walnut with a labradorite top
   const arc = (r0: number, r1: number, a0: number, a1: number) => { const s = new THREE.Shape(); s.absarc(0, 0, r1, a0, a1, false); s.absarc(0, 0, r0, a1, a0, true); return s; };
