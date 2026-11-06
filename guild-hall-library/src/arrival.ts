@@ -52,7 +52,7 @@ export function arrivalSeats(root: THREE.Object3D): Seat[] {
 }
 
 /** Scale a texture down to at most `max` px on its long side. */
-async function capTexture(t: THREE.Texture, max: number) {
+export async function capTexture(t: THREE.Texture, max: number) {
   const img = t.image as ImageBitmap | HTMLImageElement | undefined;
   if (!img?.width || Math.max(img.width, img.height) <= max) return;
   const k = max / Math.max(img.width, img.height);
@@ -70,7 +70,7 @@ async function capTexture(t: THREE.Texture, max: number) {
   t.needsUpdate = true;
 }
 
-function texturesOf(root: THREE.Object3D) {
+export function texturesOf(root: THREE.Object3D) {
   const seen = new Set<THREE.Texture>();
   root.traverse(o => {
     for (const m of ([] as THREE.Material[]).concat((o as THREE.Mesh).material ?? []))

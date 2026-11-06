@@ -22,7 +22,7 @@ import { XRMenu } from './xrmenu';
 import { XRLightPool } from './xrlights';
 import { store } from './store';
 import { bakeStatic } from './bake';
-import { loadArrival, arrivalSeats } from './arrival';
+import { loadArrival, arrivalSeats, texturesOf } from './arrival';
 import { HALL, LIB, STAGE, DESK, SPAWN, POOL, BENCHES, PATH_CURVE, V, zoneOf, outOfPool, type Zone } from './site';
 import { Presence } from './net/presence';
 import { startTicker, holdWakeLock } from './net/keepalive';
@@ -239,6 +239,7 @@ async function main() {
   // ---- people ----
   const presence = new Presence('Guest'); presenceRef = presence;
   const avatars = new Avatars(FONTS); scene.add(avatars.group);
+  avatars.prepare = async root => { await renderer.compileAsync(root, camera, scene); for (const t of texturesOf(root)) renderer.initTexture(t); };
   let voice: PhotonSession | null = null;
   let sim: SimTransport | null = null;
 
