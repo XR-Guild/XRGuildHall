@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 
-// Aurora night sky rendered into a cube render target, one face per frame,
+// Aurora night sky rendered into cube render targets, one face per frame,
 // so the (fairly expensive) aurora shader never runs at full XR resolution.
-// The cube is used as scene.background and as the reflecting pool's env map.
 
 const vert = /* glsl */ `
 varying vec3 vDir;
@@ -97,23 +96,62 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
 }`;
 
+/** Shows keyframe `uA` fading into `uB`; with uW = 1 it copies `uB`. Drawn at the far plane, wherever nothing else is. */
+const blendVert = /* glsl */ `
+varying vec3 vDir;
+void main(){ vDir = position; vec4 p = projectionMatrix * mat4(mat3(viewMatrix)) * vec4(position, 1.0); gl_Position = p.xyww; }`;
+const blendFrag = /* glsl */ `
+varying vec3 vDir;
+uniform samplerCube uA, uB;
+uniform float uW;
+void main(){
+  gl_FragColor = vec4(mix(textureCube(uA, vDir).rgb, textureCube(uB, vDir).rgb, uW), 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`;
+
+const cubeRT = (size: number, mips: boolean) => {
+  const rt = new THREE.WebGLCubeRenderTarget(size, { type: THREE.HalfFloatType, generateMipmaps: mips, minFilter: mips ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter });
+  rt.texture.colorSpace = THREE.LinearSRGBColorSpace;
+  return rt;
+};
+
+/**
+ * The aurora is drawn a face at a time into a hidden keyframe cube; finished keyframes are cross-faded on screen
+ * (`backdrop`), so a half-updated cube never shows a seam and the motion stays smooth however slowly faces are drawn.
+ * `rt` holds the latest finished keyframe, for reflections.
+ */
 export class AuroraSky {
   rt: THREE.WebGLCubeRenderTarget;
+  backdrop: THREE.Mesh;
+  private keys: [THREE.WebGLCubeRenderTarget, THREE.WebGLCubeRenderTarget, THREE.WebGLCubeRenderTarget];
   private scene = new THREE.Scene();
+  private copyScene = new THREE.Scene();
   private cams: THREE.PerspectiveCamera[] = [];
   private face = 0;
+  private cycleFrame = 0;
+  private every = 1;
   mat: THREE.ShaderMaterial;
+  private show: THREE.ShaderMaterial;
   animate = true;
   private frame = 0;
 
   constructor(private renderer: THREE.WebGLRenderer, size = 512) {
-    this.rt = new THREE.WebGLCubeRenderTarget(size, { type: THREE.HalfFloatType, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
-    this.rt.texture.colorSpace = THREE.LinearSRGBColorSpace;
+    this.rt = cubeRT(size, true);
+    this.keys = [cubeRT(size, false), cubeRT(size, false), cubeRT(size, false)];
     this.mat = new THREE.ShaderMaterial({
       vertexShader: vert, fragmentShader: frag, side: THREE.BackSide, depthWrite: false,
       uniforms: { uTime: { value: 0 }, uIntensity: { value: 1.0 }, uMode: { value: 0 }, uImage: { value: null as THREE.Texture | null }, uRot: { value: Math.PI }, uTwinkle: { value: 0 } },
     });
     this.scene.add(new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), this.mat));
+    const blend = (w: number) => new THREE.ShaderMaterial({
+      vertexShader: blendVert, fragmentShader: blendFrag, side: THREE.BackSide, depthWrite: false,
+      uniforms: { uA: { value: this.keys[0].texture }, uB: { value: this.keys[1].texture }, uW: { value: w } },
+    });
+    this.show = blend(0);
+    this.backdrop = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), this.show);
+    this.backdrop.name = 'Sky'; this.backdrop.frustumCulled = false; this.backdrop.renderOrder = 1e6;
+    this.copyScene.add(new THREE.Mesh(this.backdrop.geometry, blend(1)));
     const cube = new THREE.CubeCamera(0.1, 100, this.rt);
     // copy the exact camera setup CubeCamera uses (handles coordinate system)
     cube.coordinateSystem = renderer.coordinateSystem;
@@ -125,25 +163,32 @@ export class AuroraSky {
   }
   private cube: THREE.CubeCamera;
 
-  /** Render every face now (used at startup). */
+  /** Render every face now (used at startup and when the sky changes): no fade, and reflections updated. */
   renderAll(time = 0) {
     this.mat.uniforms.uTime.value = time;
-    for (let f = 0; f < 6; f++) this.renderFace(f);
+    for (const k of this.keys) for (let f = 0; f < 6; f++) this.renderFace(this.scene, k, f);
+    this.face = 0; this.cycleFrame = 0; this.show.uniforms.uW.value = 0;
+    this.copyToReflections();
   }
 
-  private renderFace(f: number) {
+  private renderFace(scene: THREE.Scene, target: THREE.WebGLCubeRenderTarget, f: number) {
     const r = this.renderer;
     const prevRT = r.getRenderTarget();
     const prevXR = r.xr.enabled;
     const prevTM = r.toneMapping;
     r.xr.enabled = false;
     r.toneMapping = THREE.NoToneMapping;
-    this.rt.texture.generateMipmaps = f === 5;
-    r.setRenderTarget(this.rt, f);
-    r.render(this.scene, this.cams[f]);
+    target.texture.generateMipmaps = target === this.rt && f === 5;
+    r.setRenderTarget(target, f);
+    r.render(scene, this.cams[f]);
     r.setRenderTarget(prevRT);
     r.xr.enabled = prevXR;
     r.toneMapping = prevTM;
+  }
+
+  private copyToReflections() {
+    (this.copyScene.children[0] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>).material.uniforms.uB.value = this.keys[1].texture;
+    for (let f = 0; f < 6; f++) this.renderFace(this.copyScene, this.rt, f);
   }
 
   /** Switch to an equirectangular image sky (null = back to the procedural aurora). Re-renders all six faces. */
@@ -156,13 +201,22 @@ export class AuroraSky {
   /** An image sky without twinkle never changes, so it costs nothing per frame. */
   private still = false;
 
-  /** One face per call; call once per frame. `every` throttles in XR. */
+  /** Call once per frame; one keyframe face is drawn every `every` frames, so a keyframe takes 6 × `every` frames. */
   update(time: number, every = 1) {
     if (!this.animate || this.still) return;
-    this.frame++;
-    if (this.frame % every) return;
+    // a new pace takes effect at the next keyframe, so the fade never jumps
+    if (this.face === 0 && this.cycleFrame === 0) this.every = every;
+    this.frame++; this.cycleFrame++;
+    this.show.uniforms.uW.value = Math.min(1, this.cycleFrame / (6 * this.every));
+    if (this.frame % this.every) return;
+    const [a, b, c] = this.keys;
     if (this.face === 0) this.mat.uniforms.uTime.value = time;
-    this.renderFace(this.face);
-    this.face = (this.face + 1) % 6;
+    this.renderFace(this.scene, c, this.face);
+    if (++this.face < 6) return;
+    // c is finished: fade from b to c next, and draw the following keyframe into a
+    this.keys = [b, c, a];
+    this.show.uniforms.uA.value = b.texture; this.show.uniforms.uB.value = c.texture; this.show.uniforms.uW.value = 0;
+    this.face = 0; this.cycleFrame = 0;
+    this.copyToReflections();
   }
 }

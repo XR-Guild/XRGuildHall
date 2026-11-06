@@ -126,7 +126,7 @@ async function main() {
   await step(0.3, 'Raising the aurora…');
   const sky = new AuroraSky(renderer, isMobile ? 384 : 512);
   sky.renderAll(8);
-  scene.background = sky.rt.texture;
+  scene.add(sky.backdrop);
 
   // The world's art is Evo's Arrival.space build (src/arrival.ts). The procedural builders add only what that art
   // doesn't carry: colliders, lights, media and panel mounts, click targets, the birds and the garden sound.
