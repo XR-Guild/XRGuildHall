@@ -19,6 +19,7 @@ import { initUI, lineageCard } from './ui';
 import { addJoystick } from './joystick';
 import { initSocial } from './social';
 import { XRMenu } from './xrmenu';
+import { XRLightPool } from './xrlights';
 import { store } from './store';
 import { bakeStatic } from './bake';
 import { loadArrival, arrivalSeats } from './arrival';
@@ -98,6 +99,9 @@ async function main() {
   // Phones overheat drawing Evo's materials at the display's full refresh rate (often 90-120 Hz), so they get 30 fps outside XR.
   const isMobile = matchMedia('(hover: none)').matches;
   if (isMobile) capFrameRate(30);
+  // standalone headsets share a phone-class GPU and memory: full-size art textures (about 580 MB) and a 512 px sky cost frames there
+  const isHeadset = /OculusBrowser|Quest|Pico|Wolvic/i.test(navigator.userAgent);
+  const lowGPU = isMobile || isHeadset;
   const world = await World.create(container, {
     xr: { sessionMode: SessionMode.ImmersiveVR, offer: 'none', features: { handTracking: true } },
     render: { fov: 62, near: 0.05, far: 700 },
@@ -124,7 +128,7 @@ async function main() {
   const m = makeMats();
 
   await step(0.3, 'Raising the aurora…');
-  const sky = new AuroraSky(renderer, isMobile ? 384 : 512);
+  const sky = new AuroraSky(renderer, lowGPU ? 384 : 512);
   sky.renderAll(8);
   scene.add(sky.backdrop);
 
@@ -193,7 +197,7 @@ async function main() {
   }
   // ---- Evo's Arrival.space art: the world as built in Arrival, with its own collision meshes ----
   await step(0.62, 'Planting the garden…');
-  const arrival = await loadArrival(f => { loadBar.style.width = `${Math.round((0.62 + f * 0.26) * 100)}%`; }, isMobile ? 1024 : Infinity);
+  const arrival = await loadArrival(f => { loadBar.style.width = `${Math.round((0.62 + f * 0.26) * 100)}%`; }, lowGPU ? 1024 : Infinity);
   if (!arrival) throw new Error('The world art (arrival/manifest.json) did not load.');
   scene.add(arrival.root);
   world.createTransformEntity(arrival.colliders, { persistent: true }).addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
@@ -335,7 +339,8 @@ async function main() {
   // ---- motion + quality settings ----
   let reduced = false;
   const glows = [...hall.glows, ...lib.glows, ...colonnade.glows, ...garden.glows, ...libIn.glows];
-  const allLights = [...hall.lights, ...lib.lights, ...colonnade.lights];
+  const allLights: THREE.Light[] = [...hall.lights, ...lib.lights, ...colonnade.lights];
+  const xrLights = new XRLightPool(scene, 6);
 
   // ---- XR session hooks ----
   renderer.xr.addEventListener('sessionstart', () => {
@@ -345,9 +350,12 @@ async function main() {
     s.addEventListener('select', (e: XRInputSourceEvent) => { if (!xrMenu.endDrag(hand(e))) inter.selectXR(hand(e)); });
     s.addEventListener('selectend', (e: XRInputSourceEvent) => xrMenu.endDrag(hand(e)));
     xrMenu.sessionStart();
+    xrLights.start();
     try { renderer.xr.setFoveation(0.6); } catch { /* optional */ }
+    // the GPU needs about 10 ms a frame here: 72 Hz (13.9 ms) holds steady where 90 Hz (11.1 ms) keeps missing frames
+    if (s.supportedFrameRates?.includes(72)) s.updateTargetFrameRate?.(72).catch(() => { /* keep the default */ });
   });
-  renderer.xr.addEventListener('sessionend', () => { xrMenu.sessionEnd(); camera.position.y = seat ? 1.2 : 1.7; });
+  renderer.xr.addEventListener('sessionend', () => { xrMenu.sessionEnd(); xrLights.stop(); camera.position.y = seat ? 1.2 : 1.7; });
 
   // ---- UI ----
   const ui = initUI({
@@ -529,7 +537,7 @@ async function main() {
         for (const g of glows) g.material.opacity = (g.userData.base ??= g.material.opacity) * f;
       }
       // lights: only the chamber you're in (plus the walk) stays lit in a headset
-      if (xr) for (const l of allLights) l.visible = (hall.lights.includes(l as any) && zone === 'hall') || (lib.lights.includes(l as any) && zone === 'library') || colonnade.lights.includes(l as any);
+      if (xr) xrLights.update(pp, l => !allLights.includes(l) || (hall.lights.includes(l) && zone === 'hall') || (lib.lights.includes(l) && zone === 'library') || colonnade.lights.includes(l));
       // presence
       camera.getWorldQuaternion(tmpQ); fwd.set(0, 0, -1).applyQuaternion(tmpQ);
       presence.tick(pp, Math.atan2(fwd.x, fwd.z), performance.now());
@@ -552,6 +560,11 @@ async function main() {
 
   world.setAuthoredPlayerPosition(SPAWN.pos);
   setTimeout(() => world.setAuthoredPlayerPosition(SPAWN.pos), 600);
+  if (xrSupported) {
+    // compile the headset's lighting now, behind the loading screen, rather than as the session starts
+    await step(0.97, 'Lighting the lamps…');
+    xrLights.start(); await renderer.compileAsync(scene, camera); xrLights.stop();
+  }
   await step(1, 'Welcome to the Guild Hall');
   document.getElementById('loading')!.classList.add('done');
   if (!SIM) setTimeout(social.welcome, 1400);
