@@ -3,6 +3,7 @@ import type { Mats } from './mats';
 import type { RoomState, ScreenSource } from './net/types';
 import { TAGLINE } from './hallfeatures';
 import { workerTimers } from './net/keepalive';
+import { ListenerPose, placePanner } from './spatialaudio';
 
 /**
  * Media screens in the Guild Hall (V3).
@@ -26,7 +27,7 @@ interface Screen {
   idle: THREE.CanvasTexture; w: number; h: number;
   src: ScreenSource; video: HTMLVideoElement | null; tex: THREE.VideoTexture | null; hls: any;
   liveKey: string; // which LiveKit track is attached
-  audio: { src: AudioNode; pan: PannerNode; gain: GainNode } | null;
+  audio: { src: AudioNode; pan: PannerNode; gain: GainNode; at: THREE.Vector3; level: number } | null;
 }
 export interface MediaOptions { tokenUrl: string; room: string; identity: () => string; name: () => string; logoUrl: string; fonts: { display: string; body: string; mono: string } }
 
@@ -55,6 +56,8 @@ function idleTexture(o: MediaOptions, logo: HTMLImageElement | null, label: stri
 export class MediaScreens {
   screens = new Map<ScreenId, Screen>();
   ctx: AudioContext | null = null;
+  private listenerPose = new ListenerPose();
+  private wp = new THREE.Vector3();
   soundOn = true;
   private positional = false;
   private logo: HTMLImageElement | null = null;
@@ -105,7 +108,7 @@ export class MediaScreens {
   }
   setSound(on: boolean) {
     this.soundOn = on;
-    for (const s of this.screens.values()) { if (s.audio) s.audio.gain.gain.value = on ? 1 : 0; if (s.video && !on) s.video.muted = true; }
+    for (const s of this.screens.values()) { if (s.audio) s.audio.gain.gain.value = s.audio.level = on ? 1 : 0; if (s.video && !on) s.video.muted = true; }
     if (on) this.unlockAudio();
   }
 
@@ -176,7 +179,7 @@ export class MediaScreens {
     if (s.liveKey && [...this.screens.values()].some(o => o !== s && o.audio && o.liveKey === s.liveKey)) return;
     const pan = new PannerNode(this.ctx, { panningModel: 'HRTF', distanceModel: 'inverse', refDistance: 6, rolloffFactor: 0.8, maxDistance: 60 });
     const gain = new GainNode(this.ctx, { gain: this.soundOn ? 1 : 0 });
-    s.audio = { src, pan, gain };
+    s.audio = { src, pan, gain, at: new THREE.Vector3(NaN, NaN, NaN), level: gain.gain.value };
     this.routeAudio(s);
   }
   private routeAudio(s: Screen) {
@@ -188,17 +191,15 @@ export class MediaScreens {
   /** Per frame: listener pose, and in room mode a softer level outside the hall. */
   update(listener: THREE.Object3D, inHall: boolean) {
     if (!this.ctx) return;
-    const p = new THREE.Vector3(), q = new THREE.Quaternion(), f = new THREE.Vector3(0, 0, -1), u = new THREE.Vector3(0, 1, 0);
-    listener.getWorldPosition(p); listener.getWorldQuaternion(q); f.applyQuaternion(q); u.applyQuaternion(q);
-    const L = this.ctx.listener, t = this.ctx.currentTime;
-    if (L.positionX) { L.positionX.setTargetAtTime(p.x, t, 0.05); L.positionY.setTargetAtTime(p.y, t, 0.05); L.positionZ.setTargetAtTime(p.z, t, 0.05); L.forwardX.value = f.x; L.forwardY.value = f.y; L.forwardZ.value = f.z; L.upX.value = u.x; L.upY.value = u.y; L.upZ.value = u.z; }
-    const wp = new THREE.Vector3();
-    for (const s of this.screens.values()) {
-      if (!s.audio) continue;
-      s.mesh.getWorldPosition(wp);
-      s.audio.pan.positionX.value = wp.x; s.audio.pan.positionY.value = wp.y; s.audio.pan.positionZ.value = wp.z;
-      const target = !this.soundOn ? 0 : this.positional ? 1 : inHall ? 1 : 0.25;
-      s.audio.gain.gain.setTargetAtTime(target, t, 0.2);
+    const playing = [...this.screens.values()].filter(s => s.audio);
+    if (!playing.length) return;
+    this.listenerPose.write(this.ctx, listener);
+    const target = !this.soundOn ? 0 : this.positional ? 1 : inHall ? 1 : 0.25;
+    for (const s of playing) {
+      const a = s.audio!;
+      s.mesh.getWorldPosition(this.wp);
+      placePanner(a.pan, a.at, this.wp.x, this.wp.y, this.wp.z);
+      if (a.level !== target) { a.level = target; a.gain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.2); }
     }
   }
 
