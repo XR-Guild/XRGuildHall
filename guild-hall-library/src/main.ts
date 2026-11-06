@@ -31,7 +31,7 @@ import { Avatars } from './avatars';
 import type { PhotonSession } from './net/photon';
 import { CONFIG, loadConfig } from './config';
 import { Room, defaultState } from './room';
-import { initAdmin } from './admin';
+import { initAdmin, AUDIO_MODES } from './admin';
 import { MediaScreens } from './media';
 import { makeSkySwitcher, savedSky, type SkyId } from './skies';
 import { buildArrivalAdds } from './arrivaladds';
@@ -370,9 +370,29 @@ async function main() {
 
   // ---- room settings shared by everyone (seating, audio mode, spotlight, screens): src/room.ts ----
   let adminKey = '';
+  /** List mode: this visitor's VIVERSE account ID, set when they join through VIVERSE. */
+  let myAccount = '';
+  const listMode = CONFIG.adminMode === 'list';
+  const listedAdmin = (acct: unknown) => typeof acct === 'string' && acct ? CONFIG.adminAccounts.find(a => a.id === acct) : undefined;
+  const isListed = (acct: unknown) => !!listedAdmin(acct);
   /** On VIVERSE, room controls ride on Photon events when voice is up: Photon stamps the sender, VIVERSE messages don't. */
-  const canAdmin = () => !presence.connected || (voice ? voice.isHost() : presence.isHost());
-  const sendControl = (c: Control) => { if (voice) voice.sendControl(c); else presence.sendControl(c); };
+  const isHost = () => voice ? voice.isHost() : presence.isHost();
+  // the offline simulated crowd has no VIVERSE accounts, so list mode would otherwise lock you out of trying settings
+  const canAdmin = () => !presence.connected || presence.transport?.kind === 'sim' || (listMode ? isListed(myAccount) : isHost());
+  // in list mode the master client also answers newcomers, so the settings survive the admins leaving
+  const canAnswer = () => canAdmin() || (listMode && isHost());
+  const sendControl = (c: Control) => {
+    if (c.type !== 'hello' && !canAdmin() && !(c.type === 'state' && canAnswer())) return;
+    const out: Control = listMode && myAccount ? { ...c, acct: myAccount } : c;
+    if (voice) voice.sendControl(out); else presence.sendControl(out);
+  };
+  /** Should this control from the network be applied? `hello` is from anyone; the rest only from an admin. */
+  const trusted = (c: Control, fromHost: boolean) => {
+    if (!c || typeof c !== 'object') return false;
+    if (c.type === 'hello') return true;
+    if (listMode) return isListed(c.acct) || (fromHost && c.type === 'state');
+    return fromHost;
+  };
   const applyRoom = (st: RoomState, prev: RoomState, by: 'me' | 'remote') => {
     for (const z of ['hall', 'library'] as const) {
       if (st.seating[z] === prev.seating[z] && st.v) continue;
@@ -381,12 +401,12 @@ async function main() {
       if (by === 'remote' && st.seating[z] !== prev.seating[z]) social?.sys(`A Guild admin changed the ${z === 'hall' ? 'hall' : 'library'} seating.`);
     }
     if (voice) { voice.setAudioMode(st.audio); voice.spotlight = new Set(st.spotlight); }
-    if (by === 'remote' && st.audio !== prev.audio) social?.sys(st.audio === 'spotlight' ? 'Stage spotlight is on: the stage is heard by everyone, and guests can whisper to their neighbours.' : st.audio === 'event' ? 'Large group audio is on: you hear the people nearest you, softer.' : 'Conversation audio is back on.');
+    if (by === 'remote' && st.audio !== prev.audio) social?.sys(AUDIO_MODES[st.audio].notice);
     if (by === 'remote' && st.spotlight.includes(presence.self.id) && !prev.spotlight.includes(presence.self.id)) social?.sys('A Guild admin put you in the spotlight: everyone can hear you. Press Mic to talk.');
     media.apply(st);
   };
   const room = new Room(defaultState(CONFIG.defaults), {
-    canAdmin, connected: () => presence.connected, send: sendControl, apply: applyRoom,
+    canAdmin, canAnswer, connected: () => presence.connected, send: sendControl, apply: applyRoom,
     onMuteHall: () => { if (voice?.micOn && presence.self.zone === 'hall' && !presence.self.onStage && !room.state.spotlight.includes(presence.self.id)) { voice.setMic(false).then(() => social.drawDock()); social.sys('A Guild admin asked the hall to mute. Your mic is off.'); } },
   });
   applyRoom(room.state, defaultState(CONFIG.defaults), 'me');
@@ -415,6 +435,7 @@ async function main() {
         const PEV = (await import('./net/photon')).EV;
         const id = await viverseIdentity(VIVERSE_APP_ID, true);
         if (!id) throw new Error('Taking you to the VIVERSE login…');
+        myAccount = id.accountId || '';
         if (!name) presence.self.name = id.name;
         presence.self.avatar = id.vrmUrl;
         avatars.fetchAvatar = url => id.avatarClient.getAvatarFileWithSDK(url);
@@ -426,7 +447,7 @@ async function main() {
           const v: PhotonSession = voice = new PhotonSession(PHOTON_APP_ID, vt.voiceRoom, PHOTON_REGION, photonOpts());
           v.setAudioMode(room.state.audio); v.spotlight = new Set(room.state.spotlight);
           // room controls over Photon (verified sender); VIVERSE `general` controls are ignored while voice is up
-          v.onEvent = (code, payload, from, fromHost) => { if (code === PEV.ctl && (fromHost || payload?.type === 'hello')) room.receive(payload as Control); void from; };
+          v.onEvent = (code, payload, _from, fromHost) => { if (code === PEV.ctl && trusted(payload as Control, fromHost)) room.receive(payload as Control); };
           // presence owns the dock status on VIVERSE, so voice drops and recoveries are reported in chat
           v.onStatus = () => social.drawDock();
           v.onLink = up => social.sys(up ? 'Voice is back.' : 'Voice dropped. Reconnecting…');
@@ -461,17 +482,30 @@ async function main() {
   presence.listeners.add(() => { if (!presence.connected && voice) { voice.disconnect(); voice = null; } });
   // controls from the presence transport: Photon (verified) off VIVERSE, VIVERSE `general` otherwise.
   // On VIVERSE with voice up, only `hello` is taken from VIVERSE; admin controls come through Photon (see above).
-  presence.onControl = c => { if (presence.transport?.kind === 'viverse' && voice && c.type !== 'hello') return; room.receive(c); };
+  // Exception: list mode trusts the account ID, self-declared on either channel, so a listed admin whose voice failed still gets through.
+  presence.onControl = (c, _from, fromHost) => {
+    if (presence.transport?.kind === 'viverse' && voice && c?.type !== 'hello' && !(listMode && isListed(c?.acct))) return;
+    if (trusted(c, fromHost)) room.receive(c);
+  };
   // ask whoever administers the room for the current settings once we're in
   let wasConnected = false;
   presence.listeners.add(() => {
-    if (presence.connected && !wasConnected) { wasConnected = true; setTimeout(() => room.hello(), 1500); }
+    if (presence.connected && !wasConnected) {
+      wasConnected = true;
+      // a guest's solo changes carry a newer version: kept, they'd override the admins' settings and, as master, be handed to newcomers
+      if (listMode && !canAdmin()) room.reset(defaultState(CONFIG.defaults));
+      setTimeout(() => room.hello(), 1500);
+    }
     if (!presence.connected && wasConnected) { wasConnected = false; }
   });
   function photonOpts() { return { maxPlayers: CONFIG.photonMaxPlayers, verified: CONFIG.adminMode === 'verified', adminKey }; }
   const roleText = () => {
     if (!presence.connected) return 'You are on your own, so you can try every setting here. Changes are just for you until you join others.';
-    const who = voice?.isHost() ?? presence.isHost();
+    if (listMode) {
+      if (canAdmin()) { const me = listedAdmin(myAccount); return `You are a Guild admin${me?.name ? ` (${me.name})` : ''}. Changes apply to everyone in this room.`; }
+      return myAccount ? `Guild admins set these. You can see the current settings below. Your VIVERSE account ID is ${myAccount}.` : 'Guild admins set these. You can see the current settings below.';
+    }
+    const who = isHost();
     if (CONFIG.adminMode === 'verified') return who ? 'You are signed in as a Guild admin. Changes apply to everyone in this room.' : 'Only Guild admins can change room settings. Sign in with your admin passphrase.';
     return who ? 'You are the host of this room (the first person in). Changes apply to everyone. Turn on verified admins for public events: docs/ADMIN.md.' : 'The host of this room (the first person in) sets these. You can see the current settings below.';
   };

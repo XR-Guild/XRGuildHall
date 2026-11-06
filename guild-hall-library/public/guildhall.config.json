@@ -3,7 +3,13 @@
   "photonAppId": "",
   "photonRegion": "",
   "photonMaxPlayers": 100,
-  "adminMode": "",
+  "_adminComment": "adminMode: host (the first person in), verified (proxy/photon-auth-worker.js) or list (the VIVERSE account IDs in adminAccounts; name is a label for people reading this file). See docs/ADMIN.md.",
+  "adminMode": "list",
+  "adminAccounts": [
+    { "name": "Patrick", "id": "c65694f5-4c54-4e65-ac5c-513924c297d1" },
+    { "name": "Evo", "id": "851eb953-3c98-4951-8613-bb20bfa91698" },
+    { "name": "Nick", "id": "22bfb6b2-30a6-4d56-bf1e-1188f0d4969c" }
+  ],
   "viverseAppId": "",
   "viverseRoomCap": 0,
   "media": {

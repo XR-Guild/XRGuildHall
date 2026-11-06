@@ -24,7 +24,7 @@ export class Presence {
   transport: Transport | null = null;
   status = 'Solo';
   listeners = new Set<() => void>();
-  onControl: ((c: Control, from: string) => void) | null = null;
+  onControl: ((c: Control, from: string, fromHost: boolean) => void) | null = null;
   private lastSend = 0; private lastSent = new THREE.Vector3(1e9, 0, 0); private lastRy = 0; private lastMeta = '';
   private lastSmooth = performance.now();
 
@@ -42,7 +42,7 @@ export class Presence {
       onState: s => this.receive(s),
       onLeave: id => { this.peers.delete(id); this.emit(); },
       onChat: m => this.receiveChat(m),
-      onControl: (c, from) => this.onControl?.(c, from),
+      onControl: (c, from, fromHost) => this.onControl?.(c, from, fromHost),
       onStatus: text => { this.status = text; this.emit(); },
     });
     this.lastSend = 0; this.lastMeta = '';
