@@ -52,7 +52,7 @@ export function arrivalSeats(root: THREE.Object3D): Seat[] {
 }
 
 /** Scale a texture down to at most `max` px on its long side. */
-async function capTexture(t: THREE.Texture, max: number) {
+export async function capTexture(t: THREE.Texture, max: number) {
   const img = t.image as ImageBitmap | HTMLImageElement | undefined;
   if (!img?.width || Math.max(img.width, img.height) <= max) return;
   const k = max / Math.max(img.width, img.height);
@@ -70,7 +70,7 @@ async function capTexture(t: THREE.Texture, max: number) {
   t.needsUpdate = true;
 }
 
-function texturesOf(root: THREE.Object3D) {
+export function texturesOf(root: THREE.Object3D) {
   const seen = new Set<THREE.Texture>();
   root.traverse(o => {
     for (const m of ([] as THREE.Material[]).concat((o as THREE.Mesh).material ?? []))
@@ -139,6 +139,8 @@ export async function loadArrival(onProgress?: (f: number) => void, maxTexture =
  *   floated in the Guild Hall instead of over their projectors.
  * - The seal hunt's glow rings are its hover highlights; baked, they stay lit as solid donuts on the shelves.
  * - The pool's collision box runs out to the coping; people should be able to walk the coping up to the water.
+ * - The hall's labradorite inlay lies exactly on its inlay floor, and the colonnade walk 1.5 mm above the lawn, so they
+ *   z-fought (in a headset, in one eye at a time). Depth offsets settle which is on top without moving either.
  */
 function correctArt(root: THREE.Object3D, colliders: THREE.Object3D) {
   const meshesIn = (item: string, re: RegExp) => {
@@ -146,7 +148,8 @@ function correctArt(root: THREE.Object3D, colliders: THREE.Object3D) {
     root.getObjectByName(item)?.traverse(o => { if ((o as THREE.Mesh).isMesh && re.test(o.name)) found.push(o as THREE.Mesh); });
     return found;
   };
-  for (const m of meshesIn('lawn', /./)) m.renderOrder = -2;
+  for (const m of meshesIn('lawn', /./)) { m.renderOrder = -2; offsetDepth(m, 1); }
+  for (const m of meshesIn('guild-hall_Labradorite', /./)) offsetDepth(m, -1);
   for (const item of ['Garden Ground Cover — Reflecting Pool Border', 'Garden Ground Cover — Pond & Spring'])
     for (const m of meshesIn(item, /^groundcover-soil$/)) {
       m.renderOrder = -1;
@@ -157,6 +160,11 @@ function correctArt(root: THREE.Object3D, colliders: THREE.Object3D) {
   if (lib) for (const m of meshesIn('libraryartifacts', /^hologram-/)) m.position.add(lib.position);
   for (const m of meshesIn('xrguildsealhunt', /^torus(_\d+)?$/)) m.removeFromParent();
   fitFootprint(colliders.getObjectByName('reflecting-pool collision'), POOL.width / 2, POOL.length / 2);
+}
+
+/** Nudge a mesh's depth: negative draws it over a surface it lies on, positive under anything laid on it. */
+function offsetDepth(mesh: THREE.Mesh, by: number) {
+  for (const mat of ([] as THREE.Material[]).concat(mesh.material)) { mat.polygonOffset = true; mat.polygonOffsetFactor = by; mat.polygonOffsetUnits = by; }
 }
 
 /** Move the edge of a flat quad that faces `toward` outwards by `by` metres, keeping its UVs. */

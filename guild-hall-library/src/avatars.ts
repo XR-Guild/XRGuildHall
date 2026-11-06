@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { Peer } from './net/presence';
 import { SEAT_TOP } from './seating';
+import { capTexture, texturesOf } from './arrival';
 
 /**
  * Avatar renderer built for crowds:
@@ -11,8 +12,12 @@ import { SEAT_TOP } from './seating';
  *  - a personal-space bubble hides anyone who walks into you (0.6 m)
  */
 const MAX = 220, NEAR_VRM = 12, NEAR_TAGS = 16, BUBBLE = 0.6;
+/** VIVERSE avatars often carry 2048 px or larger textures; at avatar size on screen 1024 px looks the same. */
+const VRM_TEXTURE = 1024;
+/** Avatars beyond this animate at half rate. */
+const VRM_FULL_RATE = 6;
 
-type VrmSlot = { url: string; root: THREE.Object3D; vrm: any; lastUsed: number };
+type VrmSlot = { url: string; root: THREE.Object3D; vrm: any; lastUsed: number; dt: number };
 
 export class Avatars {
   group = new THREE.Group();
@@ -30,6 +35,12 @@ export class Avatars {
   /** Cushion height of the seat a peer is on, from its seat key. */
   seatTop: (key: string) => number = () => SEAT_TOP;
   maxVrm = NEAR_VRM;
+  /** Compiles shaders and uploads textures for a new avatar before it is shown, so it doesn't stall a frame. */
+  prepare: ((root: THREE.Object3D) => Promise<void>) | null = null;
+  private frame = 0;
+  private frustum = new THREE.Frustum();
+  private viewProj = new THREE.Matrix4();
+  private bounds = new THREE.Sphere(new THREE.Vector3(), 1.2);
 
   constructor(private fonts: { display: string; body: string }) {
     this.group.name = 'Avatars';
@@ -70,8 +81,11 @@ export class Avatars {
       const vrm = gltf.userData.vrm; if (!vrm) throw new Error('not a VRM');
       VRMUtils.removeUnnecessaryVertices(gltf.scene); VRMUtils.combineSkeletons?.(gltf.scene); VRMUtils.rotateVRM0(vrm);
       vrm.scene.traverse((o: any) => { o.frustumCulled = false; });
-      const root = new THREE.Group(); root.add(vrm.scene); this.group.add(root);
-      this.vrms.set(id, { url, root, vrm, lastUsed: performance.now() });
+      await Promise.all([...texturesOf(vrm.scene)].map(t => capTexture(t, VRM_TEXTURE)));
+      const root = new THREE.Group(); root.add(vrm.scene);
+      await this.prepare?.(root);
+      this.group.add(root);
+      this.vrms.set(id, { url, root, vrm, lastUsed: performance.now(), dt: 0 });
     } catch (e) { console.warn('[avatars] VRM failed, using mannequin', e); this.failed.add(url); }
     finally { this.loading.delete(id); }
   }
@@ -92,16 +106,24 @@ export class Avatars {
     for (const [id, s] of this.vrms) { if (!wantVrm.has(id)) { if (now - s.lastUsed > 20000 || !peers.has(id)) this.dropVrm(id); else s.root.visible = false; } }
 
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), col = new THREE.Color();
-    let n = 0;
+    // skinned meshes have their culling turned off (spring bones move them past their bounds), so whole avatars are culled here
+    this.frustum.setFromProjectionMatrix(this.viewProj.copy(camera.matrixWorld).invert().premultiply(camera.projectionMatrix));
+    this.frame++;
+    let n = 0, k = 0;
     for (const { p, d } of list) {
       if (n >= MAX) break;
       const hidden = d < BUBBLE;
       const slot = wantVrm.has(p.id) ? this.vrms.get(p.id) : undefined;
       if (slot) {
-        slot.lastUsed = now; slot.root.visible = !hidden;
+        slot.lastUsed = now;
+        this.bounds.center.set(p.rp.x, p.rp.y + 0.9, p.rp.z);
+        slot.root.visible = !hidden && this.frustum.intersectsSphere(this.bounds);
+        slot.dt += dt;
+        if (!slot.root.visible || (d > VRM_FULL_RATE && (this.frame + k++) % 2)) continue;
         slot.root.position.copy(p.rp); slot.root.rotation.y = p.rry;
         pose(slot.vrm, p, t, p.seat ? this.seatTop(p.seat) : SEAT_TOP);
-        slot.vrm.update(dt);
+        slot.vrm.update(Math.min(slot.dt, 0.1));
+        slot.dt = 0;
         continue;
       }
       const seated = !!p.seat;
@@ -134,7 +156,6 @@ export class Avatars {
       if (b.key !== key) { drawBubble(b.ctx, p.bubble!.text, this.fonts); b.tex.needsUpdate = true; b.key = key; }
       b.sprite.visible = true; b.sprite.position.set(p.rp.x, p.rp.y + (p.seat ? 1.8 : 2.32), p.rp.z);
     });
-    void camera;
   }
   dispose() { for (const id of [...this.vrms.keys()]) this.dropVrm(id); }
 }

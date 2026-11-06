@@ -3,6 +3,7 @@ import type { Transport, TransportEvents, PeerState, ChatMsg, Control, AudioMode
 import type { Peer } from './presence';
 import { loadScript } from './loadScript';
 import { workerTimers } from './keepalive';
+import { ListenerPose, placePanner } from '../spatialaudio';
 
 /**
  * Photon Cloud session: spatial voice for everyone, and (off Viverse) presence + chat over room events.
@@ -143,7 +144,7 @@ async function addWorklets(ctx: AudioContext) {
 
 interface RemoteVoice {
   actorNr: number; node: AudioWorkletNode; pan: PannerNode; gain: GainNode;
-  falloff: Falloff; audible: boolean; loudAt: number; level: number;
+  falloff: Falloff; audible: boolean; loudAt: number; level: number; at: THREE.Vector3;
 }
 
 /** Replace an SDK callback without dropping the wrapper the Voice transport installed on the instance. */
@@ -174,6 +175,7 @@ export class PhotonSession {
   /** Presence ids an admin has spotlit: heard by everyone at full volume, wherever they stand. */
   spotlight = new Set<string>();
   private voices = new Map<string, RemoteVoice>();
+  private listenerPose = new ListenerPose();
   private mic: { stream: MediaStream; ctx: AudioContext; src: MediaStreamAudioSourceNode; node: AudioWorkletNode; voice: any | null } | null = null;
   private closing = false;
   private self = '';
@@ -359,7 +361,7 @@ export class PhotonSession {
     const pan = new PannerNode(ctx, { panningModel: 'HRTF', distanceModel: 'inverse', refDistance: FALLOFF.normal.ref, maxDistance: 30, rolloffFactor: FALLOFF.normal.roll });
     const gain = new GainNode(ctx, { gain: this.isMuted(actorNr) ? 0 : 1 });
     node.connect(pan).connect(gain);
-    const v: RemoteVoice = { actorNr, node, pan, gain, falloff: 'normal', audible: false, loudAt: 0, level: 1 };
+    const v: RemoteVoice = { actorNr, node, pan, gain, falloff: 'normal', audible: false, loudAt: 0, level: 1, at: new THREE.Vector3(NaN, NaN, NaN) };
     this.voices.set(key, v);
     node.port.onmessage = e => { this.underruns += e.data; };
     // stays silent until updateSubscriptions matches it to an avatar, so a voice with no one in the room is never heard
@@ -432,14 +434,10 @@ export class PhotonSession {
   /** Position every audible voice at its avatar's mouth (every frame). */
   updatePanners(listener: THREE.Object3D, peers: Map<string, Peer>) {
     const ctx = this.ctx; if (!ctx || !this.voices.size) return;
-    const p = new THREE.Vector3(), f = new THREE.Vector3(0, 0, -1), u = new THREE.Vector3(0, 1, 0), q = new THREE.Quaternion();
-    listener.getWorldPosition(p); listener.getWorldQuaternion(q); f.applyQuaternion(q); u.applyQuaternion(q);
-    const L = ctx.listener, t = ctx.currentTime;
-    if (L.positionX) { L.positionX.setTargetAtTime(p.x, t, 0.05); L.positionY.setTargetAtTime(p.y, t, 0.05); L.positionZ.setTargetAtTime(p.z, t, 0.05); L.forwardX.value = f.x; L.forwardY.value = f.y; L.forwardZ.value = f.z; L.upX.value = u.x; L.upY.value = u.y; L.upZ.value = u.z; }
-    else (L as any).setPosition(p.x, p.y, p.z);
+    this.listenerPose.write(ctx, listener);
     for (const n of this.voices.values()) {
       const id = this.pids.get(n.actorNr); const peer = id ? peers.get(id) : undefined; if (!peer) continue;
-      n.pan.positionX.setTargetAtTime(peer.rp.x, t, 0.05); n.pan.positionY.setTargetAtTime(peer.rp.y + 1.5, t, 0.05); n.pan.positionZ.setTargetAtTime(peer.rp.z, t, 0.05);
+      if (n.audible) placePanner(n.pan, n.at, peer.rp.x, peer.rp.y + 1.5, peer.rp.z, 0.05);
       const falloff: Falloff = this.isLoud(peer) ? 'megaphone' : peer.onStage ? 'stage' : 'normal';
       if (falloff !== n.falloff) { n.falloff = falloff; n.pan.refDistance = FALLOFF[falloff].ref; n.pan.rolloffFactor = FALLOFF[falloff].roll; }
     }
