@@ -201,6 +201,8 @@ function fitFootprint(o: THREE.Object3D | undefined, halfX: number, halfZ: numbe
 const BAKED_PANELS = [
   { item: 'library-fresco5', mesh: 'library_MeshBasicMaterial', panel: 'Guild library' },
   { item: 'library-fresco5', mesh: 'library_MeshBasicMaterial_1', panel: 'Timeline of XR' },
+  { item: 'welcome-desk-v2', mesh: 'welcome-desk_MeshBasicMaterial', panel: 'Desk plaque' },
+  { item: 'welcome-desk-v2', mesh: 'welcome-desk_MeshBasicMaterial_1', panel: 'Join the Guild' },
 ];
 
 function dropBakedPanel(root: THREE.Object3D, b: (typeof BAKED_PANELS)[number]) {

@@ -18,11 +18,11 @@ export const LIB_DOOR = dir((LIB.doorBay / 12) * Math.PI * 2).multiplyScalar(LIB
 
 export const STAGE = { center: V(0, 0, -9.4), r: 3.2, h: 0.45 };
 const deg = (d: number) => (d * Math.PI) / 180;
-/** Welcome desk sits inside the east wall, just south of the door to the colonnade. */
-export const DESK = { pos: dir(deg(112)).multiplyScalar(11.6), faceTo: V(0, 0, 0) };
-/** Events and news board, beside the desk. */
+/** Welcome desk at the back (south wall) of the hall, where Evo placed welcome-desk-v2 in Arrival; seating and the tour read it before that art loads. */
+export const DESK = { pos: V(1.0131, 0, 11.6415), rotY: deg(151.66) };
+/** Events and news board, inside the south-east wall. */
 export const BOARD = { pos: dir(deg(140)).multiplyScalar(12.2), faceTo: V(0, 0, 0) };
-/** Arrival point: south-east interior, below the desk, looking across the hall. */
+/** Arrival point: south-east interior, looking across the hall. */
 export const SPAWN = { pos: dir(deg(126)).multiplyScalar(10), look: V(0, 2.2, -8) };
 
 /** Wide Moorish-tiled pool running north-west to south-east, south of the colonnade (as drawn). */
