@@ -28,7 +28,7 @@ There are three modes, set by `adminMode` in `guildhall.config.json` or `VITE_AD
 **`list` (no server, VIVERSE only):** admins are the VIVERSE accounts listed in `adminAccounts` (or `VITE_ADMIN_ACCOUNTS`, comma-separated).
 
 1. Each admin joins the Hall on VIVERSE and opens the Admin panel. It shows their VIVERSE account ID (a UUID such as `00000000-0000-0000-0000-000000000000`). Developers can also run `viverse-cli auth status` and use the "Account ID". This is not the handle VIVERSE Settings calls "User ID"; the SDK doesn't expose the handle.
-2. Add the IDs to `guildhall.config.json`: `"adminMode": "list", "adminAccounts": ["…", "…"]`.
+2. Add them to `guildhall.config.json`: `"adminMode": "list", "adminAccounts": [{ "name": "Evo", "id": "…" }, …]`. `name` is optional and only for people reading the file and the Admin panel; a bare ID string works too.
 3. Re-zip and upload the world (no rebuild needed).
 
 How it works: every room control carries the sender's account ID, and visitors apply a change only if that ID is on the list. The room's master client also answers newcomers with the current settings, so they stay in place after the admins leave, but it can't change them. Nobody else can change settings until an admin returns or the room empties.

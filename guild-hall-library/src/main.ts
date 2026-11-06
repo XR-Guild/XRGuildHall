@@ -373,7 +373,8 @@ async function main() {
   /** List mode: this visitor's VIVERSE account ID, set when they join through VIVERSE. */
   let myAccount = '';
   const listMode = CONFIG.adminMode === 'list';
-  const isListed = (acct: unknown) => typeof acct === 'string' && !!acct && CONFIG.adminAccounts.includes(acct);
+  const listedAdmin = (acct: unknown) => typeof acct === 'string' && acct ? CONFIG.adminAccounts.find(a => a.id === acct) : undefined;
+  const isListed = (acct: unknown) => !!listedAdmin(acct);
   /** On VIVERSE, room controls ride on Photon events when voice is up: Photon stamps the sender, VIVERSE messages don't. */
   const isHost = () => voice ? voice.isHost() : presence.isHost();
   // the offline simulated crowd has no VIVERSE accounts, so list mode would otherwise lock you out of trying settings
@@ -501,7 +502,7 @@ async function main() {
   const roleText = () => {
     if (!presence.connected) return 'You are on your own, so you can try every setting here. Changes are just for you until you join others.';
     if (listMode) {
-      if (canAdmin()) return 'You are a Guild admin. Changes apply to everyone in this room.';
+      if (canAdmin()) { const me = listedAdmin(myAccount); return `You are a Guild admin${me?.name ? ` (${me.name})` : ''}. Changes apply to everyone in this room.`; }
       return myAccount ? `Guild admins set these. You can see the current settings below. Your VIVERSE account ID is ${myAccount}.` : 'Guild admins set these. You can see the current settings below.';
     }
     const who = isHost();
