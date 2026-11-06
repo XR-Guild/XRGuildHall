@@ -3,7 +3,9 @@
   "photonAppId": "",
   "photonRegion": "",
   "photonMaxPlayers": 100,
+  "_adminComment": "adminMode: host (the first person in), verified (proxy/photon-auth-worker.js) or list (the VIVERSE account IDs in adminAccounts). See docs/ADMIN.md.",
   "adminMode": "",
+  "adminAccounts": [],
   "viverseAppId": "",
   "viverseRoomCap": 0,
   "media": {

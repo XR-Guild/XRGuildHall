@@ -97,6 +97,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 input[type=search], textarea, select { width: 100%; background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
 textarea { resize: vertical; min-height: 84px; }
 select { padding: 8px 10px; }
+select:disabled, input:disabled { opacity: .45; cursor: not-allowed; }
 select option { background: var(--panel-solid); }
 .filters { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -118,6 +119,7 @@ select option { background: var(--panel-solid); }
 .empty { color: var(--dim); font-style: italic; }
 .ghost { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; cursor: pointer; font-size: 14px; }
 .ghost:hover { border-color: var(--teal); }
+.ghost:disabled { opacity: .45; cursor: not-allowed; border-color: var(--line); }
 .primary { background: linear-gradient(180deg, #e7c479, #b88a3a); color: #1a1206; border: 0; border-radius: 999px; padding: 9px 22px; font-weight: 700; cursor: pointer; letter-spacing: .02em; }
 .primary:disabled { opacity: .5; cursor: progress; }
 .btnlink { display: inline-block; text-decoration: none; color: var(--text); margin-top: 8px; }

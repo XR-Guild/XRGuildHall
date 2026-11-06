@@ -274,7 +274,7 @@ export class XRMenu {
     const items: [string, string, () => void, boolean?][] = [['exit', 'Exit VR', () => this.world.exitXR()]];
     if (c) items.push(['leave', 'Leave', () => { S.leave(); this.view = 'home'; }]);
     else items.push(['join', S.joining ? 'Joining…' : S.joinLabel, () => { if (!S.joining) this.openJoin(); }, this.view === 'join']);
-    if (c && v) items.push(['mic', S.micBusy ? 'Mic…' : v.micOn ? 'Mic on' : 'Mic off', () => { S.toggleMic(); }, v.micOn]);
+    if (c && v) items.push(['mic', S.micBusy ? 'Mic…' : S.micLabel(), () => { S.toggleMic(); }, v.micOn]);
     if (c && v && this.P.self.onStage) items.push(['mega', 'Megaphone', () => S.toggleMegaphone(), this.P.self.megaphone]);
     if (c) items.push(['chat', 'Chat' + (unread && this.view !== 'chat' ? ` (${unread})` : ''), () => this.go('chat'), this.view === 'chat']);
     if (c) items.push(['people', `People ${this.P.peers.size + 1}`, () => { this.page = 0; this.go('people'); }, this.view === 'people']);

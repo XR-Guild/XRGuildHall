@@ -9,11 +9,13 @@ Voice is Photon Voice (Patrick's spike, merged for V3). Every voice is decoded i
 | **Conversation** (default) | Meetups, mentorship, hanging out | The 10 people nearest you in your zone, fading with distance. People on the stage carry across the hall. |
 | **Large group** | Full rooms, mixers | Your 6 nearest neighbours within 10 m, a little softer, so a full hall stays calm. The stage still carries. |
 | **Stage spotlight** | Talks, panels, launches | Everyone on the stage, the megaphone, and spotlit guests are heard by everyone at full volume, wherever they stand. Guests can whisper to their 3 nearest neighbours within 3 m, at a third of the volume. |
+| **Stage only** | Talks where the audience should be silent | Only the stage, the megaphone and spotlit guests, at full volume, in every zone. Nobody else is heard, so guests' mics do nothing; the dock and XR menu say "not heard" while their mic can't be heard. |
 
 Also:
 - **Megaphone** (Patrick): anyone on the stage can turn it on to be heard at full volume everywhere.
 - **Spotlight** (admin): pick a person in Room settings or the People list. Use it for Q&A from the floor.
 - Each visitor can **Mute** or **Block** anyone for themselves.
+- There is no cap on loud voices: everyone on the stage (in the two stage modes), on the megaphone or spotlit is heard. Spotlight is limited to 12 people.
 
 ## Capacity and cost
 

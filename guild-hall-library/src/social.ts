@@ -2,6 +2,7 @@ import type { Presence } from './net/presence';
 import type { Seating } from './seating';
 import type { Room } from './room';
 import { HALL_PRESETS, LIB_PRESETS } from './seating';
+import { AUDIO_MODES } from './admin';
 import EVENTS from './data/events.json';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
@@ -61,7 +62,7 @@ export function initSocial(h: SocialHooks) {
   const toggleMic = async () => {
     const v = h.voice(); if (!v || micBusy) return;
     micBusy = mic.disabled = true; drawDock();
-    try { await v.setMic(!v.micOn); sys(v.micOn ? 'Your mic is on. People near you can hear you.' : 'Your mic is off.'); } catch (e: any) { sys('Microphone unavailable: ' + (e?.message ?? e)); }
+    try { await v.setMic(!v.micOn); sys(!v.micOn ? 'Your mic is off.' : micUnheard() ? 'Your mic is on, but Stage only is on: nobody hears you unless you are on the stage or spotlit.' : 'Your mic is on. People near you can hear you.'); } catch (e: any) { sys('Microphone unavailable: ' + (e?.message ?? e)); }
     micBusy = mic.disabled = false; drawDock();
   };
   mic.addEventListener('click', toggleMic);
@@ -143,12 +144,17 @@ export function initSocial(h: SocialHooks) {
   const peopleChanged = () => { if (!$('#socPeople').hidden) drawPeople(); changed(); };
   const block = (id: string) => { P.block(id); h.voice()?.muteLocal(id, true); changed(); };
   const toggleMute = (id: string) => { const v = h.voice(); if (v) v.muteLocal(id, !v.localMuted.has(id)); peopleChanged(); };
+  const isSpotlit = (id: string) => h.room.state.spotlight.includes(id);
   const toggleSpotlight = (id: string) => { h.room.setSpotlight(id, !h.room.state.spotlight.includes(id)); peopleChanged(); };
+  /** Stage only is on and nobody hears this visitor's mic (they're not on the stage or spotlit). */
+  const micUnheard = () => P.connected && h.room.state.audio === 'stageOnly' && !P.self.onStage && !isSpotlit(P.self.id);
+  const micLabel = () => (h.voice()?.micOn ? 'Mic on' : 'Mic off') + (micUnheard() ? ' · not heard' : '');
   const drawDock = () => {
-    const c = P.connected, v = h.voice();
+    const c = P.connected, v = h.voice(), unheard = micUnheard();
     $('#socStatus').textContent = P.status;
     join.textContent = c ? 'Leave' : joining ? 'Joining…' : h.joinLabel;
-    mic.hidden = !c || !v; mic.setAttribute('aria-pressed', String(!!v?.micOn)); mic.textContent = v?.micOn ? 'Mic on' : 'Mic off';
+    mic.hidden = !c || !v; mic.setAttribute('aria-pressed', String(!!v?.micOn)); mic.textContent = micLabel();
+    mic.title = unheard ? AUDIO_MODES.stageOnly.notice : '';
     mega.hidden = mic.hidden || !P.self.onStage; mega.setAttribute('aria-pressed', String(P.self.megaphone));
     chatBtn.hidden = !c; peopleBtn.hidden = !c;
     $('#socCount').textContent = c ? String(P.peers.size + 1) : '';
@@ -159,7 +165,7 @@ export function initSocial(h: SocialHooks) {
   P.listeners.add(() => { drawChat(); if (!pend) pend = window.setTimeout(() => { pend = 0; drawDock(); if (!$('#socPeople').hidden) drawPeople(); drawSeats(); }, 400); });
   peopleBtn.addEventListener('click', drawPeople);
   h.seating.onChange = () => { drawSeats(); };
-  h.room.listeners.add(() => { drawSeats(); peopleChanged(); });
+  h.room.listeners.add(() => { drawSeats(); peopleChanged(); drawDock(); });
   drawDock();
   /** Reconnect with the same name (used after an admin signs in, so Photon re-authenticates). */
   const rejoin = async () => {
@@ -171,7 +177,7 @@ export function initSocial(h: SocialHooks) {
     sys, drawDock, drawSeats, rejoin, welcome, lines, listeners,
     joinLabel: h.joinLabel, defaultName: h.defaultName, voice: h.voice, canAdmin: h.canAdmin,
     get joining() { return joining; }, get micBusy() { return micBusy; },
-    isSpotlit: (id: string) => h.room.state.spotlight.includes(id),
+    isSpotlit, micLabel,
     toggleMic, toggleMegaphone, join: joinRoom, leave, block, toggleMute, toggleSpotlight,
     say: (t: string) => P.say(t), unblockAll: () => P.unblockAll(),
   };

@@ -206,7 +206,7 @@ export class ViverseTransport implements Transport {
       else if (msg.k === 'c' && msg.v?.from) ev.onChat(msg.v as ChatMsg);
       // `general` messages carry no verified sender. Room controls are only trusted from the master client here, and
       // when Photon voice is connected main.ts ignores this channel for everything but `hello` (see docs/ADMIN.md).
-      else if (msg.k === 'x' && msg.from && (msg.from === this.masterId || msg.v?.type === 'hello')) ev.onControl(msg.v as Control, msg.from);
+      else if (msg.k === 'x' && msg.from) ev.onControl(msg.v as Control, msg.from, msg.from === this.masterId);
     });
     await timed('multiplayer init', () => mp.init({ modules: { networkSync: { enabled: false } } }), room.name);
     // fires once the SDK has given up its own reconnect attempts
@@ -296,7 +296,7 @@ export class ViverseTransport implements Transport {
   private send(obj: any) { try { this.mp?.general.sendMessage(JSON.stringify(obj)); } catch { /* dropped */ } }
   sendState(s: PeerState) { this.send({ k: 's', v: s }); }
   sendChat(m: ChatMsg) { this.send({ k: 'c', v: m }); }
-  sendControl(c: Control) { if (c.type === 'hello' || this.isHost()) this.send({ k: 'x', v: c, from: this.selfId }); }
+  sendControl(c: Control) { this.send({ k: 'x', v: c, from: this.selfId }); }
   isHost() { return !!this.selfId && this.selfId === this.masterId; }
   disconnect() {
     this.closed = true; clearInterval(this.mergeTimer); this.stopPing?.(); this.stopPing = null; this.onRoomChange = null; this.wake?.();

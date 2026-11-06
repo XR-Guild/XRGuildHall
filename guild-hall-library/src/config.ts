@@ -21,8 +21,12 @@ export interface HallConfig {
    * signed in with an admin passphrase can change room settings. Photon stamps every event with the sender,
    * so this can't be spoofed.
    * 'host': no auth worker; the room's master client (usually the first person in) acts as host.
+   * 'list': the VIVERSE account IDs in `adminAccounts` are admins. No server, so it can be spoofed by anyone
+   * who edits the page's JavaScript; see docs/ADMIN.md.
    */
-  adminMode: 'verified' | 'host';
+  adminMode: 'verified' | 'host' | 'list';
+  /** List mode: VIVERSE account IDs (`account_id`, a UUID) of Guild admins. */
+  adminAccounts: string[];
   /** VIVERSE Studio App ID. Empty = no VIVERSE login or shared VIVERSE room. */
   viverseAppId: string;
   /** People per VIVERSE room before the overflow room opens. Keep it at or below photonMaxPlayers. */
@@ -45,7 +49,8 @@ export const CONFIG: HallConfig = {
   photonAppId: env.VITE_PHOTON_APP_ID || '',
   photonRegion: env.VITE_PHOTON_REGION || 'us',
   photonMaxPlayers: parseInt(env.VITE_PHOTON_MAX_PLAYERS || '20', 10) || 20,
-  adminMode: env.VITE_ADMIN_MODE === 'verified' ? 'verified' : 'host',
+  adminMode: env.VITE_ADMIN_MODE === 'verified' || env.VITE_ADMIN_MODE === 'list' ? env.VITE_ADMIN_MODE : 'host',
+  adminAccounts: (env.VITE_ADMIN_ACCOUNTS || '').split(',').map((s: string) => s.trim()).filter(Boolean),
   viverseAppId: env.VITE_VIVERSE_APP_ID || '',
   viverseRoomCap: parseInt(env.VITE_VIVERSE_ROOM_CAP || '0', 10) || 0,
   media: { tokenUrl: env.VITE_MEDIA_TOKEN_URL || '', room: env.VITE_MEDIA_ROOM || 'guild-hall-media', hlsDefault: '' },
@@ -65,8 +70,9 @@ const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'obj
 function merge(into: any, from: any) {
   for (const [k, v] of Object.entries(from)) {
     if (k.startsWith('_')) continue; // "_comment" keys in the JSON
-    if (v === '' || v === null || v === 0) continue; // blank = keep the build-time (env) value
+    if (v === '' || v === null || v === 0 || (Array.isArray(v) && !v.length)) continue; // blank = keep the build-time (env) value
     if (isObj(v) && isObj(into[k])) merge(into[k], v);
+    else if (Array.isArray(into[k])) { if (Array.isArray(v)) into[k] = v.filter(x => typeof x === 'string'); }
     else if (k in into && typeof v === typeof into[k]) into[k] = v;
   }
 }
@@ -77,7 +83,7 @@ export async function loadConfig() {
     const r = await fetch('guildhall.config.json', { cache: 'no-store' });
     if (r.ok) merge(CONFIG, await r.json());
   } catch { /* optional file */ }
-  if (CONFIG.adminMode !== 'verified') CONFIG.adminMode = 'host';
+  if (CONFIG.adminMode !== 'verified' && CONFIG.adminMode !== 'list') CONFIG.adminMode = 'host';
   if (!CONFIG.viverseRoomCap) CONFIG.viverseRoomCap = CONFIG.photonMaxPlayers;
   CONFIG.viverseRoomCap = Math.min(CONFIG.viverseRoomCap, CONFIG.photonMaxPlayers);
   return CONFIG;
