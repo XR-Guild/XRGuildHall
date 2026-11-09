@@ -2,17 +2,36 @@ import type { Room } from './room';
 import { SCREEN_IDS } from './room';
 import type { Presence } from './net/presence';
 import type { AudioMode, ScreenSource } from './net/types';
+import { AUDIO_MODE_IDS } from './net/types';
 import { HALL_PRESETS, LIB_PRESETS } from './seating';
 import { CONFIG } from './config';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
-export const AUDIO_MODES: { id: AudioMode; name: string; hint: string }[] = [
-  { id: 'conversation', name: 'Conversation', hint: 'Everyday mode. You hear the 10 people nearest you, fading with distance; people on the stage carry across the hall.' },
-  { id: 'event', name: 'Large group', hint: 'For full rooms. You hear your 6 nearest neighbours within 10 m, a little softer, so the room stays calm; the stage still carries.' },
-  { id: 'spotlight', name: 'Stage spotlight', hint: 'For talks and panels. Everyone on the stage, and anyone you spotlight, is heard by everyone at full volume. Guests can still whisper to their 3 nearest neighbours.' },
-];
+/** Admin panel text per audio mode; `notice` is the chat line for everyone else when an admin switches to it. */
+export const AUDIO_MODES: Record<AudioMode, { name: string; hint: string; notice: string }> = {
+  conversation: {
+    name: 'Conversation',
+    hint: 'Everyday mode. You hear the 10 people nearest you, fading with distance; people on the stage carry across the hall.',
+    notice: 'Conversation audio is back on.',
+  },
+  event: {
+    name: 'Large group',
+    hint: 'For full rooms. You hear your 6 nearest neighbours within 10 m, a little softer, so the room stays calm; the stage still carries.',
+    notice: 'Large group audio is on: you hear the people nearest you, softer.',
+  },
+  spotlight: {
+    name: 'Stage spotlight',
+    hint: 'For talks and panels. Everyone on the stage, and anyone you spotlight, is heard by everyone at full volume. Guests can still whisper to their 3 nearest neighbours.',
+    notice: 'Stage spotlight is on: the stage is heard by everyone, and guests can whisper to their neighbours.',
+  },
+  stageOnly: {
+    name: 'Stage only',
+    hint: 'For talks where the audience should be silent. Everyone, everywhere, hears only the stage, megaphones and anyone you spotlight. Guests hear nobody else, and their mics are not heard.',
+    notice: 'Stage only is on: only the stage and spotlit guests can be heard.',
+  },
+};
 const SCREEN_NAMES: Record<string, string> = { stage: 'Stage screen (above the stage)' };
 
 export interface AdminHooks {
@@ -43,7 +62,7 @@ export function initAdmin(h: AdminHooks) {
   };
   const drawHall = seg($('#admSeatHall'), HALL_PRESETS, () => R.state.seating.hall, id => R.setSeating('hall', id));
   const drawLib = seg($('#admSeatLib'), LIB_PRESETS, () => R.state.seating.library, id => R.setSeating('library', id));
-  const drawAudio = seg($('#admAudio'), AUDIO_MODES, () => R.state.audio, id => R.setAudio(id as AudioMode));
+  const drawAudio = seg($('#admAudio'), AUDIO_MODE_IDS.map(id => ({ id, ...AUDIO_MODES[id] })), () => R.state.audio, id => R.setAudio(id as AudioMode));
   const drawScrAudio = seg($('#admScreenAudio'), [
     { id: 'room', name: 'Screen sound: whole room', hint: 'Everyone in the hall hears the stream at the same volume' },
     { id: 'positional', name: 'Screen sound: from the screen', hint: 'The stream sounds from its screen and fades with distance' },
@@ -116,7 +135,7 @@ export function initAdmin(h: AdminHooks) {
     $('#adminWho').textContent = h.role();
     form.hidden = !h.signIn || (can && P.connected);
     drawHall(); drawLib(); drawAudio(); drawScrAudio(); drawSpot(); drawScreens();
-    $('#admAudioHint').textContent = AUDIO_MODES.find(m => m.id === R.state.audio)?.hint ?? '';
+    $('#admAudioHint').textContent = AUDIO_MODES[R.state.audio].hint;
     ($('#admMuteHall') as HTMLButtonElement).disabled = !can || !P.connected;
     ($('#admClearSpot') as HTMLButtonElement).disabled = !can || !R.state.spotlight.length;
   };

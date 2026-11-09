@@ -1,11 +1,12 @@
 import type { Control, RoomState, AudioMode, ScreenSource } from './net/types';
+import { isAudioMode } from './net/types';
 
 /**
  * Room-wide settings that every visitor shares: seating, audio mode, spotlights and media screens.
  *
  * - Only an admin (see docs/ADMIN.md) can change them. Each change is broadcast as the whole state, stamped with
  *   a version (the admin's clock), so the newest change wins and a late or repeated message is harmless.
- * - A visitor who joins late sends `hello`; any admin in the room answers with the current state after a short
+ * - A visitor who joins late sends `hello`; any admin in the room (and, in list mode, the master client) answers with the current state after a short
  *   random delay, so a room with several admins doesn't answer in a burst.
  * - Solo (not connected), you can try every setting locally.
  */
@@ -23,7 +24,6 @@ export function defaultState(d: { hallSeating: string; librarySeating: string; a
   };
 }
 
-const AUDIO: AudioMode[] = ['conversation', 'event', 'spotlight'];
 const okUrl = (u: unknown) => typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u) && u.length < 600;
 
 /** Never trust the shape of a message from the network: rebuild the state from known fields only. */
@@ -34,7 +34,7 @@ export function sanitize(raw: any, base: RoomState): RoomState | null {
     if (typeof raw.seating.hall === 'string') s.seating.hall = raw.seating.hall.slice(0, 24);
     if (typeof raw.seating.library === 'string') s.seating.library = raw.seating.library.slice(0, 24);
   }
-  if (AUDIO.includes(raw.audio)) s.audio = raw.audio;
+  if (isAudioMode(raw.audio)) s.audio = raw.audio;
   if (Array.isArray(raw.spotlight)) s.spotlight = raw.spotlight.filter((x: unknown) => typeof x === 'string').slice(0, 12).map((x: string) => x.slice(0, 40));
   if (raw.screens && typeof raw.screens === 'object') {
     for (const id of SCREEN_IDS) {
@@ -52,6 +52,8 @@ export function sanitize(raw: any, base: RoomState): RoomState | null {
 export interface RoomHooks {
   /** May this client change room settings right now? */
   canAdmin: () => boolean;
+  /** May this client answer a newcomer's `hello` with the current state? */
+  canAnswer: () => boolean;
   /** Is this client connected to others? */
   connected: () => boolean;
   send: (c: Control) => void;
@@ -85,14 +87,16 @@ export class Room {
   setScreenAudio(mode: 'room' | 'positional') { return this.change(s => { s.screenAudio = mode; }); }
   muteHall() { if (this.h.canAdmin() && this.h.connected()) this.h.send({ type: 'muteHall' }); }
 
+  /** Replace the settings without broadcasting them (e.g. dropping a guest's solo changes on join). */
+  reset(next: RoomState) { const prev = this.state; this.state = next; this.h.apply(next, prev, 'me'); this.emit(); }
   /** Call right after connecting: ask an admin for the current settings. */
   hello() { this.h.send({ type: 'hello' }); }
 
-  /** Controls from the network. The transports only pass admin controls from verified admins (or the host). */
+  /** Controls from the network. main.ts passes only `hello` and controls from senders it trusts. */
   receive(c: Control) {
     if (!c || typeof c !== 'object') return;
     if (c.type === 'hello') {
-      if (!this.h.canAdmin() || !this.h.connected()) return;
+      if (!this.h.canAnswer() || !this.h.connected()) return;
       clearTimeout(this.answerTimer);
       this.answerTimer = window.setTimeout(() => this.h.send({ type: 'state', state: this.state }), 200 + Math.random() * 900);
       return;
@@ -108,7 +112,7 @@ export class Room {
     // single-setting controls from older builds (v2/v3 and the load-test bots)
     const prev = this.state, next = structuredClone(prev);
     if (c.type === 'seating' && (c.zone === 'hall' || c.zone === 'library')) next.seating[c.zone] = String(c.preset).slice(0, 24);
-    else if (c.type === 'audio' && AUDIO.includes(c.mode)) next.audio = c.mode;
+    else if (c.type === 'audio' && isAudioMode(c.mode)) next.audio = c.mode;
     else if (c.type === 'spotlight' && typeof c.id === 'string') next.spotlight = c.on ? [...new Set([...next.spotlight, c.id])] : next.spotlight.filter(x => x !== c.id);
     else if (c.type === 'screenAudio') next.screenAudio = c.mode === 'positional' ? 'positional' : 'room';
     else if (c.type === 'screen') { const s = sanitize({ screens: { [c.id]: c.src } }, next); if (s) next.screens = s.screens; }

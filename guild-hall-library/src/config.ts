@@ -10,6 +10,8 @@
  */
 import type { AudioMode } from './net/types';
 
+export interface AdminAccount { id: string; name?: string; }
+
 export interface HallConfig {
   /** Photon Voice App ID (dashboard.photonengine.com, app type Voice). Empty = no voice. */
   photonAppId: string;
@@ -21,8 +23,12 @@ export interface HallConfig {
    * signed in with an admin passphrase can change room settings. Photon stamps every event with the sender,
    * so this can't be spoofed.
    * 'host': no auth worker; the room's master client (usually the first person in) acts as host.
+   * 'list': the VIVERSE account IDs in `adminAccounts` are admins. No server, so it can be spoofed by anyone
+   * who edits the page's JavaScript; see docs/ADMIN.md.
    */
-  adminMode: 'verified' | 'host';
+  adminMode: 'verified' | 'host' | 'list';
+  /** List mode: Guild admins by VIVERSE account ID (`account_id`, a UUID). `name` is for people reading the list. */
+  adminAccounts: AdminAccount[];
   /** VIVERSE Studio App ID. Empty = no VIVERSE login or shared VIVERSE room. */
   viverseAppId: string;
   /** People per VIVERSE room before the overflow room opens. Keep it at or below photonMaxPlayers. */
@@ -45,7 +51,8 @@ export const CONFIG: HallConfig = {
   photonAppId: env.VITE_PHOTON_APP_ID || '',
   photonRegion: env.VITE_PHOTON_REGION || 'us',
   photonMaxPlayers: parseInt(env.VITE_PHOTON_MAX_PLAYERS || '20', 10) || 20,
-  adminMode: env.VITE_ADMIN_MODE === 'verified' ? 'verified' : 'host',
+  adminMode: env.VITE_ADMIN_MODE === 'verified' || env.VITE_ADMIN_MODE === 'list' ? env.VITE_ADMIN_MODE : 'host',
+  adminAccounts: adminList((env.VITE_ADMIN_ACCOUNTS || '').split(',')),
   viverseAppId: env.VITE_VIVERSE_APP_ID || '',
   viverseRoomCap: parseInt(env.VITE_VIVERSE_ROOM_CAP || '0', 10) || 0,
   media: { tokenUrl: env.VITE_MEDIA_TOKEN_URL || '', room: env.VITE_MEDIA_ROOM || 'guild-hall-media', hlsDefault: '' },
@@ -61,12 +68,22 @@ export const CONFIG: HallConfig = {
   },
 };
 
+/** Accepts bare IDs or { id, name } entries; anything else is dropped. */
+function adminList(raw: unknown[]): AdminAccount[] {
+  return raw.flatMap(a => {
+    const id = typeof a === 'string' ? a : typeof (a as any)?.id === 'string' ? (a as any).id : '';
+    const name = typeof (a as any)?.name === 'string' ? (a as any).name.trim() : '';
+    return id.trim() ? [{ id: id.trim(), ...(name ? { name } : {}) }] : [];
+  });
+}
+
 const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
 function merge(into: any, from: any) {
   for (const [k, v] of Object.entries(from)) {
     if (k.startsWith('_')) continue; // "_comment" keys in the JSON
-    if (v === '' || v === null || v === 0) continue; // blank = keep the build-time (env) value
+    if (v === '' || v === null || v === 0 || (Array.isArray(v) && !v.length)) continue; // blank = keep the build-time (env) value
     if (isObj(v) && isObj(into[k])) merge(into[k], v);
+    else if (Array.isArray(into[k])) { if (Array.isArray(v)) into[k] = v; }
     else if (k in into && typeof v === typeof into[k]) into[k] = v;
   }
 }
@@ -77,7 +94,8 @@ export async function loadConfig() {
     const r = await fetch('guildhall.config.json', { cache: 'no-store' });
     if (r.ok) merge(CONFIG, await r.json());
   } catch { /* optional file */ }
-  if (CONFIG.adminMode !== 'verified') CONFIG.adminMode = 'host';
+  if (CONFIG.adminMode !== 'verified' && CONFIG.adminMode !== 'list') CONFIG.adminMode = 'host';
+  CONFIG.adminAccounts = adminList(CONFIG.adminAccounts);
   if (!CONFIG.viverseRoomCap) CONFIG.viverseRoomCap = CONFIG.photonMaxPlayers;
   CONFIG.viverseRoomCap = Math.min(CONFIG.viverseRoomCap, CONFIG.photonMaxPlayers);
   return CONFIG;

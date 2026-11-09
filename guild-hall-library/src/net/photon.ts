@@ -36,6 +36,7 @@ const MODES: Record<AudioMode, { keep: number; range: number; crowdGain: number 
   conversation: { keep: 10, range: 25, crowdGain: 1 },
   event: { keep: 6, range: 10, crowdGain: 0.8 },
   spotlight: { keep: 3, range: 3, crowdGain: 0.35 },
+  stageOnly: { keep: 0, range: 0, crowdGain: 0 },
 };
 export interface PhotonOptions {
   /** People per room. Must match the Photon plan's CCU; the free plan is 20. */
@@ -398,12 +399,13 @@ export class PhotonSession {
     for (const v of this.voices.values()) if (this.pids.get(v.actorNr) === id) v.gain.gain.value = muted ? 0 : v.level;
   }
   /** Heard by everyone at full volume: on the stage with the megaphone, or spotlit by an admin. */
-  private isLoud(p: Peer) { return p.megaphone || this.spotlight.has(p.id) || (this.audioMode === 'spotlight' && p.onStage); }
+  private get stageLoud() { return this.audioMode === 'spotlight' || this.audioMode === 'stageOnly'; }
+  private isLoud(p: Peer) { return p.megaphone || this.spotlight.has(p.id) || (this.stageLoud && p.onStage); }
   setAudioMode(mode: AudioMode) { if (MODES[mode]) this.audioMode = mode; }
 
   /**
    * Pick who is audible (every ~0.5 s), following the room's audio mode: the loud voices (megaphone, spotlight,
-   * and in spotlight mode the stage) are always kept; the crowd fills the remaining slots nearest first.
+   * and in the two stage modes the stage) are always kept; the crowd fills the remaining slots nearest first.
    */
   updateSubscriptions(me: { x: number; z: number; zone: string }, peers: Map<string, Peer>, blocked: Set<string>) {
     const speaking = this.speaking, M = MODES[this.audioMode];
@@ -412,7 +414,7 @@ export class PhotonSession {
       const id = this.pids.get(v.actorNr);
       const p = id ? peers.get(id) : undefined;
       if (!id || !p || blocked.has(id)) { this.setAudible(v, false); continue; }
-      const stageVoice = p.onStage && me.zone === 'hall' && this.audioMode !== 'spotlight';
+      const stageVoice = p.onStage && me.zone === 'hall' && !this.stageLoud;
       if (this.isLoud(p)) { v.level = 1; loud.push(v); continue; }
       const d = Math.hypot(p.rp.x - me.x, p.rp.z - me.z);
       let score = 100 - d;
@@ -424,8 +426,7 @@ export class PhotonSession {
       crowd.push({ v, score });
     }
     crowd.sort((a, b) => b.score - a.score);
-    // loud voices first (capped so a mis-click can't flood a headset), then the nearest of the crowd
-    const keep = new Set([...loud.slice(0, 6), ...crowd.filter(s => s.score > 0).slice(0, M.keep).map(s => s.v)]);
+    const keep = new Set([...loud, ...crowd.filter(s => s.score > 0).slice(0, M.keep).map(s => s.v)]);
     for (const v of this.voices.values()) {
       v.gain.gain.value = this.isMuted(v.actorNr) ? 0 : v.level; // the pid may have arrived after the voice did
       this.setAudible(v, keep.has(v));
@@ -449,8 +450,8 @@ export class PhotonSession {
     if (this.opts.verified) return String(c.getUserId?.() ?? c.myActor().userId ?? '').startsWith('admin:');
     return c.myActor().actorNr === c.myRoomMasterActorNr();
   }
-  /** Room controls over Photon events (sender-stamped). `hello` may come from anyone; everything else only from an admin. */
-  sendControl(c: Control) { if (c.type === 'hello' || this.isHost()) this.send(EV.ctl, c); }
+  /** Room controls over Photon events (sender-stamped). Receivers decide whom to trust (main.ts). */
+  sendControl(c: Control) { this.send(EV.ctl, c); }
   get headcount() { return this.client?.isJoinedToRoom() ? this.client.myRoomActorsArray().length : 0; }
   /** Safe to call more than once. A retired client is disposed once its socket has actually closed. */
   disconnect() {
@@ -479,7 +480,7 @@ export class PhotonTransport implements Transport {
     s.onEvent = (code, payload, from, fromHost) => {
       if (code === EV.state && payload.id === from) ev.onState(payload as PeerState);
       else if (code === EV.chat && payload.from === from) ev.onChat(payload as ChatMsg);
-      else if (code === EV.ctl && (fromHost || payload?.type === 'hello')) ev.onControl(payload as Control, from); // Photon stamps the sender, so this can't be spoofed
+      else if (code === EV.ctl) ev.onControl(payload as Control, from, fromHost); // Photon stamps the sender, so fromHost can't be spoofed
     };
     if (!s.client) await s.connect(self.id, self.name);
   }

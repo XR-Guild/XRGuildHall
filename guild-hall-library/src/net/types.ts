@@ -19,7 +19,9 @@ export interface PeerState {
 export interface ChatMsg { id: string; from: string; name: string; text: string; t: number; zone: Zone; }
 
 /** How voices carry across the room. Set by an admin for everyone (see docs/AUDIO.md). */
-export type AudioMode = 'conversation' | 'event' | 'spotlight';
+export const AUDIO_MODE_IDS = ['conversation', 'event', 'spotlight', 'stageOnly'] as const;
+export type AudioMode = typeof AUDIO_MODE_IDS[number];
+export const isAudioMode = (x: unknown): x is AudioMode => (AUDIO_MODE_IDS as readonly unknown[]).includes(x);
 
 /** What a media screen shows. `idle` is the XR Guild slide; `hls` plays an HLS (.m3u8) or MP4 link; `live` shows the LiveKit media room (RTMP ingress or a presenter's screenshare). */
 export type ScreenSource =
@@ -37,7 +39,8 @@ export interface RoomState {
   v: number;                                // bumps on every change, so a stale answer never wins
 }
 
-export type Control =
+/** `acct` is the sender's VIVERSE account ID, stamped in list mode (see docs/ADMIN.md). */
+export type Control = (
   | { type: 'seating'; zone: 'hall' | 'library'; preset: string }
   | { type: 'muteHall' }
   | { type: 'audio'; mode: AudioMode }
@@ -45,13 +48,15 @@ export type Control =
   | { type: 'screen'; id: string; src: ScreenSource }
   | { type: 'screenAudio'; mode: 'room' | 'positional' }
   | { type: 'state'; state: RoomState }
-  | { type: 'hello' };
+  | { type: 'hello' }
+) & { acct?: string };
 
 export interface TransportEvents {
   onState: (s: PeerState) => void;
   onLeave: (id: string) => void;
   onChat: (m: ChatMsg) => void;
-  onControl: (c: Control, from: string) => void;
+  /** `fromHost`: the sender is the room's master client (or, in verified mode, a signed-in admin). */
+  onControl: (c: Control, from: string, fromHost: boolean) => void;
   onStatus: (text: string) => void;
 }
 
@@ -61,8 +66,9 @@ export interface Transport {
   connect(self: { id: string; name: string }, ev: TransportEvents): Promise<void>;
   sendState(s: PeerState): void;
   sendChat(m: ChatMsg): void;
+  /** Sends unconditionally; main.ts decides who may send what. */
   sendControl(c: Control): void;
-  /** True when this client may send room controls (a verified admin, or the room's master client when no admin is verified). */
+  /** True when this client is the room's master client (or, in verified mode, a signed-in admin). */
   isHost(): boolean;
   disconnect(): void;
 }
