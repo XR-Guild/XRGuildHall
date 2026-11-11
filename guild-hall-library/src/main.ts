@@ -165,6 +165,18 @@ async function main() {
   const news = newsPanel(FONTS); news.mesh.position.set(0, 0, 0.01); lib.panelMounts.get(2)!.add(news.mesh); news.draw();
   const libp = libraryPanel(FONTS); libp.panel.mesh.position.set(0, 0, 0.01); lib.panelMounts.get(3)!.add(libp.panel.mesh); libp.panel.draw();
   const tlp = timelinePanel(FONTS); tlp.panel.mesh.position.set(0, 0, 0.01); lib.panelMounts.get(4)!.add(tlp.panel.mesh); tlp.panel.draw();
+  // Photon's thank-you, leaning back on a shelf: in the Library, the third shelf down in Evo's bookcase right of the
+  // Timeline (low enough to read from the floor); in the garden, the top shelf of the folly's right-hand bookcase
+  const photonMat = new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load('thanks/photon.webp') });
+  photonMat.map!.colorSpace = THREE.SRGBColorSpace;
+  const photonPlaque = (name: string, shelf: THREE.Vector3, facing: THREE.Vector3, width: number, offsetX = 0) => {
+    const g = new THREE.Group(); g.name = name; g.position.copy(shelf); g.lookAt(shelf.clone().add(facing));
+    const card = new THREE.Mesh(new THREE.PlaneGeometry(width, width * 9 / 16), photonMat);
+    card.geometry.translate(0, width * 9 / 32, 0); card.position.x = offsetX; card.rotation.x = -0.1;
+    g.add(card); scene.add(g);
+  };
+  photonPlaque('Photon thanks (Library)', lib.bayWorld(5, 0.4).setY(2.245), LIB.center.clone().sub(lib.bayWorld(5)).setY(0), 0.96, 0.45);
+  photonPlaque('Photon thanks (garden folly)', V(-1.75, 1.183, 36.666), V(0.46, 0, -0.89), 0.6, 0.12);
 
   // tours (declared early so panels can walk people around)
   const fade = document.getElementById('fade')!;

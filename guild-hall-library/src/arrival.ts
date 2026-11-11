@@ -126,6 +126,7 @@ export async function loadArrival(onProgress?: (f: number) => void, maxTexture =
   for (const c of CLEARINGS) clearDoorway(root, c);
   for (const b of BAKED_PANELS) dropBakedPanel(root, b);
   correctArt(root, colliders);
+  await reframeCreditsSign(root, maxTexture);
   return { root, colliders };
 }
 
@@ -158,6 +159,9 @@ function correctArt(root: THREE.Object3D, colliders: THREE.Object3D) {
   for (const m of meshesIn('Garden Ground Cover — Reflecting Pool Border', /^groundcover-soil$/)) pushEdgeToward(m, HALL.center, 1.6);
   const lib = root.getObjectByName('libraryartifacts');
   if (lib) for (const m of meshesIn('libraryartifacts', /^hologram-/)) m.position.add(lib.position);
+  // Photon's thank-you (main.ts) takes the octahedron's shelf in bay 5, so the octahedron moves up one shelf and 0.3 m left
+  const bay5 = (5 / 12) * Math.PI * 2;
+  for (const m of meshesIn('libraryartifacts', /^hologram-octa$/)) m.position.add(new THREE.Vector3(-Math.cos(bay5) * 0.3, 0.64, -Math.sin(bay5) * 0.3));
   for (const m of meshesIn('xrguildsealhunt', /^torus(_\d+)?$/)) m.removeFromParent();
   fitFootprint(colliders.getObjectByName('reflecting-pool collision'), POOL.width / 2, POOL.length / 2);
 }
@@ -192,6 +196,29 @@ function fitFootprint(o: THREE.Object3D | undefined, halfX: number, halfZ: numbe
   o.traverse(m => { const g = (m as THREE.Mesh).geometry; if (g) { g.computeBoundingBox(); box.union(g.boundingBox!.clone().applyMatrix4(rel.multiplyMatrices(inv, m.matrixWorld))); } });
   o.scale.x *= (2 * halfX) / (box.max.x - box.min.x);
   o.scale.z *= (2 * halfZ) / (box.max.z - box.min.z);
+}
+
+/**
+ * Evo's credits sign carries the pre-1.0 credits card. It shows the v1.0 credits (2:1) instead, and the slab and its
+ * gilt are cut down to that shape, still standing on the plinth. Done here so it survives the next pull from Arrival.
+ */
+async function reframeCreditsSign(root: THREE.Object3D, maxTexture: number) {
+  const sign = root.getObjectByName('XR Guild Credits Sign')?.getObjectByName('CreditsSign');
+  const panel = sign?.getObjectByName('TexturePanel_1793123672263') as THREE.Mesh | undefined;
+  const slab = sign?.getObjectByName('slab');
+  if (!sign || !panel || !slab) { console.warn('[arrival] no credits sign to reframe'); return; }
+  const tex = await new THREE.TextureLoader().loadAsync('signs/credits.webp').catch(e => { console.warn('[arrival] credits image failed', e); return null; });
+  if (!tex) return;
+  await capTexture(tex, maxTexture);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.flipY = false;
+  const mat = panel.material as THREE.MeshBasicMaterial;
+  mat.map?.dispose(); mat.map = tex; mat.needsUpdate = true;
+  // the panel plane lies in XZ and is stood up, so its height is its z scale
+  const dh = panel.scale.z - panel.scale.x / 2;
+  panel.scale.z -= dh;
+  for (const o of [panel, slab, sign.getObjectByName('gildL'), sign.getObjectByName('gildR')]) if (o) o.position.y -= dh / 2;
+  for (const o of [slab, sign.getObjectByName('gildL'), sign.getObjectByName('gildR')]) if (o) o.scale.y -= dh;
+  for (const o of [sign.getObjectByName('gildTop'), sign.getObjectByName('crest')]) if (o) o.position.y -= dh;
 }
 
 /**
