@@ -158,6 +158,9 @@ function correctArt(root: THREE.Object3D, colliders: THREE.Object3D) {
   for (const m of meshesIn('Garden Ground Cover — Reflecting Pool Border', /^groundcover-soil$/)) pushEdgeToward(m, HALL.center, 1.6);
   const lib = root.getObjectByName('libraryartifacts');
   if (lib) for (const m of meshesIn('libraryartifacts', /^hologram-/)) m.position.add(lib.position);
+  // Photon's thank-you (main.ts) takes the octahedron's shelf in bay 5, so the octahedron moves up one shelf and 0.3 m left
+  const bay5 = (5 / 12) * Math.PI * 2;
+  for (const m of meshesIn('libraryartifacts', /^hologram-octa$/)) m.position.add(new THREE.Vector3(-Math.cos(bay5) * 0.3, 0.64, -Math.sin(bay5) * 0.3));
   for (const m of meshesIn('xrguildsealhunt', /^torus(_\d+)?$/)) m.removeFromParent();
   fitFootprint(colliders.getObjectByName('reflecting-pool collision'), POOL.width / 2, POOL.length / 2);
 }
