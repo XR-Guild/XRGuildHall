@@ -184,10 +184,38 @@ function pose(vrm: any, p: Peer, t: number, top: number) {
   if (rUL) rUL.rotation.x = k * (seated ? thigh : -swing);
   if (lLL) lLL.rotation.x = k * (seated ? shin : Math.max(0, -Math.sin(ph)) * 0.8 * walk);
   if (rLL) rLL.rotation.x = k * (seated ? shin : Math.max(0, Math.sin(ph)) * 0.8 * walk);
-  if (lUA) { lUA.rotation.z = k * (seated ? -1.45 : -1.2); lUA.rotation.x = k * (seated ? 0 : -swing * 0.6); }
-  if (rUA) { rUA.rotation.z = k * (seated ? 1.45 : 1.2); rUA.rotation.x = k * (seated ? 0 : swing * 0.6); }
-  if (lLA) lLA.rotation.y = seated ? -0.9 : -0.15; if (rLA) rLA.rotation.y = seated ? 0.9 : 0.15;
+  // Standing arms hang close to the body, a touch forward, with soft elbows, rather than splayed in an A-pose.
+  const breath = Math.sin(t * 1.6) * 0.015;
+  const armDown = seated ? 1.45 : 1.48 + breath, armFwd = seated ? 0 : -0.1;
+  if (lUA) { lUA.rotation.z = k * -armDown; lUA.rotation.x = k * (armFwd - swing * 0.6); }
+  if (rUA) { rUA.rotation.z = k * armDown; rUA.rotation.x = k * (armFwd + swing * 0.6); }
+  const elbow = seated ? 0.9 : 0.3 + walk * 0.25;
+  if (lLA) { lLA.rotation.y = -elbow; }
+  if (rLA) { rLA.rotation.y = elbow; }
   if (spine) spine.rotation.x = k * (Math.sin(t * 1.6) * 0.02 + (seated ? 0.05 : 0));
+  relaxHands(vrm, b, k);
+}
+
+/** Fingers curl a little more towards the little finger, as a resting hand does; bone rest pose is straight. */
+const FINGER_CURL: [string, number][] = [['Index', 0.18], ['Middle', 0.24], ['Ring', 0.3], ['Little', 0.36]];
+const JOINT_CURL: [string, number][] = [['Proximal', 1], ['Intermediate', 1.3], ['Distal', 0.9]];
+type FingerPose = { node: THREE.Object3D; z: number; y: number };
+const handBones = new WeakMap<object, FingerPose[]>();
+function relaxHands(vrm: any, b: (n: string) => THREE.Object3D | null, k: number) {
+  let fingers = handBones.get(vrm);
+  if (!fingers) { handBones.set(vrm, fingers = (() => {
+    const out: FingerPose[] = [];
+    for (const [side, s] of [['left', -1], ['right', 1]] as const) {
+      for (const [f, c] of FINGER_CURL) {
+        for (const [j, m] of JOINT_CURL) { const node = b(`${side}${f}${j}`); if (node) { out.push({ node, z: s * c * m, y: 0 }); } }
+      }
+      const thumb = b(`${side}ThumbProximal`), tip = b(`${side}ThumbDistal`);
+      if (thumb) { out.push({ node: thumb, z: 0, y: -s * 0.25 }); }
+      if (tip) { out.push({ node: tip, z: 0, y: -s * 0.2 }); }
+    }
+    return out;
+  })()); }
+  for (const f of fingers) { f.node.rotation.z = k * f.z; f.node.rotation.y = f.y; }
 }
 
 /**
