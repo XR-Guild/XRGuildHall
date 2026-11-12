@@ -5,6 +5,7 @@ import type { AudioMode, ScreenSource } from './net/types';
 import { AUDIO_MODE_IDS } from './net/types';
 import { HALL_PRESETS, LIB_PRESETS } from './seating';
 import { CONFIG } from './config';
+import { debugLog } from './debugLog';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -44,6 +45,8 @@ export interface AdminHooks {
   signIn: ((key: string) => Promise<string>) | null;
   /** True when the LiveKit media room is configured. */
   liveAvailable: boolean;
+  /** Drop this device's voice connection on purpose; false when voice isn't connected. */
+  testVoiceDrop: () => boolean;
 }
 
 export function initAdmin(h: AdminHooks) {
@@ -129,12 +132,36 @@ export function initAdmin(h: AdminHooks) {
     draw();
   });
 
+  // debug log: admins only, since it can show other people's names
+  const dbg = $<HTMLDetailsElement>('#admDebug'), dbgText = $<HTMLTextAreaElement>('#admDebugLog');
+  let shownLog = '', logPending = 0;
+  const drawLog = () => {
+    if (panel.hidden || !dbg.open) return;
+    const text = debugLog.text(); if (text === shownLog) return; // rewriting would also clear a selection being copied
+    shownLog = text;
+    const atEnd = dbgText.scrollTop + dbgText.clientHeight >= dbgText.scrollHeight - 4;
+    dbgText.value = text;
+    if (atEnd) dbgText.scrollTop = dbgText.scrollHeight;
+  };
+  dbg.addEventListener('toggle', drawLog);
+  // the SDK can log dozens of lines a second while connecting
+  debugLog.onChange(() => { if (!logPending) logPending = window.setTimeout(() => { logPending = 0; drawLog(); }, 250); });
+  $('#admDebugCopy').addEventListener('click', async () => {
+    const note = $('#admDebugNote');
+    try { await navigator.clipboard.writeText(debugLog.text()); note.textContent = 'Copied.'; }
+    catch { dbgText.focus(); dbgText.select(); note.textContent = 'Copying is blocked here: the log is selected, so copy it with Ctrl+C or ⌘C.'; }
+  });
+  $('#admDebugDrop').addEventListener('click', () => {
+    $('#admDebugNote').textContent = h.testVoiceDrop() ? 'Dropped your voice; it reconnects in a few seconds. Other admins see the report in their Debug log.' : 'Voice is not connected.';
+  });
+
   const draw = () => {
     if (panel.hidden) return;
     const can = h.canAdmin();
     $('#adminWho').textContent = h.role();
     form.hidden = !h.signIn || (can && P.connected);
     drawHall(); drawLib(); drawAudio(); drawScrAudio(); drawSpot(); drawScreens();
+    dbg.hidden = !can; drawLog();
     $('#admAudioHint').textContent = AUDIO_MODES[R.state.audio].hint;
     ($('#admMuteHall') as HTMLButtonElement).disabled = !can || !P.connected;
     ($('#admClearSpot') as HTMLButtonElement).disabled = !can || !R.state.spotlight.length;

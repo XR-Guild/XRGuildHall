@@ -197,6 +197,12 @@
         <div id="admScreenAudio" class="seg" role="group" aria-label="Screen sound"></div>
         <p class="fine">RTMP: point OBS at the Guild's LiveKit ingress (docs/MEDIA.md), then choose <b>Live: RTMP stream</b>. Slides: open the <a id="admPresenter" href="presenter.html" target="_blank" rel="noopener">presenter page ↗</a> on a laptop and share a window, then choose <b>Live: screenshare</b>.</p>
       </fieldset>
+      <details id="admDebug" hidden>
+        <summary>Debug log</summary>
+        <p class="fine">This browser's recent console output, including voice drop reports from anyone in the room. It stays on this device.</p>
+        <textarea id="admDebugLog" readonly spellcheck="false" aria-label="Debug log"></textarea>
+        <div class="row wrap"><button id="admDebugCopy" type="button" class="ghost sm">Copy</button><button id="admDebugDrop" type="button" class="ghost sm" title="Disconnect your own voice so the drop report and reconnect can be checked">Test: drop my voice</button><span id="admDebugNote" class="fine"></span></div>
+      </details>
     </div>
   </div>
 </div>

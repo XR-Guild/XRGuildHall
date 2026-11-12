@@ -1,3 +1,4 @@
+import './debugLog';
 import * as THREE from 'three';
 import {
   World, SessionMode, LocomotionEnvironment, EnvironmentType, TurningMethod,
@@ -45,6 +46,8 @@ const FONTS = {
 };
 const PARAMS = new URLSearchParams(location.search);
 const SIM = Math.min(300, Math.max(0, parseInt(PARAMS.get('sim') ?? '0', 10) || 0));
+/** Voice drop reports sent to admins: the 30 s health history is about 1,200 characters. */
+const VOICE_REPORT_MAX = 2000;
 // App IDs and event settings come from src/config.ts (env at build time, guildhall.config.json at run time); see main()
 let VIVERSE_APP_ID = '', PHOTON_APP_ID = '', PHOTON_REGION = 'us';
 
@@ -251,6 +254,9 @@ async function main() {
   // ---- people ----
   const presence = new Presence('Guest'); presenceRef = presence;
   const avatars = new Avatars(FONTS); scene.add(avatars.group);
+  // load tests (docs/PHOTON-VOICE-SPIKE.md): how many real avatars this device can draw, and from how far
+  const numParam = (k: string) => { const v = parseFloat(PARAMS.get(k) ?? ''); return Number.isFinite(v) && v >= 0 ? v : null; };
+  avatars.maxVrm = Math.floor(numParam('maxVrm') ?? avatars.maxVrm); avatars.vrmRange = numParam('vrmRange') ?? avatars.vrmRange;
   avatars.prepare = async root => { await renderer.compileAsync(root, camera, scene); for (const t of texturesOf(root)) renderer.initTexture(t); };
   let voice: PhotonSession | null = null;
   let sim: SimTransport | null = null;
@@ -442,6 +448,11 @@ async function main() {
         return;
       }
       const { PhotonSession, PhotonTransport } = PHOTON_APP_ID ? await import('./net/photon') : ({} as any);
+      const reportLink = (up: boolean, why?: string, report?: string) => {
+        social.sys(up ? 'Voice is back.' : `Voice dropped (${why}). Reconnecting…`);
+        // VIVERSE presence stays up while voice is down, so admins hear about it straight away (shown in their Debug log)
+        if (report && presence.transport?.kind === 'viverse') sendVoiceReport(report);
+      };
       if (VIVERSE_APP_ID) {
         const { viverseIdentity, ViverseTransport } = await import('./net/viverse');
         const PEV = (await import('./net/photon')).EV;
@@ -451,6 +462,8 @@ async function main() {
         if (!name) presence.self.name = id.name;
         presence.self.avatar = id.vrmUrl;
         avatars.fetchAvatar = url => id.avatarClient.getAvatarFileWithSDK(url);
+        // load tests wear real VIVERSE avatars (run-bots --vrm-urls); admins copy these from the Debug log
+        if (listMode && isListed(myAccount)) id.avatarClient.getAvatarList?.().then((list: { vrmUrl?: string }[]) => console.info(`[viverse] your avatars, for run-bots --vrm-urls: ${JSON.stringify(list.map(a => a.vrmUrl).filter(Boolean))}`)).catch(() => {});
         const vt = new ViverseTransport(VIVERSE_APP_ID, id, CONFIG.viverseRoomCap);
         // presence stays on VIVERSE; a voice problem (e.g. the CCU cap) must not drop people from the room.
         // Voice joins the Photon room for this world's VIVERSE room (overflow rooms get their own voice room).
@@ -462,7 +475,7 @@ async function main() {
           v.onEvent = (code, payload, _from, fromHost) => { if (code === PEV.ctl && trusted(payload as Control, fromHost)) room.receive(payload as Control); };
           // presence owns the dock status on VIVERSE, so voice drops and recoveries are reported in chat
           v.onStatus = () => social.drawDock();
-          v.onLink = up => social.sys(up ? 'Voice is back.' : 'Voice dropped. Reconnecting…');
+          v.onLink = reportLink;
           try { await v.connect(presence.self.id, presence.self.name); } catch (e: any) { v.disconnect(); if (voice === v) { voice = null; social.sys('Voice is unavailable right now. ' + (e?.message ?? '')); } }
           // Leave pressed while voice was still joining: the listener below already dropped it, so close this one too
           if (voice !== v) v.disconnect();
@@ -485,6 +498,7 @@ async function main() {
         voice?.disconnect();
         voice = new PhotonSession(PHOTON_APP_ID, PARAMS.get('room') ?? 'guild-hall', PHOTON_REGION, photonOpts());
         voice!.setAudioMode(room.state.audio); voice!.spotlight = new Set(room.state.spotlight);
+        voice!.onLink = reportLink;
         await presence.connect(new PhotonTransport(voice));
       }
     },
@@ -495,10 +509,22 @@ async function main() {
   // controls from the presence transport: Photon (verified) off VIVERSE, VIVERSE `general` otherwise.
   // On VIVERSE with voice up, only `hello` is taken from VIVERSE; admin controls come through Photon (see above).
   // Exception: list mode trusts the account ID, self-declared on either channel, so a listed admin whose voice failed still gets through.
-  presence.onControl = (c, _from, fromHost) => {
+  presence.onControl = (c, from, fromHost) => {
+    if (c?.type === 'voiceDrop') {
+      if (canAdmin() && typeof c.report === 'string') console.warn(`[voice] ${presence.peers.get(from)?.name ?? 'someone'} (${String(from).slice(0, 12)}): ${c.report.slice(0, VOICE_REPORT_MAX)}`);
+      return;
+    }
     if (presence.transport?.kind === 'viverse' && voice && c?.type !== 'hello' && !(listMode && isListed(c?.acct))) return;
     if (trusted(c, fromHost)) room.receive(c);
   };
+  // a network outage can take presence down with voice: hold the latest reports until presence is back
+  const heldReports: string[] = [];
+  const flushReports = () => { if (presence.connected) while (heldReports.length) presence.transport?.sendControl({ type: 'voiceDrop', report: heldReports.shift()! }); };
+  const sendVoiceReport = (report: string) => {
+    heldReports.push(report.slice(0, VOICE_REPORT_MAX)); if (heldReports.length > 4) heldReports.shift();
+    flushReports();
+  };
+  presence.listeners.add(flushReports);
   // ask whoever administers the room for the current settings once we're in
   let wasConnected = false;
   presence.listeners.add(() => {
@@ -523,6 +549,7 @@ async function main() {
   };
   initAdmin({
     room, presence, canAdmin, role: roleText, liveAvailable: media.liveAvailable,
+    testVoiceDrop: () => !!voice?.simulateDrop(),
     signIn: CONFIG.adminMode === 'verified' && PHOTON_APP_ID ? async (key: string) => {
       adminKey = key;
       if (!presence.connected) return 'Passphrase kept for this visit. Press Join others: you will join as an admin if it is right.';

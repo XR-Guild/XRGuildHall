@@ -242,12 +242,49 @@ node scripts/load/run-bots.mjs --room loadtest-PICK-A-NAME --total 19 --per-page
 - `--duration` is in seconds (default 300). Ctrl-C stops early.
 - `--base` points at an existing server. Without it, the launcher starts its own Vite dev server on port 5199, which reads `VITE_PHOTON_APP_ID` from `.env.local`.
 - `--region`, `--wav`, `--synth`, `--headed` are optional.
+- `--vrm` gives each bot a real avatar instead of a mannequin (see [Bots with VRM avatars](#bots-with-vrm-avatars)).
+- Open mics send every frame, silence included, because the app's own client does. `--gate` sends only while the clip is speaking, which is what a client with voice activity detection would do.
 
-Every 10 s the launcher prints joined bots and frames sent per second (25 per bot while its clip is speaking). Bots only send: they have no audio context and decode nothing, so listening is checked from a real client.
+Every 10 s the launcher prints joined bots, frames sent per second (25 per open mic), and how many times a bot's voice connection has dropped. Each drop also prints a `[voice] dropped` report: Photon's reason code, then round-trip time, longest main-thread stall, voices coming in and frames decoded, every 2 s for the 30 s before it. A real client writes the same report to its console, and on the `?room=` path it also posts the drop in chat. Bots only send: they have no audio context and decode nothing, so listening is checked from a real client.
 
 The page can also be opened by hand: `bots.html?room=NAME&bots=3&mic=1&stage=1`.
 
 Then join as the listener with `?room=NAME&debug=voice`, from a browser or a Quest. On a Quest the page must be served over HTTPS, because AudioWorklet needs a secure context. `?room=` puts presence on Photon even when a VIVERSE App ID is configured, because the bots' positions travel as Photon events that VIVERSE presence can't see.
+
+#### Bots with VRM avatars
+
+Without `--vrm`, bots have no avatar, so viewers draw them as mannequins and the test leaves out the cost of VRM avatars. To test that cost:
+
+```bash
+node scripts/fetch-test-avatars.mjs
+```
+
+```bash
+node scripts/load/run-bots.mjs --room loadtest-PICK-A-NAME --total 19 --per-page 5 --vrm
+```
+
+- `fetch-test-avatars.mjs` downloads 10 openly licensed VRMs into `test-avatars/`, which is gitignored and served only by the dev server. The script records each file's source and licence. It also writes `test-avatars/index.json`, the list the bots choose from.
+- **Avatars from the VIVERSE avatar creator** are closest to what visitors wear: 40k to 80k triangles, 4 to 7 meshes and 6 to 10 textures each. Their licence prohibits redistribution, so they can't be downloaded by the script. Export them from your own VIVERSE account (My avatars → ⋮ → Export), put the files in `test-avatars/viverse/`, and run the fetch script again to update the index.
+- `--vrm-viverse` is the fraction of bots that wear a VIVERSE export (default 0.8). The rest wear the downloaded avatars. Within each group, the bots cycle through all the files.
+- Bots send a path such as `test-avatars/viverse/stylized-01.vrm`, not a full URL. Each viewer loads it from its own origin, so the viewer must be served by a dev server that has the files, for example `?room=NAME` on `npm run dev`. A viewer on the uploaded VIVERSE build gets 404s and shows mannequins.
+- On the viewer, `?maxVrm=N` changes how many real avatars it draws (default 12), and `?vrmRange=M` changes the distance in metres beyond which people are mannequins (default 18). For example, `?room=NAME&maxVrm=24&vrmRange=1000`.
+- `bots.html?...&vrm=1&vrmViverse=0.8` does the same thing when the page is opened by hand.
+
+#### Bots wearing real VIVERSE avatars
+
+Bots can wear avatars from a VIVERSE account instead of files in `test-avatars/`. Viewers load them exactly as they load a visitor's avatar, so nothing has to be uploaded and the avatar-creator licence isn't an issue.
+
+1. Sign in to the world as a listed admin. The Debug log (Admin panel) shows a line `[viverse] your avatars, for run-bots --vrm-urls: [...]`.
+2. Copy the JSON array from that line into a file, for example `vrm-urls.json`. Keep it out of git.
+3. Run the bots with it:
+
+```bash
+node scripts/load/run-bots.mjs --viverse --total 12 --per-page 4 --mic 1 --vrm-urls vrm-urls.json
+```
+
+- Without `--vrm`, every bot wears one of the URLs. With `--vrm`, the URLs replace the exports in `test-avatars/viverse/`: `--vrm-viverse` of the bots wear them, and the rest wear the downloaded avatars.
+- VIVERSE avatar files are encrypted and decoded by the viewer's VIVERSE SDK, so these bots only show their avatars to viewers on VIVERSE. Viewers on `?room=` see mannequins.
+- The URLs may expire. If bots that used to show their avatars turn into mannequins, copy a fresh list from the Debug log.
 
 #### VIVERSE mode
 
