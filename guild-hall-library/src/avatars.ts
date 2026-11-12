@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { Peer } from './net/presence';
 import { SEAT_TOP } from './seating';
 import { capTexture, texturesOf } from './arrival';
+import { isTestAvatar } from './testAvatars';
 
 /**
  * Avatar renderer built for crowds:
@@ -16,6 +17,8 @@ const MAX = 220, NEAR_VRM = 12, NEAR_TAGS = 16, BUBBLE = 0.6;
 const VRM_TEXTURE = 1024;
 /** Avatars beyond this animate at half rate. */
 const VRM_FULL_RATE = 6;
+/** Beyond this, people are mannequins even when a VRM slot is free. */
+const VRM_RANGE = 18;
 
 type VrmSlot = { url: string; root: THREE.Object3D; vrm: any; lastUsed: number; dt: number };
 
@@ -35,6 +38,7 @@ export class Avatars {
   /** Cushion height of the seat a peer is on, from its seat key. */
   seatTop: (key: string) => number = () => SEAT_TOP;
   maxVrm = NEAR_VRM;
+  vrmRange = VRM_RANGE;
   /** Compiles shaders and uploads textures for a new avatar before it is shown, so it doesn't stall a frame. */
   prepare: ((root: THREE.Object3D) => Promise<void>) | null = null;
   private frame = 0;
@@ -68,7 +72,7 @@ export class Avatars {
   private lib() { return (this.vrmLib ??= import('@pixiv/three-vrm')); }
   private buffer(url: string) {
     let p = this.bufCache.get(url);
-    if (!p) { p = (this.fetchAvatar ? this.fetchAvatar(url) : fetch(url).then(r => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer(); })); this.bufCache.set(url, p); }
+    if (!p) { p = (this.fetchAvatar && !isTestAvatar(url) ? this.fetchAvatar(url) : fetch(url).then(r => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer(); })); this.bufCache.set(url, p); }
     return p;
   }
   private async loadVrm(id: string, url: string) {
@@ -101,7 +105,7 @@ export class Avatars {
     const now = performance.now();
     // decide who gets a VRM
     const wantVrm = new Set<string>();
-    if (this.vrmEnabled) for (const { p, d } of list) { if (wantVrm.size >= this.maxVrm) break; if (p.avatar && !this.failed.has(p.avatar) && d < 18) wantVrm.add(p.id); }
+    if (this.vrmEnabled) for (const { p, d } of list) { if (wantVrm.size >= this.maxVrm) break; if (p.avatar && !this.failed.has(p.avatar) && d < this.vrmRange) wantVrm.add(p.id); }
     for (const id of wantVrm) { const p = peers.get(id)!; const s = this.vrms.get(id); if (s && s.url !== p.avatar) this.dropVrm(id); if (!this.vrms.has(id)) this.loadVrm(id, p.avatar!); }
     for (const [id, s] of this.vrms) { if (!wantVrm.has(id)) { if (now - s.lastUsed > 20000 || !peers.has(id)) this.dropVrm(id); else s.root.visible = false; } }
 

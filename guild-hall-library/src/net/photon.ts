@@ -50,6 +50,20 @@ export interface PhotonOptions {
 }
 type Falloff = keyof typeof FALLOFF;
 
+/** The main thread's longest blocking task since the last read. Not available on Safari, where it reads 0. */
+const stalls = (() => {
+  let worst = 0, on = false;
+  return {
+    start() {
+      if (on) return; on = true;
+      try { new PerformanceObserver(l => { for (const e of l.getEntries()) worst = Math.max(worst, e.duration); }).observe({ type: 'longtask', buffered: false }); } catch { /* unsupported */ }
+    },
+    take() { const w = worst; worst = 0; return Math.round(w); },
+  };
+})();
+type HealthSample = { at: number; rtt: number; stallMs: number; voicesIn: number; decodedPerS: number; hidden: boolean };
+const HEALTH_EVERY_MS = 2000, HEALTH_KEEP = 15;
+
 async function loadPhoton() {
   const G = globalThis as any;
   await loadScript(SDK, () => !!G.Photon?.Voice, 'Could not load the Photon Voice SDK');
@@ -162,13 +176,22 @@ export class PhotonSession {
   /** Running totals for load testing: jitter-buffer underruns across audible voices, and frames decoded. */
   underruns = 0;
   framesDecoded = 0;
+  /** Joined connections that dropped since connect(), for load tests. */
+  drops = 0;
   onEvent: ((code: number, payload: any, from: string, fromHost: boolean) => void) | null = null;
   onLeave: ((id: string) => void) | null = null;
   onStatus: ((s: string) => void) | null = null;
-  /** Fires once when a joined connection drops, and once when it is back. */
-  onLink: ((up: boolean) => void) | null = null;
+  /** Fires once when a joined connection drops (with the SDK's reason and the health report), and once when it is back. */
+  onLink: ((up: boolean, why?: string, report?: string) => void) | null = null;
   private P: any = null;
   private linkDown = false;
+  private joinedAt = 0;
+  private droppedAt = 0;
+  private testDrop = false;
+  /** The last 30 s of connection health, logged when a joined connection drops. */
+  private health: HealthSample[] = [];
+  private healthTimer: any = 0;
+  private healthFrames = 0;
   private pids = new Map<number, string>();
   /** Actors the auth worker signed in as admins (UserId "admin:…"). Set by Photon, not by the actor, so it can't be faked. */
   private admins = new Set<number>();
@@ -210,6 +233,14 @@ export class PhotonSession {
     document.addEventListener('visibilitychange', this.onVisible);
     addEventListener('online', this.retryNow);
     try { await this.open(); } catch (e) { this.disconnect(); throw e; }
+    stalls.start();
+    this.healthTimer = workerTimers.setInterval(() => this.sampleHealth(), HEALTH_EVERY_MS);
+  }
+  private sampleHealth() {
+    const c = this.client; if (!c?.isJoinedToRoom()) return;
+    const decoded = this.framesDecoded - this.healthFrames; this.healthFrames = this.framesDecoded;
+    this.health.push({ at: Math.round((performance.now() - this.joinedAt) / 1000), rtt: c.gamePeer?.getRtt?.() ?? -1, stallMs: stalls.take(), voicesIn: this.voices.size, decodedPerS: Math.round(decoded * 1000 / HEALTH_EVERY_MS), hidden: document.hidden });
+    if (this.health.length > HEALTH_KEEP) this.health.shift();
   }
 
   /** One client per connection. A dropped client is retired and replaced, never reused. */
@@ -239,10 +270,10 @@ export class PhotonSession {
       c.setCustomAuthentication(q.toString(), CA?.Custom ?? 0);
     }
     return new Promise<void>((res, rej) => {
-      let joined = false, settled = false;
+      let joined = false, settled = false, lastError = '';
       const fail = (msg: string) => { if (!settled) { settled = true; rej(new Error(msg)); } };
       const timer = setTimeout(() => fail('Voice server did not answer'), JOIN_TIMEOUT_MS);
-      c.onError = (code: number, msg: string) => fail(`Photon error ${code}: ${msg}`);
+      c.onError = (code: number, msg: string) => { lastError = `${code} ${msg}`; fail(`Photon error ${code}: ${msg}`); };
       // join/create failures (room full, closed) only arrive here, not in onError or a state change
       c.onOperationResponse = (err: number, msg: string, code: number) => { if (err && (code === OP.JoinGame || code === OP.CreateGame)) fail(msg || `Could not join the voice room (${err})`); };
       chain(c, 'onStateChange', (st: number) => {
@@ -252,7 +283,8 @@ export class PhotonSession {
         if (st === S.JoinedLobby && !joined) c.joinRoom(this.roomName, { createIfNotExists: true }, { maxPlayers: this.opts.maxPlayers, publishUserId: true });
         else if (st === S.Joined && !joined) {
           joined = settled = true; clearTimeout(timer); this.retries = 0;
-          if (this.linkDown) { this.linkDown = false; this.onLink?.(true); }
+          this.joinedAt = performance.now(); this.health = []; this.healthFrames = this.framesDecoded; stalls.take();
+          if (this.linkDown) { this.linkDown = false; this.onLink?.(true, undefined, `back after ${Math.round((performance.now() - this.droppedAt) / 1000)} s`); }
           for (const a of c.myRoomActorsArray()) this.track(a);
           this.attachMic();
           this.onStatus?.(this.micOn ? 'Voice connected · mic ON' : 'Voice connected · mic off');
@@ -260,7 +292,8 @@ export class PhotonSession {
         } else if (st === S.Disconnected || st === S.Error) {
           clearTimeout(timer); fail('Could not reach Photon');
           // a joined connection can still drop, e.g. when a headset sleeps and stops answering the server
-          if (joined) this.dropped();
+          // the SDK raises onError just after this state change, so the reason is read a tick later
+          if (joined) { this.dropped(); queueMicrotask(() => this.reportDrop(lastError)); }
         }
       });
       c.connectToRegionMaster(this.region);
@@ -274,9 +307,21 @@ export class PhotonSession {
     this.retire();
     this.reconnectLater();
   }
+  /**
+   * 2004: we stopped hearing from the server (network, or a stalled main thread); 2003: the server closed us.
+   * One line per health sample, so it reads the same in an admin's Debug log and in the bot launcher's output.
+   */
+  private reportDrop(error: string) {
+    const why = error || (this.testDrop ? 'test drop from the Admin panel' : 'no reason given');
+    this.testDrop = false;
+    this.drops++;
+    const h = this.health.map(x => `  t+${x.at}s rtt ${x.rtt} ms · longest stall ${x.stallMs} ms · voices in ${x.voicesIn} · decoded ${x.decodedPerS}/s${x.hidden ? ' · hidden' : ''}`);
+    const report = [`dropped after ${Math.round((performance.now() - this.joinedAt) / 1000)} s in ${this.roomName}: ${why} · ${navigator.onLine ? 'online' : 'OFFLINE'}${document.hidden ? ' · tab hidden' : ''} · since the last stall sample: ${stalls.take()} ms`, ...h].join('\n');
+    console.warn('[voice] ' + report);
+    if (!this.closing && !this.linkDown) { this.linkDown = true; this.droppedAt = performance.now(); this.onLink?.(false, why, report); }
+  }
   private reconnectLater() {
     if (this.closing) return;
-    if (!this.linkDown) { this.linkDown = true; this.onLink?.(false); }
     this.onStatus?.('Voice reconnecting…');
     this.retryTimer = workerTimers.setTimeout(() => { this.retryTimer = 0; this.reopen(); }, Math.min(30000, 2000 * 2 ** this.retries++));
   }
@@ -453,10 +498,13 @@ export class PhotonSession {
   /** Room controls over Photon events (sender-stamped). Receivers decide whom to trust (main.ts). */
   sendControl(c: Control) { this.send(EV.ctl, c); }
   get headcount() { return this.client?.isJoinedToRoom() ? this.client.myRoomActorsArray().length : 0; }
+  /** Admin panel test: close the joined connection so the real drop, report and reconnect path runs. */
+  simulateDrop() { if (!this.client?.isJoinedToRoom()) return false; this.testDrop = true; this.client.disconnect(); return true; }
   /** Safe to call more than once. A retired client is disposed once its socket has actually closed. */
   disconnect() {
     this.closing = true;
     workerTimers.clearTimeout(this.retryTimer); this.retryTimer = 0;
+    workerTimers.clearInterval(this.healthTimer); this.healthTimer = 0;
     document.removeEventListener('visibilitychange', this.onVisible);
     removeEventListener('online', this.retryNow);
     if (this.mic) this.setMic(false);

@@ -16,3 +16,5 @@ guild-hall-v3-viverse.zip
 release/
 # Arrival pull cache: uncompressed originals and the plugin list (scripts/arrival/make-manifest.mjs)
 .arrival-cache/
+# Load-test VRMs: node scripts/fetch-test-avatars.mjs
+test-avatars/

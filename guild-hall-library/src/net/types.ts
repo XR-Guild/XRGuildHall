@@ -49,6 +49,8 @@ export type Control = (
   | { type: 'screenAudio'; mode: 'room' | 'positional' }
   | { type: 'state'; state: RoomState }
   | { type: 'hello' }
+  /** A visitor's voice dropped or came back; logged by admins only (src/debugLog.ts). The sender is self-declared. */
+  | { type: 'voiceDrop'; report: string }
 ) & { acct?: string };
 
 export interface TransportEvents {

@@ -5,6 +5,10 @@
 //   node scripts/load/run-bots.mjs --room loadtest-abc --total 19 [--per-page 5] [--duration 300] [--mic 1] [--stage]
 //   node scripts/load/run-bots.mjs --viverse --total 5 [...]
 //                                  [--base http://localhost:5173] [--wav speech.wav] [--synth] [--headed] [--region us]
+//                                  [--vrm [--vrm-viverse 0.8]]   bots wear test avatars (see src/testAvatars.ts)
+//                                  [--gate]   open mics send only while speaking; without it they send every frame, as the app does
+//                                  [--vrm-urls FILE]   a JSON array of VIVERSE avatar URLs (an admin's Debug log lists theirs); worn by
+//                                             the --vrm-viverse share of bots in place of the exports, or by every bot without --vrm
 //
 // --viverse: bots join like visitors to the VIVERSE build, so a logged-in VIVERSE client sees and hears them. Presence goes over
 // the VIVERSE Play SDK without a login, voice over the VIVERSE voice room; that room is shared with everyone in the world.
@@ -18,7 +22,7 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs, promisify } from 'node:util';
 import { execFile } from 'node:child_process';
-import { mkdir, rm, stat } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 
@@ -27,12 +31,15 @@ const { values: a } = parseArgs({
     room: { type: 'string' }, total: { type: 'string', default: '19' }, 'per-page': { type: 'string', default: '1' },
     duration: { type: 'string', default: '300' }, mic: { type: 'string', default: '1' }, stage: { type: 'boolean', default: false }, viverse: { type: 'boolean', default: false },
     base: { type: 'string' }, wav: { type: 'string' }, synth: { type: 'boolean', default: false }, headed: { type: 'boolean', default: false }, region: { type: 'string' },
+    vrm: { type: 'boolean', default: false }, 'vrm-viverse': { type: 'string' }, gate: { type: 'boolean', default: false }, 'vrm-urls': { type: 'string' },
   },
 });
 if (a.viverse && a.room) { console.error('--room does not apply with --viverse: VIVERSE bots join the world\'s own rooms.'); process.exit(2); }
 if (!a.viverse && (!a.room || a.room === 'guild-hall')) { console.error('Pass --room <private room name>; the live room "guild-hall" is refused.'); process.exit(2); }
 const total = Math.max(1, +a.total), perPage = Math.max(1, +a['per-page']), duration = Math.max(10, +a.duration);
 const instances = Math.ceil(total / perPage);
+const vrmUrls = a['vrm-urls'] ? JSON.parse(await readFile(resolve(a['vrm-urls']), 'utf8')) : [];
+if (!Array.isArray(vrmUrls) || vrmUrls.some(u => typeof u !== 'string' || !u.startsWith('https://'))) { console.error('--vrm-urls must be a JSON array of https:// URLs'); process.exit(2); }
 
 // the system default can be a Siri voice, which writes an empty file, so name standard voices; rotating them tells bots apart
 const SAY_VOICES = ['Samantha', 'Daniel', 'Karen', 'Moira', 'Rishi', 'Tessa'];
@@ -92,24 +99,26 @@ for (let k = 0; k < instances; k++) {
   const n = Math.min(perPage, total - k * perPage);
   // a context per tab, so the VIVERSE SDK's storage isn't shared between pages
   const page = await (await browser.newContext()).newPage();
+  // the URLs are long and signed, so they go to the page directly rather than in its query string
+  if (vrmUrls.length) await page.addInitScript(urls => { window.__vrmUrls = urls; }, vrmUrls);
   if (a.wav) await page.route('**/bot-clip', r => r.fulfill({ path: resolve(a.wav) }));
   if (clipDir) await page.route('**/bot-clip/*', r => r.fulfill({ path: join(clipDir, `${new URL(r.request().url()).pathname.split('/').pop()}.wav`) }));
-  page.on('console', m => { if (m.type() === 'error' || m.text().startsWith('[bots]')) console.log(`  [page ${k}] ${m.text()}`); });
+  page.on('console', m => { if (m.type() === 'error' || /^\[(bots|voice)\]/.test(m.text())) console.log(`  [page ${k}] ${m.text()}`); });
   page.on('pageerror', e => console.log(`  [page ${k}] ${e.message}`));
-  const q = new URLSearchParams({ ...(a.viverse ? { viverse: '1' } : { room: a.room }), bots: String(n), first: String(k * perPage), mic: a.mic, ...(a.stage && k === 0 ? { stage: '1' } : {}), ...(a.region ? { region: a.region } : {}), ...(a.wav ? { clip: 'bot-clip' } : clipDir ? { clip: 'bot-clip/{n}' } : {}) });
+  const q = new URLSearchParams({ ...(a.viverse ? { viverse: '1' } : { room: a.room }), bots: String(n), first: String(k * perPage), mic: a.mic, ...(a.stage && k === 0 ? { stage: '1' } : {}), ...(a.region ? { region: a.region } : {}), ...(a.gate ? { gate: '1' } : {}), ...(a.vrm ? { vrm: '1' } : {}), ...(a['vrm-viverse'] ? { vrmViverse: a['vrm-viverse'] } : {}), ...(a.wav ? { clip: 'bot-clip' } : clipDir ? { clip: 'bot-clip/{n}' } : {}) });
   await page.goto(new URL(`bots.html?${q}`, base).href);
   pages.push(page);
 }
 
 const status = async () => {
   const s = await Promise.all(pages.map(p => p.evaluate(() => window.__bots ?? { joined: 0, errors: [] }).catch(() => ({ joined: 0, errors: ['page closed'] }))));
-  return { joined: s.reduce((n, x) => n + x.joined, 0), sent: s.reduce((n, x) => n + (x.framesSent ?? 0), 0), fewestPeers: Math.min(...s.map(x => x.fewestPeers ?? 0)), peers: s.flatMap(x => x.peers ?? []), rooms: [...new Set(s.flatMap(x => x.rooms ?? []))], people: [...new Set(s.flatMap(x => x.people ?? []))], errors: s.flatMap(x => x.errors) };
+  return { joined: s.reduce((n, x) => n + x.joined, 0), drops: s.reduce((n, x) => n + (x.drops ?? 0), 0), sent: s.reduce((n, x) => n + (x.framesSent ?? 0), 0), fewestPeers: Math.min(...s.map(x => x.fewestPeers ?? 0)), peers: s.flatMap(x => x.peers ?? []), rooms: [...new Set(s.flatMap(x => x.rooms ?? []))], people: [...new Set(s.flatMap(x => x.people ?? []))], errors: s.flatMap(x => x.errors) };
 };
 let lastSent = 0;
 const until = Date.now() + duration * 1000;
 const timer = setInterval(async () => {
   const s = await status();
   const sent = Math.round((s.sent - lastSent) / 10); lastSent = s.sent;
-  console.log(`${new Date().toISOString().slice(11, 19)}  joined ${s.joined}/${total}, each sees ≥${s.fewestPeers} others  voice frames sent ${sent}/s  per bot sees [${s.peers.join(',')}]  room ${s.rooms.join('/')}  people: ${s.people.join(', ') || 'none'}${s.errors.length ? `  errors: ${s.errors.join('; ')}` : ''}  (${Math.round((until - Date.now()) / 1000)} s left)`);
+  console.log(`${new Date().toISOString().slice(11, 19)}  joined ${s.joined}/${total}, each sees ≥${s.fewestPeers} others  voice frames sent ${sent}/s  drops ${s.drops}  per bot sees [${s.peers.join(',')}]  room ${s.rooms.join('/')}  people: ${s.people.join(', ') || 'none'}${s.errors.length ? `  errors: ${s.errors.join('; ')}` : ''}  (${Math.round((until - Date.now()) / 1000)} s left)`);
   if (Date.now() > until) { clearInterval(timer); stop(0); }
 }, 10000);
