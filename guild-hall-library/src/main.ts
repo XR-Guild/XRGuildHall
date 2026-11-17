@@ -503,7 +503,7 @@ async function main() {
       }
     },
   });
-  const xrMenu = new XRMenu(world, inter, presence, social, FONTS);
+  const xrMenu = new XRMenu(world, inter, presence, social, FONTS, { list: TOURS, goTo });
   // Leave only disconnects the presence transport; on VIVERSE the voice session is separate and must not keep the mic live
   presence.listeners.add(() => { if (!presence.connected && voice) { voice.disconnect(); voice = null; } });
   // controls from the presence transport: Photon (verified) off VIVERSE, VIVERSE `general` otherwise.
