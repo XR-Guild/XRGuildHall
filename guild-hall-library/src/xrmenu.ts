@@ -7,6 +7,7 @@ import type { Social } from './social';
 
 type View = 'home' | 'chat' | 'people' | 'join';
 type Hand = 'left' | 'right';
+export interface Places { list: { id: string; name: string }[]; goTo: (id: string) => void }
 
 const KEY_ROWS = ['1234567890', 'qwertyuiop', "asdfghjkl'", 'zxcvbnm,.?'];
 const QUICK = ['Hello!', 'Can you hear me?', 'Thanks!', 'Be right back'];
@@ -50,7 +51,7 @@ export class XRMenu {
   /** The hint mesh is offset so its Y disc sits on the button; hands have no disc, so their tag is re-centred. */
   private discShift = 0;
 
-  constructor(private world: World, private inter: Interactor, private P: Presence, private S: Social, fonts: Fonts) {
+  constructor(private world: World, private inter: Interactor, private P: Presence, private S: Social, fonts: Fonts, private places: Places) {
     this.panel = new CanvasPanel(0.6, 0.6, 1500, p => this.render(p));
     this.panel.fonts = fonts;
     this.prepOverlay(this.panel.mesh, 997);
@@ -298,8 +299,15 @@ export class XRMenu {
 
   private renderHome(p: CanvasPanel, y: number) {
     const f = p.fonts, W = p.W;
-    const tip = this.leftIsHand ? 'Tap the Menu tag on your left wrist with your right finger to hide or show this panel. Tap buttons directly, or point and pinch.' : 'Press Y on your left controller to hide or show this panel.';
+    // hands-only visitors have no thumbstick; the SDK's thumb microgestures are off until the swipe that enables them
+    const tip = this.leftIsHand
+      ? 'Tap the Menu tag on your left wrist with your right finger to hide or show this panel. Tap buttons directly, or point and pinch. To move without controllers, slide your right thumb forward along your index finger to turn on gestures, then thumb-tap to teleport and swipe left or right to turn.'
+      : 'Press Y on your left controller to hide or show this panel.';
     y += p.wrap(tip + ' Pinch and drag the bar at the top to move it.', M, y, W - 2 * M, 38, { font: `29px ${f.body}`, color: INK.text }) + 24;
+    p.text('Walk to', M, y, { font: `600 26px ${f.body}`, color: INK.dim }); y += 40;
+    const cols = 4, gap = 12, bw = (W - 2 * M - (cols - 1) * gap) / cols;
+    this.places.list.forEach((pl, i) => p.button('walk-' + pl.id, M + (i % cols) * (bw + gap), y + Math.floor(i / cols) * 70, bw, 58, pl.name, () => this.places.goTo(pl.id), { font: `600 24px ${f.body}` }));
+    y += Math.ceil(this.places.list.length / cols) * 70 + 14;
     const recent = this.S.lines.slice(-6);
     if (recent.length) {
       p.rule(M, y, W - 2 * M); y += 22;
